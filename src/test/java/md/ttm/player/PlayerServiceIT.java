@@ -61,6 +61,10 @@ class PlayerServiceIT {
     @WithMockUser(username = "admin", roles = "ADMIN")
     void administratorulPoateAdaugaEditaSiStergeJucatori() {
         Player created = playerService.save(player("  Ion ", "Popescu", 1000));
+        assertThat(created.getPlayHand()).isNull();
+        assertThat(created.hasEquipment()).isFalse();
+        created.setPlayHand(PlayHand.RIGHT);
+        created.setBlade("Stiga Allround Classic");
         created.setCity("   ");
         created.setPhone("+373 69 123 456");
         Player saved = playerService.save(created);
@@ -68,6 +72,8 @@ class PlayerServiceIT {
         assertThat(saved.getFirstName()).isEqualTo("Ion");
         assertThat(saved.getCity()).isNull();
         assertThat(saved.getPhone()).isEqualTo("+373 69 123 456");
+        assertThat(saved.getPlayHand()).isEqualTo(PlayHand.RIGHT);
+        assertThat(saved.getBlade()).isEqualTo("Stiga Allround Classic");
 
         playerService.delete(saved.getId());
         assertThat(playerRepository.findById(saved.getId())).isEmpty();
@@ -112,12 +118,20 @@ class PlayerServiceIT {
 
         own.setCity("Bălți");
         own.setPlayStyle(PlayStyle.DEFENCE);
+        own.setPlayHand(PlayHand.LEFT);
+        own.setBlade("  Butterfly Viscaria ");
+        own.setForehandRubber("Tenergy 05");
+        own.setBackhandRubber("");
         own.setRating(3000);
         own.setWins(99);
         Player saved = playerService.updateOwnProfile(own);
 
         assertThat(saved.getCity()).isEqualTo("Bălți");
         assertThat(saved.getPlayStyle()).isEqualTo(PlayStyle.DEFENCE);
+        assertThat(saved.getPlayHand()).isEqualTo(PlayHand.LEFT);
+        assertThat(saved.getBlade()).isEqualTo("Butterfly Viscaria");
+        assertThat(saved.getForehandRubber()).isEqualTo("Tenergy 05");
+        assertThat(saved.getBackhandRubber()).isNull();
         assertThat(saved.getRating()).isEqualTo(Player.DEFAULT_RATING);
         assertThat(saved.getWins()).isZero();
     }

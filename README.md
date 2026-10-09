@@ -11,10 +11,11 @@ Aplicație web (instalabilă și pe telefon, ca PWA) pentru gestionarea jucător
 | Funcționalitate | Guest (nelogat) | Utilizator logat | Administrator |
 |---|:---:|:---:|:---:|
 | Clasamentul jucătorilor (ordonat după rating, căutare, sortare) | ✅ | ✅ | ✅ |
+| Mâna de joc în clasament; echipamentul (lemn, fețe forehand/backhand) la click pe jucător | ✅ | ✅ | ✅ |
 | Coloana „Telefon” în clasament | – | – | ✅ |
 | Adăugare / editare / ștergere jucători | – | – | ✅ |
 | Cont nou (înregistrare simplă: nume, prenume, utilizator, parolă) | ✅ | – | – |
-| „Profilul meu”: date personale, stil de joc, oraș, telefon, schimbarea parolei | – | ✅ | ✅ |
+| „Profilul meu”: date personale, stil și mână de joc, oraș, telefon, echipament, schimbarea parolei | – | ✅ | ✅ |
 | „Utilizatori”: lista completă, adăugare, editare (rol, blocare, parolă), ștergere | – | – | ✅ |
 
 Interfața se adaptează la telefon: în clasament, numele, stilul de joc și orașul apar într-o singură coloană, iar administratorul editează sau șterge un jucător atingând rândul respectiv. Aplicația se poate adăuga pe ecranul telefonului („Add to Home Screen”).
@@ -90,7 +91,7 @@ psql -U postgres -f database/create_database.sql
 
 ## Baza de date
 
-- **Scripturile de creare a tabelelor:** `src/main/resources/db/migration/` (de exemplu `V1__jucatori_si_utilizatori.sql`). Le aplică automat **Flyway** la pornirea aplicației, în ordinea versiunilor; nu e nevoie să le rulați manual.
+- **Scripturile de creare a tabelelor:** `src/main/resources/db/migration/` (`V1__jucatori_si_utilizatori.sql`, `V2__jucator_mana_si_echipament.sql`). Le aplică automat **Flyway** la pornirea aplicației, în ordinea versiunilor; nu e nevoie să le rulați manual.
 - **Modificări de schemă:** nu se editează niciodată un script deja aplicat. Se adaugă unul nou: `V2__descriere.sql`, `V3__...` etc.
 - **Crearea bazei de date și a utilizatorului:** `database/create_database.sql` (fără Docker) sau automat de `docker-compose.yml`.
 - **Baza pentru teste:** `ttm_test`, creată de `database/init/01-create-test-db.sql` la prima pornire a containerului.
@@ -105,10 +106,12 @@ id            PK                        id             PK
 first_name    nume                      username       unic, litere mici
 last_name     prenume                   password_hash  BCrypt
 play_style    ATTACK / DEFENCE          role           USER / ADMIN
+play_hand     RIGHT / LEFT
 city                                    enabled
 phone         (vizibil doar adminului)  player_id      FK → player.id (unic)
 rating        implicit 1000
 wins, losses
+blade, forehand_rubber, backhand_rubber   (echipament)
 ```
 
 ---

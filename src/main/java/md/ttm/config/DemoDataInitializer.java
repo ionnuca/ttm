@@ -1,5 +1,6 @@
 package md.ttm.config;
 
+import md.ttm.player.PlayHand;
 import md.ttm.player.PlayStyle;
 import md.ttm.player.Player;
 import md.ttm.player.PlayerRepository;
@@ -47,26 +48,40 @@ public class DemoDataInitializer implements ApplicationRunner {
         if (playerRepository.count() > 0) {
             return;
         }
-        Player first = save("Ion", "Popescu", PlayStyle.ATTACK, "Chișinău", "+373 69 123 456", 1420, 18, 4);
-        save("Mihai", "Rusu", PlayStyle.DEFENCE, "Bălți", "+373 79 222 333", 1385, 15, 6);
-        save("Ana", "Ciobanu", PlayStyle.ATTACK, "Chișinău", "+373 68 555 010", 1350, 14, 7);
-        save("Victor", "Lungu", PlayStyle.ATTACK, "Orhei", null, 1350, 12, 8);
-        save("Elena", "Moraru", PlayStyle.DEFENCE, "Cahul", "+373 60 777 888", 1290, 11, 9);
-        save("Andrei", "Țurcanu", PlayStyle.ATTACK, "Chișinău", "+373 69 000 111", 1255, 9, 10);
-        save("Sergiu", "Bîrcă", PlayStyle.DEFENCE, "Ungheni", null, 1210, 8, 11);
-        save("Natalia", "Cojocaru", PlayStyle.ATTACK, "Soroca", "+373 78 444 222", 1180, 7, 12);
-        save("Dumitru", "Ceban", PlayStyle.ATTACK, "Comrat", null, 1120, 5, 13);
-        save("Cristina", "Sârbu", PlayStyle.DEFENCE, "Chișinău", "+373 67 321 654", 1000, 0, 0);
+        Player first = save("Ion", "Popescu", PlayStyle.ATTACK, PlayHand.RIGHT, "Chișinău", "+373 69 123 456",
+                1420, 18, 4, "Butterfly Viscaria", "Tenergy 05", "Dignics 09C");
+        save("Mihai", "Rusu", PlayStyle.DEFENCE, PlayHand.RIGHT, "Bălți", "+373 79 222 333",
+                1385, 15, 6, "Butterfly Defence Alpha", "Tenergy 64", "Feint Long III");
+        save("Ana", "Ciobanu", PlayStyle.ATTACK, PlayHand.LEFT, "Chișinău", "+373 68 555 010",
+                1350, 14, 7, "Stiga Cybershape Carbon", "DNA Dragon Grip", "DNA Platinum XH");
+        save("Victor", "Lungu", PlayStyle.ATTACK, PlayHand.RIGHT, "Orhei", null,
+                1350, 12, 8, "DHS Hurricane Long 5", "Hurricane 3 Neo", "Tenergy 05");
+        save("Elena", "Moraru", PlayStyle.DEFENCE, PlayHand.RIGHT, "Cahul", "+373 60 777 888",
+                1290, 11, 9, "Tibhar Defense Plus", "Evolution MX-P", "Grass D.TecS");
+        save("Andrei", "Țurcanu", PlayStyle.ATTACK, PlayHand.LEFT, "Chișinău", "+373 69 000 111",
+                1255, 9, 10, "Yasaka Ma Lin Extra Offensive", "Rakza 7", "Rakza 7 Soft");
+        save("Sergiu", "Bîrcă", PlayStyle.DEFENCE, PlayHand.RIGHT, "Ungheni", null,
+                1210, 8, 11, null, null, null);
+        save("Natalia", "Cojocaru", PlayStyle.ATTACK, PlayHand.RIGHT, "Soroca", "+373 78 444 222",
+                1180, 7, 12, "Butterfly Timo Boll ALC", "Tenergy 80", "Tenergy 80");
+        save("Dumitru", "Ceban", PlayStyle.ATTACK, null, "Comrat", null,
+                1120, 5, 13, null, null, null);
+        save("Cristina", "Sârbu", PlayStyle.DEFENCE, PlayHand.LEFT, "Chișinău", "+373 67 321 654",
+                1000, 0, 0, "Donic Defplay Senso", "Bluefire M2", null);
 
         AppUser demoUser = new AppUser("jucator", passwordEncoder.encode("jucator123"), Role.USER, first);
         userRepository.save(demoUser);
         log.info("Date demonstrative încărcate: 10 jucători și utilizatorul 'jucator' (parola 'jucator123')");
     }
 
-    private Player save(String firstName, String lastName, PlayStyle style, String city, String phone,
-                        int rating, int wins, int losses) {
+    private Player save(String firstName, String lastName, PlayStyle style, PlayHand hand, String city, String phone,
+                        int rating, int wins, int losses, String blade, String forehand, String backhand) {
         Player player = new Player(firstName, lastName);
         player.setPlayStyle(style);
+        player.setPlayHand(hand);
+        player.setBlade(blade);
+        player.setForehandRubber(forehand);
+        player.setBackhandRubber(backhand);
         player.setCity(city);
         player.setPhone(phone);
         player.setRating(rating);

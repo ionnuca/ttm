@@ -4,6 +4,7 @@ import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.formlayout.FormLayout;
+import com.vaadin.flow.component.html.H4;
 import com.vaadin.flow.component.radiobutton.RadioButtonGroup;
 import com.vaadin.flow.component.textfield.IntegerField;
 import com.vaadin.flow.component.textfield.TextField;
@@ -55,13 +56,21 @@ public class PlayerFormDialog extends Dialog {
         binder.forField(rating).asRequired("Introduceți ratingul").bind("rating");
         binder.forField(wins).asRequired("Introduceți numărul de victorii").bind("wins");
         binder.forField(losses).asRequired("Introduceți numărul de înfrângeri").bind("losses");
+        PlayerDetailsFields details = new PlayerDetailsFields(binder);
         binder.readBean(player);
 
-        FormLayout form = new FormLayout(lastName, firstName, playStyle, city, phone, rating, wins, losses);
+        FormLayout form = new FormLayout(lastName, firstName, playStyle);
+        details.addPlayHandTo(form);
+        form.add(city, phone);
+        details.addEquipmentTo(form);
+        H4 statsTitle = new H4("Rating și statistici");
+        statsTitle.getStyle().set("margin", "var(--lumo-space-m) 0 0");
+        form.add(statsTitle, rating, wins, losses);
+        form.setColspan(statsTitle, 2);
+        form.setColspan(rating, 2);
         form.setResponsiveSteps(
                 new FormLayout.ResponsiveStep("0", 1),
                 new FormLayout.ResponsiveStep("28rem", 2));
-        form.setColspan(playStyle, 2);
         add(form);
 
         Button save = new Button("Salvează", e -> {

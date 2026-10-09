@@ -7,6 +7,7 @@ import com.vaadin.flow.component.confirmdialog.ConfirmDialog;
 import com.vaadin.flow.component.grid.ColumnTextAlign;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.GridVariant;
+import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.VaadinIcon;
@@ -14,6 +15,7 @@ import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
+import com.vaadin.flow.data.renderer.ComponentRenderer;
 import com.vaadin.flow.data.value.ValueChangeMode;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
@@ -47,7 +49,7 @@ public class PlayersView extends VerticalLayout {
     private final Grid<RankedPlayer> grid = new Grid<>();
     private final TextField search = new TextField();
     private final Span counter = new Span();
-    private final Span tapHint = new Span("Atingeți un jucător pentru a-l edita sau șterge.");
+    private final Span tapHint = new Span("Apăsați pe un jucător pentru a vedea echipamentul.");
     private List<RankedPlayer> players = List.of();
     private boolean narrowScreen;
 
@@ -60,7 +62,6 @@ public class PlayersView extends VerticalLayout {
         tapHint.getStyle()
                 .set("font-size", "var(--lumo-font-size-s)")
                 .set("color", "var(--lumo-secondary-text-color)");
-        tapHint.setVisible(false);
         add(createHeader(), createToolbar(), tapHint, grid);
         configureGrid();
         refresh();
@@ -132,6 +133,12 @@ public class PlayersView extends VerticalLayout {
                 .setSortable(true)
                 .setComparator(Comparator.comparing((RankedPlayer rp) -> rp.player().getPlayStyle()));
 
+        Grid.Column<RankedPlayer> hand = grid.addColumn(rp -> handLabel(rp.player()))
+                .setHeader("Mâna")
+                .setAutoWidth(true).setFlexGrow(0)
+                .setSortable(true)
+                .setComparator(Comparator.comparing((RankedPlayer rp) -> handLabel(rp.player())));
+
         Grid.Column<RankedPlayer> city = grid.addColumn(rp -> valueOrDash(rp.player().getCity()))
                 .setHeader("Oraș")
                 .setFlexGrow(2)
@@ -166,6 +173,9 @@ public class PlayersView extends VerticalLayout {
                     .setFrozenToEnd(true);
         }
 
+        // Click pe rând: se deschide dedesubt echipamentul jucătorului
+        grid.setItemDetailsRenderer(new ComponentRenderer<>(rp -> equipmentDetails(rp.player())));
+
         // Pe telefon, administratorul editează atingând rândul (butoanele nu încap)
         grid.addItemClickListener(e -> {
             if (admin && narrowScreen) {
@@ -182,9 +192,14 @@ public class PlayersView extends VerticalLayout {
             if (actionsColumn != null) {
                 actionsColumn.setVisible(!narrow);
             }
-            tapHint.setVisible(admin && narrow);
+            boolean tapToEdit = admin && narrow;
+            grid.setDetailsVisibleOnClick(!tapToEdit);
+            tapHint.setText(tapToEdit
+                    ? "Atingeți un jucător pentru a-l edita sau șterge."
+                    : "Apăsați pe un jucător pentru a vedea echipamentul.");
             name.setVisible(!narrow);
             style.setVisible(!narrow);
+            hand.setVisible(!narrow);
             city.setVisible(!narrow);
             if (phoneColumn != null) {
                 phoneColumn.setVisible(!narrow);
@@ -201,6 +216,9 @@ public class PlayersView extends VerticalLayout {
         name.getStyle().set("font-weight", "500");
 
         StringBuilder details = new StringBuilder(player.getPlayStyle().getLabel());
+        if (player.getPlayHand() != null) {
+            details.append(" · ").append(player.getPlayHand().getLabel());
+        }
         if (player.getCity() != null) {
             details.append(" · ").append(player.getCity());
         }
@@ -213,6 +231,36 @@ public class PlayersView extends VerticalLayout {
         cell.setSpacing(false);
         cell.getStyle().set("line-height", "1.3").set("white-space", "normal");
         return cell;
+    }
+
+    private static String handLabel(Player player) {
+        return player.getPlayHand() != null ? player.getPlayHand().getLabel() : "—";
+    }
+
+    private static Component equipmentDetails(Player player) {
+        Div details = new Div();
+        details.getStyle()
+                .set("display", "flex")
+                .set("flex-wrap", "wrap")
+                .set("gap", "var(--lumo-space-xs) var(--lumo-space-l)")
+                .set("padding", "var(--lumo-space-s) var(--lumo-space-m) var(--lumo-space-s) 4.5rem")
+                .set("font-size", "var(--lumo-font-size-s)");
+        if (!player.hasEquipment()) {
+            Span empty = secondaryText("Echipamentul nu este completat.");
+            details.add(empty);
+            return details;
+        }
+        details.add(equipmentItem("Lemn", player.getBlade()),
+                equipmentItem("Forehand", player.getForehandRubber()),
+                equipmentItem("Backhand", player.getBackhandRubber()));
+        return details;
+    }
+
+    private static Component equipmentItem(String label, String value) {
+        Span labelSpan = secondaryText(label + ": ");
+        Span valueSpan = new Span(valueOrDash(value));
+        valueSpan.getStyle().set("font-weight", "500");
+        return new Span(labelSpan, valueSpan);
     }
 
     private static Span secondaryText(String text) {

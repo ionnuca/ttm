@@ -80,7 +80,7 @@ public class PlayerService {
 
     /**
      * Actualizează profilul de jucător al utilizatorului autentificat.
-     * Se preiau doar datele personale; ratingul și statisticile nu pot fi modificate de jucător.
+     * Se preiau doar datele personale și echipamentul; ratingul și statisticile nu pot fi modificate de jucător.
      */
     @PreAuthorize("isAuthenticated()")
     @Transactional
@@ -98,6 +98,10 @@ public class PlayerService {
         own.setPlayStyle(edited.getPlayStyle());
         own.setCity(edited.getCity());
         own.setPhone(edited.getPhone());
+        own.setPlayHand(edited.getPlayHand());
+        own.setBlade(edited.getBlade());
+        own.setForehandRubber(edited.getForehandRubber());
+        own.setBackhandRubber(edited.getBackhandRubber());
         normalize(own);
         return playerRepository.save(own);
     }
@@ -107,6 +111,9 @@ public class PlayerService {
         player.setLastName(Texts.trimToNull(player.getLastName()));
         player.setCity(Texts.trimToNull(player.getCity()));
         player.setPhone(Texts.trimToNull(player.getPhone()));
+        player.setBlade(Texts.trimToNull(player.getBlade()));
+        player.setForehandRubber(Texts.trimToNull(player.getForehandRubber()));
+        player.setBackhandRubber(Texts.trimToNull(player.getBackhandRubber()));
         if (player.getFirstName() == null || player.getLastName() == null) {
             throw new BusinessException("Numele și prenumele sunt obligatorii");
         }

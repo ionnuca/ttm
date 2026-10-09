@@ -61,6 +61,22 @@ public class Player {
     @Column(name = "phone", length = 30)
     private String phone;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "play_hand", length = 10)
+    private PlayHand playHand;
+
+    @Size(max = 100, message = "Maximum 100 de caractere")
+    @Column(name = "blade", length = 100)
+    private String blade;
+
+    @Size(max = 100, message = "Maximum 100 de caractere")
+    @Column(name = "forehand_rubber", length = 100)
+    private String forehandRubber;
+
+    @Size(max = 100, message = "Maximum 100 de caractere")
+    @Column(name = "backhand_rubber", length = 100)
+    private String backhandRubber;
+
     @Min(value = 0, message = "Ratingul nu poate fi negativ")
     @Max(value = 5000, message = "Ratingul maxim este 5000")
     @Column(name = "rating", nullable = false)
@@ -141,6 +157,43 @@ public class Player {
 
     public void setPhone(String phone) {
         this.phone = phone;
+    }
+
+    public PlayHand getPlayHand() {
+        return playHand;
+    }
+
+    public void setPlayHand(PlayHand playHand) {
+        this.playHand = playHand;
+    }
+
+    public String getBlade() {
+        return blade;
+    }
+
+    public void setBlade(String blade) {
+        this.blade = blade;
+    }
+
+    public String getForehandRubber() {
+        return forehandRubber;
+    }
+
+    public void setForehandRubber(String forehandRubber) {
+        this.forehandRubber = forehandRubber;
+    }
+
+    public String getBackhandRubber() {
+        return backhandRubber;
+    }
+
+    public void setBackhandRubber(String backhandRubber) {
+        this.backhandRubber = backhandRubber;
+    }
+
+    /** Are completat cel puțin un element de echipament. */
+    public boolean hasEquipment() {
+        return blade != null || forehandRubber != null || backhandRubber != null;
     }
 
     public int getRating() {

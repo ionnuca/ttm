@@ -105,13 +105,16 @@ public class ProfileView extends VerticalLayout {
         binder.forField(playStyle).asRequired("Alegeți stilul de joc").bind("playStyle");
         binder.forField(city).bind("city");
         binder.forField(phone).bind("phone");
+        PlayerDetailsFields details = new PlayerDetailsFields(binder);
         binder.readBean(player);
 
-        FormLayout form = new FormLayout(lastName, firstName, playStyle, city, phone);
+        FormLayout form = new FormLayout(lastName, firstName, playStyle);
+        details.addPlayHandTo(form);
+        form.add(city, phone);
+        details.addEquipmentTo(form);
         form.setResponsiveSteps(
                 new FormLayout.ResponsiveStep("0", 1),
                 new FormLayout.ResponsiveStep("28rem", 2));
-        form.setColspan(playStyle, 2);
 
         Button save = new Button("Salvează profilul", e -> {
             if (binder.writeBeanIfValid(player)) {

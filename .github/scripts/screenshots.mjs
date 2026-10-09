@@ -61,6 +61,12 @@ await check('guest: lista jucătorilor', async () => {
   await expectNoText(page, 'Adaugă jucător');
   await shot(page, '01-guest-jucatori');
 });
+await check('guest: echipamentul unui jucător', async () => {
+  await page.getByText('Popescu Ion').first().click();
+  await expectText(page, 'Butterfly Viscaria');
+  await expectText(page, 'Dignics 09C');
+  await shot(page, '01b-guest-echipament');
+});
 await check('guest: pagina admin redirecționează la login', async () => {
   await page.goto(`${BASE}/utilizatori`);
   await page.waitForURL(/login/, { timeout: 10000 });
@@ -127,6 +133,8 @@ await check('utilizator: lista fără telefon', async () => {
 await check('utilizator: profil', async () => {
   await page.goto(`${BASE}/profil`);
   await expectText(page, 'Date personale');
+  await expectText(page, 'Echipament');
+  await expectText(page, 'Mâna de joc');
   await shot(page, '11-utilizator-profil');
 });
 await ctx.close();
