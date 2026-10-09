@@ -8,6 +8,7 @@ import md.ttm.model.user.AppUser;
 import md.ttm.repository.AppUserRepository;
 import md.ttm.repository.PlayerRepository;
 import md.ttm.security.SecurityUtils;
+import md.ttm.service.tournament.TournamentService;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,8 +27,11 @@ public class PlayerService {
 
     private final PlayerRepository playerRepository;
     private final AppUserRepository userRepository;
+    private final TournamentService tournamentService;
 
-    public PlayerService(PlayerRepository playerRepository, AppUserRepository userRepository) {
+    public PlayerService(PlayerRepository playerRepository, AppUserRepository userRepository,
+                         TournamentService tournamentService) {
+        this.tournamentService = tournamentService;
         this.playerRepository = playerRepository;
         this.userRepository = userRepository;
     }
@@ -75,6 +79,9 @@ public class PlayerService {
             if (ownAccount) {
                 throw new BusinessException("Nu vă puteți șterge propriul profil");
             }
+        }
+        tournamentService.releasePlayer(playerId);
+        if (account.isPresent()) {
             userRepository.delete(account.get());
             userRepository.flush();
         }

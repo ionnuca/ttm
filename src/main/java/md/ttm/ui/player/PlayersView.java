@@ -6,6 +6,7 @@ import md.ttm.model.player.Player;
 import md.ttm.security.SecurityUtils;
 import md.ttm.service.player.PlayerService;
 import md.ttm.service.player.RankedPlayer;
+import md.ttm.ui.components.Badges;
 import md.ttm.ui.components.Notifications;
 import md.ttm.ui.components.Responsive;
 import md.ttm.ui.layout.MainLayout;
@@ -344,23 +345,10 @@ public class PlayersView extends VerticalLayout {
     }
 
     private static Component playStyleBadge(PlayStyle style) {
-        Span badge = new Span(style.getLabel());
-        boolean attack = style == PlayStyle.ATTACK;
-        badge.getStyle()
-                .set("display", "inline-block")
-                .set("padding", "0 var(--lumo-space-s)")
-                .set("border-radius", "var(--lumo-border-radius-m)")
-                .set("font-size", "var(--lumo-font-size-s)")
-                .set("font-weight", "500")
-                .set("line-height", "1.6")
-                .set("color", attack ? "var(--lumo-error-text-color)" : "var(--lumo-primary-text-color)")
-                .set("background", attack ? "var(--lumo-error-color-10pct)" : "var(--lumo-primary-color-10pct)");
-        return badge;
+        return Badges.badge(style.getLabel(), style == PlayStyle.ATTACK ? Badges.Tone.ERROR : Badges.Tone.PRIMARY);
     }
 
     private static String valueOrDash(String value) {
         return value == null || value.isBlank() ? "—" : value;
-    }
-        return ex.getMessage();
     }
 }

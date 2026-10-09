@@ -8,6 +8,7 @@ import md.ttm.model.user.Role;
 import md.ttm.repository.AppUserRepository;
 import md.ttm.repository.PlayerRepository;
 import md.ttm.security.SecurityUtils;
+import md.ttm.service.tournament.TournamentService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -31,11 +32,14 @@ public class UserService {
     private final PlayerRepository playerRepository;
     private final PasswordEncoder passwordEncoder;
     private final boolean registrationEnabled;
+    private final TournamentService tournamentService;
 
     public UserService(AppUserRepository userRepository,
                        PlayerRepository playerRepository,
                        PasswordEncoder passwordEncoder,
+                       TournamentService tournamentService,
                        @Value("${app.registration.enabled:true}") boolean registrationEnabled) {
+        this.tournamentService = tournamentService;
         this.userRepository = userRepository;
         this.playerRepository = playerRepository;
         this.passwordEncoder = passwordEncoder;
@@ -149,6 +153,9 @@ public class UserService {
             requireAnotherActiveAdmin();
         }
         Player player = user.getPlayer();
+        if (player != null) {
+            tournamentService.releasePlayer(player.getId());
+        }
         userRepository.delete(user);
         userRepository.flush();
         if (player != null) {

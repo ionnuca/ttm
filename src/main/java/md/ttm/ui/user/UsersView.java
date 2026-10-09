@@ -3,6 +3,7 @@ package md.ttm.ui.user;
 import md.ttm.common.BusinessException;
 import md.ttm.model.user.AppUser;
 import md.ttm.service.user.UserService;
+import md.ttm.ui.components.Badges;
 import md.ttm.ui.components.Notifications;
 import md.ttm.ui.components.Responsive;
 import md.ttm.ui.layout.MainLayout;
@@ -237,16 +238,8 @@ public class UsersView extends VerticalLayout {
     }
 
     private static Component statusBadge(AppUser user) {
-        Span badge = new Span(user.isEnabled() ? "Activ" : "Blocat");
-        badge.getStyle()
-                .set("display", "inline-block")
-                .set("padding", "0 var(--lumo-space-s)")
-                .set("border-radius", "var(--lumo-border-radius-m)")
-                .set("font-size", "var(--lumo-font-size-s)")
-                .set("font-weight", "500")
-                .set("line-height", "1.6")
-                .set("color", user.isEnabled() ? "var(--lumo-success-text-color)" : "var(--lumo-error-text-color)")
-                .set("background", user.isEnabled() ? "var(--lumo-success-color-10pct)" : "var(--lumo-error-color-10pct)");
-        return badge;
+        return user.isEnabled()
+                ? Badges.badge("Activ", Badges.Tone.SUCCESS)
+                : Badges.badge("Blocat", Badges.Tone.ERROR);
     }
 }
