@@ -41,10 +41,6 @@ final class TournamentLabels {
         return format.format(amount) + " lei";
     }
 
-    static String bestOf(int bestOf) {
-        return "Best of " + bestOf + " (" + (bestOf / 2 + 1) + " seturi câștigătoare)";
-    }
-
     /** De exemplu „Round robin · best of 5”. */
     static String configuration(Tournament tournament) {
         return tournament.getFormat().getLabel() + " · best of " + tournament.getBestOf();

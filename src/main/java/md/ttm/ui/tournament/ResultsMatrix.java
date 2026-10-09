@@ -16,6 +16,7 @@ import java.util.Map;
 class ResultsMatrix extends Div {
 
     private static final String BORDER = "1px solid var(--lumo-contrast-20pct)";
+    private static final String STICKY = "position:sticky;left:0;z-index:1;";
 
     /**
      * @param participants participanții în ordinea din grupă
@@ -37,7 +38,7 @@ class ResultsMatrix extends Div {
                 .set("font-size", "var(--lumo-font-size-s)");
 
         Element head = new Element("tr");
-        head.appendChild(headerCell("#"), headerCell("Jucător").setAttribute("style", headerStyle() + "text-align:left;"));
+        head.appendChild(headerCell("Jucător").setAttribute("style", headerStyle() + STICKY + "text-align:left;"));
         for (TournamentParticipant p : participants) {
             head.appendChild(headerCell(String.valueOf(p.getSeed())));
         }
@@ -54,8 +55,7 @@ class ResultsMatrix extends Div {
             if (own) {
                 tr.getStyle().set("background", "var(--lumo-primary-color-10pct)");
             }
-            tr.appendChild(cell(String.valueOf(participant.getSeed()), "color:var(--lumo-secondary-text-color);"));
-            tr.appendChild(nameCell(participant));
+            tr.appendChild(nameCell(participant, own));
 
             Map<Long, StandingsCalculator.Cell> cells = row.cells();
             for (TournamentParticipant opponent : participants) {
@@ -75,10 +75,19 @@ class ResultsMatrix extends Div {
         getElement().appendChild(table);
     }
 
-    private static Element nameCell(TournamentParticipant participant) {
-        Element td = cell(null, "text-align:left;white-space:nowrap;");
+    /** Numele rămâne vizibil la derularea orizontală a tabelului (pe telefon). */
+    private static Element nameCell(TournamentParticipant participant, boolean own) {
+        String background = own
+                ? "linear-gradient(var(--lumo-primary-color-10pct), var(--lumo-primary-color-10pct)), var(--lumo-base-color)"
+                : "var(--lumo-base-color)";
+        Element td = cell(null, STICKY + "background:" + background + ";text-align:left;white-space:nowrap;");
         Element name = new Element("div");
-        name.setText(participant.getPlayer().getDisplayName());
+        Element seed = new Element("span");
+        seed.setText(participant.getSeed() + ". ");
+        seed.getStyle().set("color", "var(--lumo-secondary-text-color)");
+        Element fullName = new Element("span");
+        fullName.setText(participant.getPlayer().getDisplayName());
+        name.appendChild(seed, fullName);
         name.getStyle().set("font-weight", "500");
         Element rating = new Element("div");
         rating.setText("rating " + participant.getSeedRating());
@@ -127,7 +136,8 @@ class ResultsMatrix extends Div {
 
     private static String headerStyle() {
         return "padding:var(--lumo-space-xs) var(--lumo-space-s);border:" + BORDER + ";"
-                + "background:var(--lumo-contrast-5pct);font-weight:600;text-align:center;white-space:nowrap;";
+                + "background:linear-gradient(var(--lumo-contrast-5pct), var(--lumo-contrast-5pct)), var(--lumo-base-color);"
+                + "font-weight:600;text-align:center;white-space:nowrap;";
     }
 
     private static Element cell(String text, String extraStyle) {

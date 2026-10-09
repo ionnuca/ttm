@@ -58,7 +58,9 @@ public class TournamentFormDialog extends Dialog {
         format.setReadOnly(TournamentFormat.values().length == 1);
         bestOf.setLabel("Numărul de seturi");
         bestOf.setItems(3, 5, 7);
-        bestOf.setItemLabelGenerator(TournamentLabels::bestOf);
+        bestOf.setItemLabelGenerator(n -> "Best of " + n);
+        bestOf.addValueChangeListener(e -> bestOf.setHelperText(
+                e.getValue() == null ? null : "Câștigă primul la " + (e.getValue() / 2 + 1) + " seturi"));
 
         winners.setItems(1, 2, 3);
         winners.setItemLabelGenerator(n -> PrizeDistribution.forWinners(n).getLabel());
