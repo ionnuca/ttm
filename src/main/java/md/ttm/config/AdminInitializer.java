@@ -1,9 +1,9 @@
 package md.ttm.config;
 
-import md.ttm.user.AppUser;
-import md.ttm.user.AppUserRepository;
-import md.ttm.user.Role;
-import md.ttm.user.UserService;
+import md.ttm.model.user.AppUser;
+import md.ttm.model.user.Role;
+import md.ttm.repository.AppUserRepository;
+import md.ttm.service.user.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;

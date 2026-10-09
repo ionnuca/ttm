@@ -1,7 +1,7 @@
 package md.ttm.security;
 
+import md.ttm.ui.account.LoginView;
 import com.vaadin.flow.spring.security.VaadinWebSecurity;
-import md.ttm.ui.LoginView;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;

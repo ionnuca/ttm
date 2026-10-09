@@ -1,12 +1,12 @@
 package md.ttm.config;
 
-import md.ttm.player.PlayHand;
-import md.ttm.player.PlayStyle;
-import md.ttm.player.Player;
-import md.ttm.player.PlayerRepository;
-import md.ttm.user.AppUser;
-import md.ttm.user.AppUserRepository;
-import md.ttm.user.Role;
+import md.ttm.model.player.PlayHand;
+import md.ttm.model.player.PlayStyle;
+import md.ttm.model.player.Player;
+import md.ttm.model.user.AppUser;
+import md.ttm.model.user.Role;
+import md.ttm.repository.AppUserRepository;
+import md.ttm.repository.PlayerRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
