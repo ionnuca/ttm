@@ -132,12 +132,11 @@ await check('admin: dialog utilizator nou', async () => {
   await shot(page, '09-admin-utilizator-nou');
   await page.keyboard.press('Escape');
 });
-await check('admin: turneu nou (comercial)', async () => {
+await check('admin: turneu nou (doar nume și dată)', async () => {
   await page.goto(`${BASE}/turnee`);
   await page.getByRole('button', { name: 'Turneu nou' }).click();
-  await expectText(page, 'Tipul turneului');
-  await page.getByText('Turneu comercial (cu taxă de participare și premii)').click();
-  await expectText(page, '2 câștigători (60% / 40%)');
+  await expectText(page, 'Numele turneului');
+  await expectNoText(page, 'Tipul turneului');
   await shot(page, '22-admin-turneu-nou');
   await page.keyboard.press('Escape');
 });
@@ -147,6 +146,18 @@ await check('admin: turneu cu înscriere deschisă', async () => {
   await expectText(page, 'Participanți înscriși (4)');
   await expectText(page, 'Începe turneul');
   await shot(page, '23-admin-turneu-inscriere');
+});
+await check('admin: configurarea la începerea turneului', async () => {
+  await page.getByRole('button', { name: 'Începe turneul' }).click();
+  await expectText(page, 'Tipul turneului');
+  await expectText(page, 'se generează 6 meciuri în 3 tururi');
+  await page.getByText('Turneu comercial (cu taxă de participare și premii)').click();
+  await page.getByText('2 câștigători (60% / 40%)').click();
+  await page.getByLabel('Taxa de participare').fill('50');
+  await expectText(page, 'Suma acumulată: 200 lei');
+  await expectText(page, 'locul 2: 80 lei');
+  await shot(page, '23b-admin-incepe-turneul');
+  await page.getByRole('button', { name: 'Anulează' }).click();
 });
 await ctx.close();
 

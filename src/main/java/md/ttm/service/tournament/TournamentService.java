@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -37,7 +38,8 @@ import java.util.Set;
  *     <li>Oricine poate vedea turneele.</li>
  *     <li>Utilizatorul logat se poate înscrie / retrage cât timp înscrierea e deschisă.</li>
  *     <li>Participanții unui turneu început pot introduce rezultatele meciurilor lui.</li>
- *     <li>Administratorul face orice: creează, editează, pornește, corectează rezultate.</li>
+ *     <li>Administratorul face orice: creează turneul (nume și dată), îl pornește alegând
+ *     configurarea (tip, seturi, turneu comercial), corectează rezultate.</li>
  * </ul>
  */
 @Service
@@ -111,7 +113,7 @@ public class TournamentService {
     public Tournament update(Long tournamentId, TournamentForm form) {
         Tournament tournament = requireTournament(tournamentId);
         if (!tournament.isRegistrationOpen()) {
-            throw new BusinessException("Turneul a început; configurarea lui nu mai poate fi modificată");
+            throw new BusinessException("Turneul a început; datele lui nu mai pot fi modificate");
         }
         apply(form, tournament);
         return tournamentRepository.save(tournament);
@@ -183,17 +185,18 @@ public class TournamentService {
     // ------------------------------------------------------------------
 
     /**
-     * Închide înscrierea, formează grupa (jucătorii ordonați după rating, descrescător)
-     * și generează toate meciurile Round Robin.
+     * Stabilește configurarea turneului (tip, seturi, turneu comercial), închide înscrierea,
+     * formează grupa (jucătorii ordonați după rating, descrescător) și generează toate meciurile.
      */
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
-    public void start(Long tournamentId) {
+    public void start(Long tournamentId, TournamentSettings settings) {
         Tournament tournament = requireOpenTournament(tournamentId);
         List<TournamentParticipant> participants = new ArrayList<>(participantRepository.findByTournamentIdWithPlayer(tournamentId));
         if (participants.size() < 2) {
             throw new BusinessException("Pentru a începe turneul sunt necesari cel puțin 2 participanți");
         }
+        applySettings(settings, tournament);
         participants.sort(BY_RATING);
         for (int i = 0; i < participants.size(); i++) {
             TournamentParticipant participant = participants.get(i);
@@ -400,7 +403,7 @@ public class TournamentService {
         }
     }
 
-    private void apply(TournamentForm form, Tournament tournament) {
+    private static void apply(TournamentForm form, Tournament tournament) {
         String name = Texts.trimToNull(form.getName());
         if (name == null) {
             throw new BusinessException("Introduceți numele turneului");
@@ -411,28 +414,35 @@ public class TournamentService {
         if (form.getDate() == null) {
             throw new BusinessException("Alegeți data turneului");
         }
-        if (!ALLOWED_BEST_OF.contains(form.getBestOf())) {
-            throw new BusinessException("Numărul de seturi trebuie să fie 3, 5 sau 7");
-        }
         tournament.setName(name);
         tournament.setTournamentDate(form.getDate());
-        tournament.setBestOf(form.getBestOf());
-        tournament.setCommercial(form.isCommercial());
-        if (form.isCommercial()) {
-            Integer winners = form.getWinnersCount();
+    }
+
+    /** Validează întâi toată configurarea, apoi o aplică (turneul nu rămâne pe jumătate modificat). */
+    private static void applySettings(TournamentSettings settings, Tournament tournament) {
+        if (settings == null || settings.getFormat() == null) {
+            throw new BusinessException("Alegeți tipul turneului");
+        }
+        if (settings.getBestOf() == null || !ALLOWED_BEST_OF.contains(settings.getBestOf())) {
+            throw new BusinessException("Numărul de seturi trebuie să fie 3, 5 sau 7");
+        }
+        Integer winners = null;
+        BigDecimal fee = null;
+        if (settings.isCommercial()) {
+            winners = settings.getWinnersCount();
             if (winners == null || winners < 1 || winners > 3) {
                 throw new BusinessException("Alegeți numărul de câștigători (1, 2 sau 3)");
             }
-            BigDecimal fee = form.getEntryFee();
-            if (fee == null || fee.signum() <= 0) {
+            if (settings.getEntryFee() == null || settings.getEntryFee().signum() <= 0) {
                 throw new BusinessException("Introduceți taxa de participare");
             }
-            tournament.setWinnersCount(winners);
-            tournament.setEntryFee(fee.setScale(2, java.math.RoundingMode.HALF_UP));
-        } else {
-            tournament.setWinnersCount(null);
-            tournament.setEntryFee(null);
+            fee = settings.getEntryFee().setScale(2, RoundingMode.HALF_UP);
         }
+        tournament.setFormat(settings.getFormat());
+        tournament.setBestOf(settings.getBestOf());
+        tournament.setCommercial(settings.isCommercial());
+        tournament.setWinnersCount(winners);
+        tournament.setEntryFee(fee);
     }
 
     private Tournament requireTournament(Long tournamentId) {

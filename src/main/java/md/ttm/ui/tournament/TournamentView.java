@@ -127,9 +127,11 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
             titleRow.add(delete);
         }
 
+        String configuration = t.isStarted()
+                ? t.getFormat().getLabel() + " · best of " + t.getBestOf() + " · "
+                : "";
         Span meta = new Span(TournamentLabels.longDate(t.getTournamentDate()) + " · "
-                + t.getFormat().getLabel() + " · best of " + t.getBestOf() + " · "
-                + details.participants().size() + " participanți");
+                + configuration + details.participants().size() + " participanți");
         meta.getStyle().set("color", "var(--lumo-secondary-text-color)");
         HorizontalLayout metaRow = new HorizontalLayout(meta, TournamentLabels.statusBadge(t.getStatus()));
         metaRow.setAlignItems(FlexComponent.Alignment.CENTER);
@@ -216,7 +218,7 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
 
             Div spacer = new Div();
             spacer.getStyle().set("flex-grow", "1");
-            Button start = new Button("Începe turneul", VaadinIcon.PLAY.create(), e -> confirmStart(details));
+            Button start = new Button("Începe turneul", VaadinIcon.PLAY.create(), e -> openStartDialog(details));
             start.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_SUCCESS);
             start.setEnabled(details.participants().size() >= 2);
             actions.add(spacer, start);
@@ -257,7 +259,8 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
             }).setAutoWidth(true).setFlexGrow(0);
         }
         grid.setItems(participants);
-        Span order = new Span("Ordinea e după rating; la începerea turneului devine ordinea din grupă.");
+        Span order = new Span("Ordinea e după rating; la începerea turneului devine ordinea din grupă. "
+                + "Tipul turneului, numărul de seturi și opțiunea de turneu comercial se aleg la „Începe turneul”.");
         order.getStyle()
                 .set("font-size", "var(--lumo-font-size-s)")
                 .set("color", "var(--lumo-secondary-text-color)");
@@ -265,19 +268,12 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         return section;
     }
 
-    private void confirmStart(TournamentDetails details) {
-        int n = details.participants().size();
-        int matches = n * (n - 1) / 2;
-        int rounds = n % 2 == 0 ? n - 1 : n;
-        ConfirmDialog dialog = new ConfirmDialog();
-        dialog.setHeader("Începeți turneul?");
-        dialog.setText("Înscrierea se închide. Se formează grupa cu " + n + " jucători, ordonată după rating, "
-                + "și se generează " + matches + " meciuri în " + rounds + " tururi.");
-        dialog.setCancelable(true);
-        dialog.setCancelText("Anulează");
-        dialog.setConfirmText("Începe turneul");
-        dialog.addConfirmListener(e -> run(() -> tournamentService.start(tournamentId), "Turneul a început"));
-        dialog.open();
+    private void openStartDialog(TournamentDetails details) {
+        new StartTournamentDialog(details.tournament().getName(), details.participants().size(), settings -> {
+            tournamentService.start(tournamentId, settings);
+            Notifications.success("Turneul a început");
+            refresh();
+        }).open();
     }
 
     // ------------------------------------------------------------------

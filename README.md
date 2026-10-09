@@ -20,7 +20,7 @@ Aplicație web (instalabilă și pe telefon, ca PWA) pentru gestionarea jucător
 | „Turnee”: lista turneelor, tabelul și meciurile fiecărui turneu | ✅ | ✅ | ✅ |
 | Înscriere / retragere la un turneu (cât timp înscrierea e deschisă) | – | ✅ | ✅ |
 | Introducerea rezultatelor (participanții turneului) | – | ✅ | ✅ |
-| Creare, editare, ștergere turneu; adăugare/scoatere participanți; „Începe turneul”; ștergerea unui rezultat | – | – | ✅ |
+| Creare (nume, dată), editare, ștergere turneu; adăugare/scoatere participanți; „Începe turneul” cu alegerea configurării; ștergerea unui rezultat | – | – | ✅ |
 
 Interfața se adaptează la telefon: în clasament, numele, stilul de joc și orașul apar într-o singură coloană, iar administratorul editează sau șterge un jucător atingând rândul respectiv. Aplicația se poate adăuga pe ecranul telefonului („Add to Home Screen”).
 
@@ -33,9 +33,9 @@ Reguli:
 
 ### Turnee (Round Robin)
 
-1. **Crearea** (administrator): nume, dată, tipul (Round robin), numărul de seturi (best of 3/5/7). Opțional, **turneu comercial**: taxa de participare și numărul de câștigători, cu împărțirea sumei acumulate (taxa × participanți): 1 câștigător – 100%; 2 – 60% / 40%; 3 – 50% / 30% / 20%.
+1. **Crearea** (administrator): doar numele și data. Înscrierea se deschide imediat.
 2. **Înscrierea**: utilizatorii logați se înscriu singuri; administratorul poate adăuga sau scoate orice jucător.
-3. **Începerea** (administrator): înscrierea se închide, se formează grupa cu jucătorii ordonați după rating (descrescător) și se generează toate meciurile, pe tururi (fiecare cu fiecare, metoda Berger).
+3. **Începerea** (administrator, butonul „Începe turneul”): se alege configurarea – tipul (Round robin), numărul de seturi (best of 3/5/7) și, opțional, **turneu comercial**: taxa de participare și numărul de câștigători, cu împărțirea sumei acumulate (taxa × participanți): 1 câștigător – 100%; 2 – 60% / 40%; 3 – 50% / 30% / 20%. Dialogul arată pe loc suma acumulată și premiile. La confirmare, înscrierea se închide, se formează grupa cu jucătorii ordonați după rating (descrescător) și se generează toate meciurile, pe tururi (fiecare cu fiecare, metoda Berger).
 4. **Rezultatele**: le introduc participanții turneului sau administratorul: scorul la seturi (ex. 3:1) sau **W – victorie tehnică**, când adversarul refuză jocul. După ultimul rezultat, turneul devine „Încheiat”; din acel moment doar administratorul mai poate corecta.
 5. **Tabelul** se actualizează după fiecare rezultat: matrice cu fiecare întâlnire scrisă ca fracție (sus punctele: 2 victorie, 1 înfrângere, 0 înfrângere tehnică; jos scorul la seturi), apoi coloanele *Seturi* (câștigate/pierdute), *Puncte* și *Loc*.
 

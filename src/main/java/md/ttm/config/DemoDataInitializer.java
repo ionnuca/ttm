@@ -11,6 +11,7 @@ import md.ttm.model.tournament.TournamentMatch;
 import md.ttm.service.tournament.MatchResultForm;
 import md.ttm.service.tournament.TournamentForm;
 import md.ttm.service.tournament.TournamentService;
+import md.ttm.service.tournament.TournamentSettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
@@ -101,16 +102,10 @@ public class DemoDataInitializer implements ApplicationRunner {
         try {
             List<Player> players = playerRepository.findAllByOrderByRatingDescLastNameAscFirstNameAsc();
 
-            TournamentForm autumn = new TournamentForm();
-            autumn.setName("Cupa de toamnă");
-            autumn.setDate(LocalDate.now().minusDays(1));
-            autumn.setBestOf(5);
-            autumn.setCommercial(true);
-            autumn.setWinnersCount(3);
-            autumn.setEntryFee(new BigDecimal("100"));
-            Long autumnId = tournamentService.create(autumn).getId();
+            Long autumnId = tournamentService.create(
+                    new TournamentForm("Cupa de toamnă", LocalDate.now().minusDays(1))).getId();
             players.subList(0, 6).forEach(p -> tournamentService.addParticipant(autumnId, p.getId()));
-            tournamentService.start(autumnId);
+            tournamentService.start(autumnId, TournamentSettings.commercial(5, 3, new BigDecimal("100")));
             int i = 0;
             for (TournamentMatch match : tournamentService.findDetails(autumnId).orElseThrow().matches()) {
                 if (match.getRoundNo() > 3) {
@@ -127,11 +122,8 @@ public class DemoDataInitializer implements ApplicationRunner {
                 i++;
             }
 
-            TournamentForm sunday = new TournamentForm();
-            sunday.setName("Turneul de duminică");
-            sunday.setDate(LocalDate.now().plusDays(3));
-            sunday.setBestOf(3);
-            Long sundayId = tournamentService.create(sunday).getId();
+            Long sundayId = tournamentService.create(
+                    new TournamentForm("Turneul de duminică", LocalDate.now().plusDays(3))).getId();
             players.subList(1, 5).forEach(p -> tournamentService.addParticipant(sundayId, p.getId()));
         } finally {
             SecurityContextHolder.getContext().setAuthentication(previous);
