@@ -134,10 +134,13 @@ Administratorul se creează doar dacă nu există încă niciun administrator ac
 ## Teste și build
 
 ```powershell
-docker compose up -d db                # testele folosesc baza ttm_test
-mvn test                               # teste de integrare (servicii, securitate, reguli)
-mvn -Pproduction package               # JAR de producție: target/ttm-0.1.0-SNAPSHOT.jar
+mvn clean package                      # compilare + JAR (nu are nevoie de baza de date)
+docker compose up -d db                # pornește PostgreSQL; testele folosesc baza ttm_test
+mvn clean verify                       # în plus, testele de integrare (*IT.java) pe baza de date
+mvn -Pproduction clean package         # JAR de producție: target/ttm-0.1.0-SNAPSHOT.jar
 ```
+
+Testele de integrare se află în fișierele `*IT.java` și rulează doar la `mvn verify`. Dacă la `verify` apare eroarea `Connection to localhost:5432 refused`, baza de date nu e pornită: rulați `docker compose up -d db`.
 
 La fiecare push, GitHub Actions (`.github/workflows/ci.yml`) rulează testele și build-ul de producție. Workflow-ul manual **Capturi interfață** pornește aplicația cu date demonstrative și salvează capturi de ecran ale tuturor paginilor, pe desktop și pe telefon.
 

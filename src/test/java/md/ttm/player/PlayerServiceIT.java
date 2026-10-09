@@ -19,7 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @IntegrationTest
-class PlayerServiceTest {
+class PlayerServiceIT {
 
     @Autowired
     PlayerService playerService;

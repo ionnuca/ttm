@@ -14,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @IntegrationTest
-class UserServiceTest {
+class UserServiceIT {
 
     @Autowired
     UserService userService;
