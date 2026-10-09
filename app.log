@@ -1,0 +1,158 @@
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.6)
+
+2026-10-09T16:26:44.290Z  INFO 3067 --- [ttm] [           main] md.ttm.TtmApplication                    : Starting TtmApplication v0.1.0-SNAPSHOT using Java 21.0.12.1 with PID 3067 (/home/runner/work/ttm/ttm/target/ttm-0.1.0-SNAPSHOT.jar started by runner in /home/runner/work/ttm/ttm)
+2026-10-09T16:26:44.293Z  INFO 3067 --- [ttm] [           main] md.ttm.TtmApplication                    : The following 1 profile is active: "demo"
+2026-10-09T16:26:45.567Z  INFO 3067 --- [ttm] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-10-09T16:26:45.743Z  INFO 3067 --- [ttm] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 166 ms. Found 6 JPA repository interfaces.
+2026-10-09T16:26:46.688Z  INFO 3067 --- [ttm] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-10-09T16:26:46.742Z  INFO 3067 --- [ttm] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-10-09T16:26:46.743Z  INFO 3067 --- [ttm] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.46]
+2026-10-09T16:26:46.796Z  INFO 3067 --- [ttm] [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-10-09T16:26:46.797Z  INFO 3067 --- [ttm] [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 2424 ms
+2026-10-09T16:26:46.983Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Installed AtmosphereHandler com.vaadin.hilla.push.PushEndpoint mapped to context-path: /HILLA/push
+2026-10-09T16:26:46.985Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Installed the following AtmosphereInterceptor mapped to AtmosphereHandler com.vaadin.hilla.push.PushEndpoint
+2026-10-09T16:26:46.985Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : 	org.atmosphere.interceptor.AtmosphereResourceLifecycleInterceptor : Atmosphere LifeCycle
+2026-10-09T16:26:46.985Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : 	org.atmosphere.client.TrackMessageSizeInterceptor :  Track Message Size Interceptor using |
+2026-10-09T16:26:46.985Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : 	org.atmosphere.interceptor.SuspendTrackerInterceptor : UUID Tracking Interceptor
+2026-10-09T16:26:47.046Z  INFO 3067 --- [ttm] [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing AtmosphereFramework
+2026-10-09T16:26:47.643Z  INFO 3067 --- [ttm] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-10-09T16:26:47.992Z  INFO 3067 --- [ttm] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@6cbbfe29
+2026-10-09T16:26:47.993Z  INFO 3067 --- [ttm] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-10-09T16:26:48.018Z  INFO 3067 --- [ttm] [           main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://localhost:5432/ttm (PostgreSQL 16.15)
+2026-10-09T16:26:48.052Z  INFO 3067 --- [ttm] [           main] o.f.c.i.s.JdbcTableSchemaHistory         : Schema history table "public"."flyway_schema_history" does not exist yet
+2026-10-09T16:26:48.055Z  INFO 3067 --- [ttm] [           main] o.f.core.internal.command.DbValidate     : Successfully validated 4 migrations (execution time 00:00.016s)
+2026-10-09T16:26:48.069Z  INFO 3067 --- [ttm] [           main] o.f.c.i.s.JdbcTableSchemaHistory         : Creating Schema History table "public"."flyway_schema_history" ...
+2026-10-09T16:26:48.149Z  INFO 3067 --- [ttm] [           main] o.f.core.internal.command.DbMigrate      : Current version of schema "public": << Empty Schema >>
+2026-10-09T16:26:48.166Z  INFO 3067 --- [ttm] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "1 - jucatori si utilizatori"
+2026-10-09T16:26:48.224Z  INFO 3067 --- [ttm] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "2 - jucator mana si echipament"
+2026-10-09T16:26:48.252Z  INFO 3067 --- [ttm] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "3 - turnee"
+2026-10-09T16:26:48.317Z  INFO 3067 --- [ttm] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "4 - rating elo"
+2026-10-09T16:26:48.349Z  INFO 3067 --- [ttm] [           main] o.f.core.internal.command.DbMigrate      : Successfully applied 4 migrations to schema "public", now at version v4 (execution time 00:00.111s)
+2026-10-09T16:26:48.459Z  INFO 3067 --- [ttm] [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-10-09T16:26:48.512Z  INFO 3067 --- [ttm] [           main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.29.Final
+2026-10-09T16:26:48.542Z  INFO 3067 --- [ttm] [           main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-10-09T16:26:48.820Z  INFO 3067 --- [ttm] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-10-09T16:26:48.912Z  INFO 3067 --- [ttm] [           main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 16.15
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-10-09T16:26:49.950Z  INFO 3067 --- [ttm] [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-10-09T16:26:49.988Z  INFO 3067 --- [ttm] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-10-09T16:26:50.458Z  INFO 3067 --- [ttm] [           main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-10-09T16:26:51.610Z  INFO 3067 --- [ttm] [           main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name appUserDetailsService
+2026-10-09T16:26:52.025Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Installed AtmosphereHandler com.vaadin.flow.server.communication.PushAtmosphereHandler mapped to context-path: /*
+2026-10-09T16:26:52.026Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Installed the following AtmosphereInterceptor mapped to AtmosphereHandler com.vaadin.flow.server.communication.PushAtmosphereHandler
+2026-10-09T16:26:52.050Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Atmosphere is using org.atmosphere.util.VoidAnnotationProcessor for processing annotation
+2026-10-09T16:26:52.056Z  INFO 3067 --- [ttm] [           main] org.atmosphere.util.ForkJoinPool         : Using ForkJoinPool  java.util.concurrent.ForkJoinPool. Set the org.atmosphere.cpr.broadcaster.maxAsyncWriteThreads to -1 to fully use its power.
+2026-10-09T16:26:52.060Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Installed WebSocketProtocol org.atmosphere.websocket.protocol.SimpleHttpProtocol 
+2026-10-09T16:26:52.063Z  INFO 3067 --- [ttm] [           main] o.a.container.JSR356AsyncSupport         : JSR 356 Mapping path /VAADIN/push
+2026-10-09T16:26:52.076Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Installing Default AtmosphereInterceptors
+2026-10-09T16:26:52.076Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : 	org.atmosphere.interceptor.CorsInterceptor : CORS Interceptor Support
+2026-10-09T16:26:52.077Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : 	org.atmosphere.interceptor.CacheHeadersInterceptor : Default Response's Headers Interceptor
+2026-10-09T16:26:52.077Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : 	org.atmosphere.interceptor.PaddingAtmosphereInterceptor : Browser Padding Interceptor Support
+2026-10-09T16:26:52.078Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : 	org.atmosphere.interceptor.AndroidAtmosphereInterceptor : Android Interceptor Support
+2026-10-09T16:26:52.078Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : 	org.atmosphere.interceptor.HeartbeatInterceptor : Heartbeat Interceptor Support
+2026-10-09T16:26:52.078Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : 	org.atmosphere.interceptor.SSEAtmosphereInterceptor : SSE Interceptor Support
+2026-10-09T16:26:52.079Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : 	org.atmosphere.interceptor.JSONPAtmosphereInterceptor : JSONP Interceptor Support
+2026-10-09T16:26:52.079Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : 	org.atmosphere.interceptor.JavaScriptProtocol : Atmosphere JavaScript Protocol
+2026-10-09T16:26:52.080Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : 	org.atmosphere.interceptor.WebSocketMessageSuspendInterceptor : org.atmosphere.interceptor.WebSocketMessageSuspendInterceptor
+2026-10-09T16:26:52.080Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : 	org.atmosphere.interceptor.OnDisconnectInterceptor : Browser disconnection detection
+2026-10-09T16:26:52.080Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : 	org.atmosphere.interceptor.IdleResourceInterceptor : org.atmosphere.interceptor.IdleResourceInterceptor
+2026-10-09T16:26:52.080Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Set org.atmosphere.cpr.AtmosphereInterceptor.disableDefaults to disable them.
+2026-10-09T16:26:52.080Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Installed AtmosphereInterceptor CORS Interceptor Support with priority FIRST_BEFORE_DEFAULT 
+2026-10-09T16:26:52.080Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Installed AtmosphereInterceptor Default Response's Headers Interceptor with priority AFTER_DEFAULT 
+2026-10-09T16:26:52.080Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Installed AtmosphereInterceptor Browser Padding Interceptor Support with priority AFTER_DEFAULT 
+2026-10-09T16:26:52.080Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Installed AtmosphereInterceptor Android Interceptor Support with priority AFTER_DEFAULT 
+2026-10-09T16:26:52.080Z  INFO 3067 --- [ttm] [           main] o.a.interceptor.HeartbeatInterceptor     : HeartbeatInterceptor configured with padding value 'X', client frequency 0 seconds and server frequency 60 seconds
+2026-10-09T16:26:52.081Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Installed AtmosphereInterceptor Heartbeat Interceptor Support with priority AFTER_DEFAULT 
+2026-10-09T16:26:52.081Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Installed AtmosphereInterceptor SSE Interceptor Support with priority AFTER_DEFAULT 
+2026-10-09T16:26:52.081Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Installed AtmosphereInterceptor JSONP Interceptor Support with priority AFTER_DEFAULT 
+2026-10-09T16:26:52.081Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Installed AtmosphereInterceptor Atmosphere JavaScript Protocol with priority AFTER_DEFAULT 
+2026-10-09T16:26:52.081Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Installed AtmosphereInterceptor org.atmosphere.interceptor.WebSocketMessageSuspendInterceptor with priority AFTER_DEFAULT 
+2026-10-09T16:26:52.081Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Installed AtmosphereInterceptor Browser disconnection detection with priority AFTER_DEFAULT 
+2026-10-09T16:26:52.081Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Installed AtmosphereInterceptor org.atmosphere.interceptor.IdleResourceInterceptor with priority BEFORE_DEFAULT 
+2026-10-09T16:26:52.081Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Using EndpointMapper class org.atmosphere.util.DefaultEndpointMapper
+2026-10-09T16:26:52.081Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Using BroadcasterCache: org.atmosphere.cache.UUIDBroadcasterCache
+2026-10-09T16:26:52.081Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Default Broadcaster Class: org.atmosphere.cpr.DefaultBroadcaster
+2026-10-09T16:26:52.082Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Broadcaster Shared List Resources: false
+2026-10-09T16:26:52.082Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Broadcaster Polling Wait Time 100
+2026-10-09T16:26:52.082Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Shared ExecutorService supported: true
+2026-10-09T16:26:52.082Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Messaging ExecutorService Pool Size unavailable - Not instance of ThreadPoolExecutor
+2026-10-09T16:26:52.082Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Async I/O Thread Pool Size: 200
+2026-10-09T16:26:52.082Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Using BroadcasterFactory: org.atmosphere.cpr.DefaultBroadcasterFactory
+2026-10-09T16:26:52.082Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Using AtmosphereResurceFactory: org.atmosphere.cpr.DefaultAtmosphereResourceFactory
+2026-10-09T16:26:52.082Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Using WebSocketProcessor: org.atmosphere.websocket.DefaultWebSocketProcessor
+2026-10-09T16:26:52.084Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Invoke AtmosphereInterceptor on WebSocket message true
+2026-10-09T16:26:52.084Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : HttpSession supported: true
+2026-10-09T16:26:52.084Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Atmosphere is using org.atmosphere.inject.InjectableObjectFactory for dependency injection and object creation
+2026-10-09T16:26:52.084Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Atmosphere is using async support: org.atmosphere.container.JSR356AsyncSupport running under container: Apache Tomcat/10.1.46 using jakarta.servlet/3.0 and jsr356/WebSocket API
+2026-10-09T16:26:52.084Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Atmosphere Framework 3.0.5.slf4jvaadin1 started.
+2026-10-09T16:26:52.086Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Installed AtmosphereInterceptor  Track Message Size Interceptor using | with priority BEFORE_DEFAULT 
+2026-10-09T16:26:52.116Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Atmosphere is using org.atmosphere.cpr.DefaultAnnotationProcessor for processing annotation
+2026-10-09T16:26:52.116Z  INFO 3067 --- [ttm] [           main] o.a.cpr.DefaultAnnotationProcessor       : AnnotationProcessor class org.atmosphere.cpr.DefaultAnnotationProcessor$BytecodeBasedAnnotationProcessor being used
+2026-10-09T16:26:52.260Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Auto detecting WebSocketHandler in /WEB-INF/classes/
+2026-10-09T16:26:52.261Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Installed WebSocketProtocol org.atmosphere.websocket.protocol.SimpleHttpProtocol 
+2026-10-09T16:26:52.261Z  INFO 3067 --- [ttm] [           main] o.a.container.JSR356AsyncSupport         : JSR 356 Mapping path /HILLA/push
+2026-10-09T16:26:52.262Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Installing Default AtmosphereInterceptors
+2026-10-09T16:26:52.262Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : 	org.atmosphere.interceptor.CorsInterceptor : CORS Interceptor Support
+2026-10-09T16:26:52.262Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : 	org.atmosphere.interceptor.CacheHeadersInterceptor : Default Response's Headers Interceptor
+2026-10-09T16:26:52.263Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : 	org.atmosphere.interceptor.PaddingAtmosphereInterceptor : Browser Padding Interceptor Support
+2026-10-09T16:26:52.263Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : 	org.atmosphere.interceptor.AndroidAtmosphereInterceptor : Android Interceptor Support
+2026-10-09T16:26:52.263Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : 	org.atmosphere.interceptor.HeartbeatInterceptor : Heartbeat Interceptor Support
+2026-10-09T16:26:52.263Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : 	org.atmosphere.interceptor.SSEAtmosphereInterceptor : SSE Interceptor Support
+2026-10-09T16:26:52.263Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : 	org.atmosphere.interceptor.JSONPAtmosphereInterceptor : JSONP Interceptor Support
+2026-10-09T16:26:52.263Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : 	org.atmosphere.interceptor.JavaScriptProtocol : Atmosphere JavaScript Protocol
+2026-10-09T16:26:52.263Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : 	org.atmosphere.interceptor.WebSocketMessageSuspendInterceptor : org.atmosphere.interceptor.WebSocketMessageSuspendInterceptor
+2026-10-09T16:26:52.263Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : 	org.atmosphere.interceptor.OnDisconnectInterceptor : Browser disconnection detection
+2026-10-09T16:26:52.264Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : 	org.atmosphere.interceptor.IdleResourceInterceptor : org.atmosphere.interceptor.IdleResourceInterceptor
+2026-10-09T16:26:52.264Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Set org.atmosphere.cpr.AtmosphereInterceptor.disableDefaults to disable them.
+2026-10-09T16:26:52.264Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Installed AtmosphereInterceptor CORS Interceptor Support with priority FIRST_BEFORE_DEFAULT 
+2026-10-09T16:26:52.264Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Installed AtmosphereInterceptor Default Response's Headers Interceptor with priority AFTER_DEFAULT 
+2026-10-09T16:26:52.264Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Installed AtmosphereInterceptor Browser Padding Interceptor Support with priority AFTER_DEFAULT 
+2026-10-09T16:26:52.264Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Installed AtmosphereInterceptor Android Interceptor Support with priority AFTER_DEFAULT 
+2026-10-09T16:26:52.264Z  INFO 3067 --- [ttm] [           main] o.a.interceptor.HeartbeatInterceptor     : HeartbeatInterceptor configured with padding value 'X', client frequency 0 seconds and server frequency 60 seconds
+2026-10-09T16:26:52.264Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Installed AtmosphereInterceptor Heartbeat Interceptor Support with priority AFTER_DEFAULT 
+2026-10-09T16:26:52.264Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Installed AtmosphereInterceptor SSE Interceptor Support with priority AFTER_DEFAULT 
+2026-10-09T16:26:52.264Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Installed AtmosphereInterceptor JSONP Interceptor Support with priority AFTER_DEFAULT 
+2026-10-09T16:26:52.264Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Installed AtmosphereInterceptor Atmosphere JavaScript Protocol with priority AFTER_DEFAULT 
+2026-10-09T16:26:52.264Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Installed AtmosphereInterceptor org.atmosphere.interceptor.WebSocketMessageSuspendInterceptor with priority AFTER_DEFAULT 
+2026-10-09T16:26:52.264Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Installed AtmosphereInterceptor Browser disconnection detection with priority AFTER_DEFAULT 
+2026-10-09T16:26:52.264Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Installed AtmosphereInterceptor org.atmosphere.interceptor.IdleResourceInterceptor with priority BEFORE_DEFAULT 
+2026-10-09T16:26:52.265Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Using EndpointMapper class org.atmosphere.util.DefaultEndpointMapper
+2026-10-09T16:26:52.266Z  WARN 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : No BroadcasterCache configured. Broadcasted message between client reconnection will be LOST. It is recommended to configure the org.atmosphere.cache.UUIDBroadcasterCache
+2026-10-09T16:26:52.266Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Default Broadcaster Class: org.atmosphere.util.SimpleBroadcaster
+2026-10-09T16:26:52.266Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Broadcaster Shared List Resources: false
+2026-10-09T16:26:52.266Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Broadcaster Polling Wait Time 100
+2026-10-09T16:26:52.266Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Shared ExecutorService supported: true
+2026-10-09T16:26:52.266Z  INFO 3067 --- [ttm] [           main] org.atmosphere.util.ForkJoinPool         : Using ForkJoinPool  java.util.concurrent.ForkJoinPool. Set the org.atmosphere.cpr.broadcaster.maxAsyncWriteThreads to -1 to fully use its power.
+2026-10-09T16:26:52.266Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Messaging ExecutorService Pool Size unavailable - Not instance of ThreadPoolExecutor
+2026-10-09T16:26:52.266Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Async I/O Thread Pool Size: 200
+2026-10-09T16:26:52.266Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Using BroadcasterFactory: org.atmosphere.cpr.DefaultBroadcasterFactory
+2026-10-09T16:26:52.266Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Using AtmosphereResurceFactory: org.atmosphere.cpr.DefaultAtmosphereResourceFactory
+2026-10-09T16:26:52.266Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Using WebSocketProcessor: org.atmosphere.websocket.DefaultWebSocketProcessor
+2026-10-09T16:26:52.266Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Invoke AtmosphereInterceptor on WebSocket message true
+2026-10-09T16:26:52.266Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : HttpSession supported: false
+2026-10-09T16:26:52.266Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Atmosphere is using org.atmosphere.inject.InjectableObjectFactory for dependency injection and object creation
+2026-10-09T16:26:52.266Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Atmosphere is using async support: org.atmosphere.container.JSR356AsyncSupport running under container: Apache Tomcat/10.1.46 using jakarta.servlet/3.0 and jsr356/WebSocket API
+2026-10-09T16:26:52.266Z  INFO 3067 --- [ttm] [           main] org.atmosphere.cpr.AtmosphereFramework   : Atmosphere Framework 3.0.5.slf4jvaadin1 started.
+2026-10-09T16:26:52.281Z  INFO 3067 --- [ttm] [           main] c.v.f.s.DefaultDeploymentConfiguration   : Vaadin is running in production mode.
+2026-10-09T16:26:52.304Z  INFO 3067 --- [ttm] [           main] c.vaadin.flow.spring.SpringInstantiator  : The number of beans implementing 'I18NProvider' is 0. Cannot use Spring beans for I18N, falling back to the default behavior
+2026-10-09T16:26:52.349Z  INFO 3067 --- [ttm] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2026-10-09T16:26:52.359Z  INFO 3067 --- [ttm] [           main] md.ttm.TtmApplication                    : Started TtmApplication in 8.741 seconds (process running for 9.411)
+2026-10-09T16:26:52.454Z  INFO 3067 --- [ttm] [           main] md.ttm.config.AdminInitializer           : Cont de administrator creat: 'admin'
+2026-10-09T16:26:53.112Z  INFO 3067 --- [ttm] [nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-10-09T16:26:53.112Z  INFO 3067 --- [ttm] [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-10-09T16:26:53.113Z  INFO 3067 --- [ttm] [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
+2026-10-09T16:26:53.423Z  INFO 3067 --- [ttm] [           main] md.ttm.config.DemoDataInitializer        : Date demonstrative încărcate: 10 jucători, 3 turnee și utilizatorul 'jucator' (parola 'jucator123')
