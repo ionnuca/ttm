@@ -81,7 +81,9 @@ public class TournamentsView extends VerticalLayout {
                 .setHeader("Turneu")
                 .setFlexGrow(1);
         compact.setVisible(false);
-        Grid.Column<TournamentSummary> config = grid.addColumn(s -> TournamentLabels.configuration(s.tournament()))
+        Grid.Column<TournamentSummary> config = grid.addColumn(s -> s.tournament().isStarted()
+                        ? TournamentLabels.configuration(s.tournament())
+                        : "—")
                 .setHeader("Format")
                 .setAutoWidth(true).setFlexGrow(0);
         Grid.Column<TournamentSummary> participants = grid.addColumn(TournamentSummary::participants)
@@ -131,6 +133,9 @@ public class TournamentsView extends VerticalLayout {
     }
 
     private static String typeLabel(Tournament tournament) {
+        if (!tournament.isStarted()) {
+            return "—";
+        }
         return tournament.isCommercial()
                 ? "Comercial · " + TournamentLabels.money(tournament.getEntryFee())
                 : "Amical";

@@ -46,7 +46,7 @@ class TournamentServiceIT {
     @Test
     @WithMockUser(username = "admin", roles = "ADMIN")
     void turneulComplet_inscriere_incepere_rezultate_clasament() {
-        Tournament tournament = tournamentService.create(form("Cupa de toamnă", false));
+        Tournament tournament = tournamentService.create(form("Cupa de toamnă"));
         List<Player> players = List.of(
                 player("Ana", "Ciobanu", 1200), player("Ion", "Popescu", 1500),
                 player("Mihai", "Rusu", 1300), player("Elena", "Moraru", 1100));
@@ -55,7 +55,7 @@ class TournamentServiceIT {
         assertThatThrownBy(() -> tournamentService.addParticipant(tournament.getId(), players.get(0).getId()))
                 .isInstanceOf(BusinessException.class);
 
-        tournamentService.start(tournament.getId());
+        tournamentService.start(tournament.getId(), TournamentSettings.roundRobin(5));
         TournamentDetails details = tournamentService.findDetails(tournament.getId()).orElseThrow();
 
         // grupa e ordonată după rating, descrescător
@@ -108,12 +108,12 @@ class TournamentServiceIT {
     @Test
     @WithMockUser(username = "admin", roles = "ADMIN")
     void stergereaRezultatuluiRedeschideTurneulIncheiat() {
-        Tournament tournament = tournamentService.create(form("Turneu scurt", false));
+        Tournament tournament = tournamentService.create(form("Turneu scurt"));
         Player a = player("Ana", "Ciobanu", 1200);
         Player b = player("Ion", "Popescu", 1500);
         tournamentService.addParticipant(tournament.getId(), a.getId());
         tournamentService.addParticipant(tournament.getId(), b.getId());
-        tournamentService.start(tournament.getId());
+        tournamentService.start(tournament.getId(), TournamentSettings.roundRobin(5));
         TournamentMatch match = tournamentService.findDetails(tournament.getId()).orElseThrow().matches().get(0);
 
         tournamentService.recordResult(match.getId(), MatchResultForm.sets(3, 0));
@@ -126,15 +126,17 @@ class TournamentServiceIT {
     @Test
     @WithMockUser(username = "admin", roles = "ADMIN")
     void turneulComercialImparteSumaAcumulata() {
-        TournamentForm form = form("Turneu comercial", true);
-        form.setWinnersCount(3);
-        form.setEntryFee(new BigDecimal("100"));
-        Tournament tournament = tournamentService.create(form);
+        Tournament tournament = tournamentService.create(form("Turneu comercial"));
         for (int i = 0; i < 8; i++) {
             tournamentService.addParticipant(tournament.getId(), player("Jucător", "Nr" + i, 1000 + i).getId());
         }
+        // înainte de începere configurarea comercială nu e stabilită
+        assertThat(tournamentService.findDetails(tournament.getId()).orElseThrow().prizePool()).isNull();
 
+        tournamentService.start(tournament.getId(),
+                TournamentSettings.commercial(5, 3, new BigDecimal("100")));
         TournamentDetails details = tournamentService.findDetails(tournament.getId()).orElseThrow();
+        assertThat(details.tournament().isCommercial()).isTrue();
         assertThat(details.prizePool()).isEqualByComparingTo("800");
         assertThat(details.prizes()).extracting(PrizePlace::percentage).containsExactly(50, 30, 20);
         assertThat(details.prizes()).extracting(PrizePlace::amount)
@@ -143,10 +145,22 @@ class TournamentServiceIT {
 
     @Test
     @WithMockUser(username = "admin", roles = "ADMIN")
-    void turneulComercialCereTaxaSiCastigatorii() {
-        TournamentForm form = form("Fără taxă", true);
-        form.setEntryFee(null);
-        assertThatThrownBy(() -> tournamentService.create(form)).isInstanceOf(BusinessException.class);
+    void configurareaSeAlegeLaIncepereSiEsteValidata() {
+        Tournament tournament = tournamentService.create(form("Fără taxă"));
+        tournamentService.addParticipant(tournament.getId(), player("Ana", "Ciobanu", 1200).getId());
+        tournamentService.addParticipant(tournament.getId(), player("Ion", "Popescu", 1500).getId());
+
+        assertThatThrownBy(() -> tournamentService.start(tournament.getId(),
+                TournamentSettings.commercial(5, 2, null))).isInstanceOf(BusinessException.class);
+        assertThatThrownBy(() -> tournamentService.start(tournament.getId(),
+                TournamentSettings.roundRobin(4))).isInstanceOf(BusinessException.class);
+        assertThat(status(tournament)).isEqualTo(TournamentStatus.REGISTRATION);
+
+        tournamentService.start(tournament.getId(), TournamentSettings.roundRobin(3));
+        Tournament started = tournamentService.findDetails(tournament.getId()).orElseThrow().tournament();
+        assertThat(started.getBestOf()).isEqualTo(3);
+        assertThat(started.getSetsToWin()).isEqualTo(2);
+        assertThat(started.isCommercial()).isFalse();
     }
 
     @Test
@@ -157,19 +171,19 @@ class TournamentServiceIT {
         userRepository.save(new AppUser("ion", "x", Role.USER, ion));
         userRepository.save(new AppUser("strain", "x", Role.USER, player("Mihai", "Rusu", 1300)));
 
-        Long tournamentId = as("admin", true, () -> tournamentService.create(form("Turneu", false)).getId());
+        Long tournamentId = as("admin", true, () -> tournamentService.create(form("Turneu")).getId());
         as("ana", false, () -> tournamentService.registerSelf(tournamentId));
         as("ion", false, () -> tournamentService.registerSelf(tournamentId));
 
         assertThatThrownBy(() -> as("ana", false, () -> tournamentService.registerSelf(tournamentId)))
                 .isInstanceOf(BusinessException.class);
         assertThatThrownBy(() -> as("ana", false, () -> {
-            tournamentService.start(tournamentId);
+            tournamentService.start(tournamentId, TournamentSettings.roundRobin(5));
             return null;
         })).isInstanceOf(AccessDeniedException.class);
 
         as("admin", true, () -> {
-            tournamentService.start(tournamentId);
+            tournamentService.start(tournamentId, TournamentSettings.roundRobin(5));
             return null;
         });
         Long matchId = as("ana", false, () -> tournamentService.findDetails(tournamentId).orElseThrow()
@@ -197,14 +211,14 @@ class TournamentServiceIT {
     @Test
     @WithMockUser(username = "admin", roles = "ADMIN")
     void jucatorulCareAJucatIntrUnTurneuInceputNuPoateFiSters() {
-        Tournament started = tournamentService.create(form("Început", false));
-        Tournament open = tournamentService.create(form("Deschis", false));
+        Tournament started = tournamentService.create(form("Început"));
+        Tournament open = tournamentService.create(form("Deschis"));
         Player a = player("Ana", "Ciobanu", 1200);
         Player b = player("Ion", "Popescu", 1500);
         Player c = player("Mihai", "Rusu", 1300);
         tournamentService.addParticipant(started.getId(), a.getId());
         tournamentService.addParticipant(started.getId(), b.getId());
-        tournamentService.start(started.getId());
+        tournamentService.start(started.getId(), TournamentSettings.roundRobin(5));
         tournamentService.addParticipant(open.getId(), c.getId());
 
         assertThatThrownBy(() -> playerService.delete(a.getId())).isInstanceOf(BusinessException.class);
@@ -230,17 +244,8 @@ class TournamentServiceIT {
         return playerRepository.save(player);
     }
 
-    private static TournamentForm form(String name, boolean commercial) {
-        TournamentForm form = new TournamentForm();
-        form.setName(name);
-        form.setDate(LocalDate.of(2026, 10, 15));
-        form.setBestOf(5);
-        form.setCommercial(commercial);
-        if (commercial) {
-            form.setWinnersCount(1);
-            form.setEntryFee(new BigDecimal("50"));
-        }
-        return form;
+    private static TournamentForm form(String name) {
+        return new TournamentForm(name, LocalDate.of(2026, 10, 15));
     }
 
     /** Rulează codul autentificat ca utilizatorul dat. */
