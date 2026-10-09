@@ -1,6 +1,6 @@
 package md.ttm.security;
 
-import md.ttm.user.Role;
+import md.ttm.model.user.Role;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;

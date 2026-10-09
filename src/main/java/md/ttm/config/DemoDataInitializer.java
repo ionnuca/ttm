@@ -1,27 +1,39 @@
 package md.ttm.config;
 
-import md.ttm.player.PlayHand;
-import md.ttm.player.PlayStyle;
-import md.ttm.player.Player;
-import md.ttm.player.PlayerRepository;
-import md.ttm.user.AppUser;
-import md.ttm.user.AppUserRepository;
-import md.ttm.user.Role;
+import md.ttm.model.player.PlayHand;
+import md.ttm.model.player.PlayStyle;
+import md.ttm.model.player.Player;
+import md.ttm.model.user.AppUser;
+import md.ttm.model.user.Role;
+import md.ttm.repository.AppUserRepository;
+import md.ttm.repository.PlayerRepository;
+import md.ttm.model.tournament.TournamentMatch;
+import md.ttm.service.tournament.MatchResultForm;
+import md.ttm.service.tournament.TournamentForm;
+import md.ttm.service.tournament.TournamentService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.AuthorityUtils;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
 
 /**
  * Date demonstrative pentru dezvoltare (profilul "demo", inclus automat în profilul "dev").
  * Se încarcă doar dacă nu există încă niciun jucător.
  * <p>
- * Creează și un cont de test: utilizator {@code jucator}, parolă {@code jucator123}.
+ * Creează și un cont de test: utilizator {@code jucator}, parolă {@code jucator123},
+ * plus două turnee: unul în desfășurare și unul cu înscrierea deschisă.
  */
 @Component
 @Profile("demo")
@@ -33,10 +45,13 @@ public class DemoDataInitializer implements ApplicationRunner {
     private final PlayerRepository playerRepository;
     private final AppUserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final TournamentService tournamentService;
 
     public DemoDataInitializer(PlayerRepository playerRepository,
                                AppUserRepository userRepository,
-                               PasswordEncoder passwordEncoder) {
+                               PasswordEncoder passwordEncoder,
+                               TournamentService tournamentService) {
+        this.tournamentService = tournamentService;
         this.playerRepository = playerRepository;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
@@ -71,7 +86,56 @@ public class DemoDataInitializer implements ApplicationRunner {
 
         AppUser demoUser = new AppUser("jucator", passwordEncoder.encode("jucator123"), Role.USER, first);
         userRepository.save(demoUser);
-        log.info("Date demonstrative încărcate: 10 jucători și utilizatorul 'jucator' (parola 'jucator123')");
+        createDemoTournaments();
+        log.info("Date demonstrative încărcate: 10 jucători, 2 turnee și utilizatorul 'jucator' (parola 'jucator123')");
+    }
+
+    /**
+     * Un turneu comercial în desfășurare, cu câteva rezultate, și unul cu înscrierea deschisă.
+     * Operațiile trec prin serviciu, ca administrator, la fel ca din interfață.
+     */
+    private void createDemoTournaments() {
+        var previous = SecurityContextHolder.getContext().getAuthentication();
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
+                "admin", null, AuthorityUtils.createAuthorityList("ROLE_ADMIN")));
+        try {
+            List<Player> players = playerRepository.findAllByOrderByRatingDescLastNameAscFirstNameAsc();
+
+            TournamentForm autumn = new TournamentForm();
+            autumn.setName("Cupa de toamnă");
+            autumn.setDate(LocalDate.now().minusDays(1));
+            autumn.setBestOf(5);
+            autumn.setCommercial(true);
+            autumn.setWinnersCount(3);
+            autumn.setEntryFee(new BigDecimal("100"));
+            Long autumnId = tournamentService.create(autumn).getId();
+            players.subList(0, 6).forEach(p -> tournamentService.addParticipant(autumnId, p.getId()));
+            tournamentService.start(autumnId);
+            int i = 0;
+            for (TournamentMatch match : tournamentService.findDetails(autumnId).orElseThrow().matches()) {
+                if (match.getRoundNo() > 3) {
+                    continue;
+                }
+                MatchResultForm result = switch (i % 5) {
+                    case 0 -> MatchResultForm.sets(3, 1);
+                    case 1 -> MatchResultForm.sets(3, 0);
+                    case 2 -> MatchResultForm.sets(2, 3);
+                    case 3 -> MatchResultForm.walkover(match.getParticipantA().getId());
+                    default -> MatchResultForm.sets(3, 2);
+                };
+                tournamentService.recordResult(match.getId(), result);
+                i++;
+            }
+
+            TournamentForm sunday = new TournamentForm();
+            sunday.setName("Turneul de duminică");
+            sunday.setDate(LocalDate.now().plusDays(3));
+            sunday.setBestOf(3);
+            Long sundayId = tournamentService.create(sunday).getId();
+            players.subList(1, 5).forEach(p -> tournamentService.addParticipant(sundayId, p.getId()));
+        } finally {
+            SecurityContextHolder.getContext().setAuthentication(previous);
+        }
     }
 
     private Player save(String firstName, String lastName, PlayStyle style, PlayHand hand, String city, String phone,

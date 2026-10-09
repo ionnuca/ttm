@@ -1,8 +1,8 @@
 package md.ttm.security;
 
-import md.ttm.user.AppUser;
-import md.ttm.user.AppUserRepository;
-import md.ttm.user.UserService;
+import md.ttm.model.user.AppUser;
+import md.ttm.repository.AppUserRepository;
+import md.ttm.service.user.UserService;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;

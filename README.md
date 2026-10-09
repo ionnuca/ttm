@@ -6,7 +6,7 @@ Aplicație web (instalabilă și pe telefon, ca PWA) pentru gestionarea jucător
 
 ---
 
-## Funcționalități (etapa 1)
+## Funcționalități
 
 | Funcționalitate | Guest (nelogat) | Utilizator logat | Administrator |
 |---|:---:|:---:|:---:|
@@ -17,6 +17,10 @@ Aplicație web (instalabilă și pe telefon, ca PWA) pentru gestionarea jucător
 | Cont nou (înregistrare simplă: nume, prenume, utilizator, parolă) | ✅ | – | – |
 | „Profilul meu”: date personale, stil și mână de joc, oraș, telefon, echipament, schimbarea parolei | – | ✅ | ✅ |
 | „Utilizatori”: lista completă, adăugare, editare (rol, blocare, parolă), ștergere | – | – | ✅ |
+| „Turnee”: lista turneelor, tabelul și meciurile fiecărui turneu | ✅ | ✅ | ✅ |
+| Înscriere / retragere la un turneu (cât timp înscrierea e deschisă) | – | ✅ | ✅ |
+| Introducerea rezultatelor (participanții turneului) | – | ✅ | ✅ |
+| Creare, editare, ștergere turneu; adăugare/scoatere participanți; „Începe turneul”; ștergerea unui rezultat | – | – | ✅ |
 
 Interfața se adaptează la telefon: în clasament, numele, stilul de joc și orașul apar într-o singură coloană, iar administratorul editează sau șterge un jucător atingând rândul respectiv. Aplicația se poate adăuga pe ecranul telefonului („Add to Home Screen”).
 
@@ -25,6 +29,17 @@ Reguli:
 - Ștergerea unui jucător șterge și contul lui; ștergerea unui utilizator șterge și profilul de jucător.
 - Administratorul nu își poate șterge propriul cont, nu își poate retrage drepturile și trebuie să rămână mereu cel puțin un administrator activ.
 - Ratingul și statisticile (victorii / înfrângeri) le modifică doar administratorul; ulterior vor fi calculate automat din rezultatele meciurilor.
+- Un jucător care a jucat într-un turneu început nu mai poate fi șters, ca rezultatele să rămână complete.
+
+### Turnee (Round Robin)
+
+1. **Crearea** (administrator): nume, dată, tipul (Round robin), numărul de seturi (best of 3/5/7). Opțional, **turneu comercial**: taxa de participare și numărul de câștigători, cu împărțirea sumei acumulate (taxa × participanți): 1 câștigător – 100%; 2 – 60% / 40%; 3 – 50% / 30% / 20%.
+2. **Înscrierea**: utilizatorii logați se înscriu singuri; administratorul poate adăuga sau scoate orice jucător.
+3. **Începerea** (administrator): înscrierea se închide, se formează grupa cu jucătorii ordonați după rating (descrescător) și se generează toate meciurile, pe tururi (fiecare cu fiecare, metoda Berger).
+4. **Rezultatele**: le introduc participanții turneului sau administratorul: scorul la seturi (ex. 3:1) sau **W – victorie tehnică**, când adversarul refuză jocul. După ultimul rezultat, turneul devine „Încheiat”; din acel moment doar administratorul mai poate corecta.
+5. **Tabelul** se actualizează după fiecare rezultat: matrice cu fiecare întâlnire scrisă ca fracție (sus punctele: 2 victorie, 1 înfrângere, 0 înfrângere tehnică; jos scorul la seturi), apoi coloanele *Seturi* (câștigate/pierdute), *Puncte* și *Loc*.
+
+Departajarea la egalitate de puncte: punctele din meciurile directe dintre jucătorii la egalitate, apoi raportul seturilor din aceste meciuri, apoi raportul seturilor din toate meciurile, apoi poziția în grupă. O victorie tehnică se socotește la seturi ca victorie la scor alb (3:0 la best of 5).
 
 ---
 
@@ -70,7 +85,7 @@ Necesar: JDK 21, Maven 3.9+ (inclus în IntelliJ), Docker Desktop pentru baza de
    ```
 4. Deschideți **http://localhost:8080**.
 
-Profilul `dev` încarcă 10 jucători demonstrativi și creează conturile:
+Profilul `dev` încarcă 10 jucători demonstrativi, două turnee (unul comercial în desfășurare, unul cu înscrierea deschisă) și creează conturile:
 
 | Utilizator | Parolă | Rol |
 |---|---|---|
@@ -91,7 +106,7 @@ psql -U postgres -f database/create_database.sql
 
 ## Baza de date
 
-- **Scripturile de creare a tabelelor:** `src/main/resources/db/migration/` (`V1__jucatori_si_utilizatori.sql`, `V2__jucator_mana_si_echipament.sql`). Le aplică automat **Flyway** la pornirea aplicației, în ordinea versiunilor; nu e nevoie să le rulați manual.
+- **Scripturile de creare a tabelelor:** `src/main/resources/db/migration/` (`V1__jucatori_si_utilizatori.sql`, `V2__jucator_mana_si_echipament.sql`, `V3__turnee.sql`). Le aplică automat **Flyway** la pornirea aplicației, în ordinea versiunilor; nu e nevoie să le rulați manual.
 - **Modificări de schemă:** nu se editează niciodată un script deja aplicat. Se adaugă unul nou: `V2__descriere.sql`, `V3__...` etc.
 - **Crearea bazei de date și a utilizatorului:** `database/create_database.sql` (fără Docker) sau automat de `docker-compose.yml`.
 - **Baza pentru teste:** `ttm_test`, creată de `database/init/01-create-test-db.sql` la prima pornire a containerului.
@@ -112,6 +127,17 @@ phone         (vizibil doar adminului)  player_id      FK → player.id (unic)
 rating        implicit 1000
 wins, losses
 blade, forehand_rubber, backhand_rubber   (echipament)
+
+tournament                   tournament_participant         tournament_match
+─────────────────────        ──────────────────────────     ─────────────────────────────
+id           PK              id             PK              id             PK
+name, tournament_date        tournament_id  FK → tournament tournament_id  FK → tournament
+format       ROUND_ROBIN     player_id      FK → player     round_no       turul
+best_of      3 / 5 / 7       seed           poziția în grupă participant_a / participant_b
+status       REGISTRATION /  seed_rating    rating la start sets_a, sets_b scorul la seturi
+             IN_PROGRESS /                                  outcome        NORMAL / WALKOVER
+             FINISHED                                       winner_id      FK → participant
+commercial, winners_count, entry_fee                        recorded_by, recorded_at
 ```
 
 ---
@@ -153,13 +179,27 @@ La fiecare push, GitHub Actions (`.github/workflows/ci.yml`) rulează testele ș
 
 ```
 src/main/java/md/ttm/
-├── TtmApplication.java        pornirea aplicației, configurarea PWA
-├── common/                    excepții și utilitare comune
-├── config/                    administratorul inițial, datele demonstrative
-├── player/                    jucătorul: entitate, repository, serviciu, clasament
-├── user/                      conturi: entitate, roluri, serviciu, formulare
-├── security/                  Spring Security: configurare, încărcarea conturilor
-└── ui/                        paginile Vaadin (clasament, utilizatori, profil, login, cont nou)
+├── TtmApplication.java          pornirea aplicației, configurarea PWA
+├── common/                      excepții și utilitare comune
+├── config/                      administratorul inițial, datele demonstrative
+├── security/                    Spring Security: configurare, încărcarea conturilor
+├── model/                       entitățile JPA și enumerările
+│   ├── player/                  Player, PlayStyle, PlayHand
+│   ├── user/                    AppUser, Role
+│   └── tournament/              Tournament, TournamentParticipant, TournamentMatch, PrizeDistribution …
+├── repository/                  interfețele Spring Data pentru acces la baza de date
+├── service/                     logica de business (tranzacții, reguli, permisiuni)
+│   ├── player/                  jucători și clasament
+│   ├── user/                    conturi, înregistrare
+│   └── tournament/              turnee, generarea meciurilor (RoundRobinScheduler),
+│                                tabelul și departajarea (StandingsCalculator)
+└── ui/                          paginile Vaadin
+    ├── layout/                  structura comună (meniu, bara de sus)
+    ├── components/              componente reutilizabile (notificări, etichete, adaptare la telefon)
+    ├── player/                  clasamentul jucătorilor
+    ├── user/                    administrarea utilizatorilor
+    ├── account/                 autentificare, cont nou, profilul meu
+    └── tournament/              lista turneelor, pagina turneului, tabelul-matrice, rezultate
 src/main/resources/
 ├── application.properties     configurarea implicită
 ├── application-dev.properties profilul de dezvoltare
