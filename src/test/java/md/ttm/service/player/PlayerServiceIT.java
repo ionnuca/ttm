@@ -154,6 +154,7 @@ class PlayerServiceIT {
 
     private static Player player(String firstName, String lastName, int rating) {
         Player player = new Player(firstName, lastName);
+        player.setInitialRating(rating);
         player.setRating(rating);
         return player;
     }

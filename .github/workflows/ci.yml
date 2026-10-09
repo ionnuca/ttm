@@ -58,6 +58,17 @@ jobs:
             skipped=$((skipped + $(echo "$line" | sed -E 's/.* skipped="([0-9]+)".*/\1/')))
           done
           echo "::notice title=Teste::rulate ${tests}, eșuate ${failures}, erori ${errors}, ignorate ${skipped}"
+          # testele care au eșuat, ca adnotări vizibile direct în GitHub
+          python3 - <<'PY' || true
+          import glob, xml.etree.ElementTree as ET
+          for f in glob.glob('target/surefire-reports/TEST-*.xml') + glob.glob('target/failsafe-reports/TEST-*.xml'):
+              for case in ET.parse(f).getroot().iter('testcase'):
+                  for kind in ('failure', 'error'):
+                      el = case.find(kind)
+                      if el is not None:
+                          msg = (el.get('message') or el.get('type') or '').replace('\n', ' ')[:400]
+                          print(f"::error title={case.get('classname')}.{case.get('name')}::{msg}")
+          PY
           jar=$(ls target/ttm-*.jar 2>/dev/null | head -1)
           if [ -n "$jar" ]; then
             echo "::notice title=Build::${jar} ($(du -h "$jar" | cut -f1))"

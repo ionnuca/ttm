@@ -65,6 +65,13 @@ public class TournamentMatch {
     @Column(name = "recorded_at")
     private Instant recordedAt;
 
+    /** Schimbarea de rating a jucătorului A (doar meciuri jucate efectiv, din turnee încheiate). */
+    @Column(name = "rating_delta_a")
+    private Integer ratingDeltaA;
+
+    @Column(name = "rating_delta_b")
+    private Integer ratingDeltaB;
+
     public TournamentMatch() {
     }
 
@@ -91,6 +98,8 @@ public class TournamentMatch {
         winner = null;
         recordedBy = null;
         recordedAt = null;
+        ratingDeltaA = null;
+        ratingDeltaB = null;
     }
 
     public Long getId() {
@@ -163,6 +172,19 @@ public class TournamentMatch {
 
     public void setRecordedAt(Instant recordedAt) {
         this.recordedAt = recordedAt;
+    }
+
+    public Integer getRatingDeltaA() {
+        return ratingDeltaA;
+    }
+
+    public Integer getRatingDeltaB() {
+        return ratingDeltaB;
+    }
+
+    public void setRatingDeltas(Integer deltaA, Integer deltaB) {
+        this.ratingDeltaA = deltaA;
+        this.ratingDeltaB = deltaB;
     }
 
     @Override

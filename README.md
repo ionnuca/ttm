@@ -28,7 +28,7 @@ Reguli:
 - Fiecare utilizator este un jucător: la crearea unui cont se creează automat și profilul de jucător, cu ratingul inițial 1000.
 - Ștergerea unui jucător șterge și contul lui; ștergerea unui utilizator șterge și profilul de jucător.
 - Administratorul nu își poate șterge propriul cont, nu își poate retrage drepturile și trebuie să rămână mereu cel puțin un administrator activ.
-- Ratingul și statisticile (victorii / înfrângeri) le modifică doar administratorul; ulterior vor fi calculate automat din rezultatele meciurilor.
+- Ratingul curent și statisticile (victorii / înfrângeri) se calculează automat din turneele încheiate; administratorul stabilește doar **ratingul inițial** al fiecărui jucător.
 - Un jucător care a jucat într-un turneu început nu mai poate fi șters, ca rezultatele să rămână complete.
 
 ### Turnee (Round Robin)
@@ -38,6 +38,25 @@ Reguli:
 3. **Începerea** (administrator, butonul „Începe turneul”): se alege configurarea – tipul (Round robin), numărul de seturi (best of 3/5/7) și, opțional, **turneu comercial**: taxa de participare și numărul de câștigători, cu împărțirea sumei acumulate (taxa × participanți): 1 câștigător – 100%; 2 – 60% / 40%; 3 – 50% / 30% / 20%. Dialogul arată pe loc suma acumulată și premiile. La confirmare, înscrierea se închide, se formează grupa cu jucătorii ordonați după rating (descrescător) și se generează toate meciurile, pe tururi (fiecare cu fiecare, metoda Berger).
 4. **Rezultatele**: le introduc participanții turneului sau administratorul: scorul la seturi (ex. 3:1) sau **W – victorie tehnică**, când adversarul refuză jocul. După ultimul rezultat, turneul devine „Încheiat”; din acel moment doar administratorul mai poate corecta.
 5. **Tabelul** se actualizează după fiecare rezultat: matrice cu fiecare întâlnire scrisă ca fracție (sus punctele: 2 victorie, 1 înfrângere, 0 înfrângere tehnică; jos scorul la seturi), apoi coloanele *Seturi* (câștigate/pierdute), *Puncte* și *Loc*.
+
+### Ratingul (Elo)
+
+Ratingul se calculează după formula Elo, la încheierea fiecărui turneu:
+
+```
+E_A  = 1 / (1 + 10^((R_B − R_A) / 400))     probabilitatea așteptată ca A să câștige
+R_A' = R_A + K × (S_A − E_A)                S_A = 1 victorie, 0 înfrângere
+```
+
+- **K = 40** până la 30 de meciuri cu rating jucate, apoi **K = 20** (ca la FIDE);
+- o diferență de rating mai mare de **400** de puncte se socotește ca 400;
+- toate meciurile unui turneu se calculează din ratingurile **de dinaintea turneului**; schimbarea totală se rotunjește o singură dată (0,5 departe de zero);
+- **victoriile tehnice (W) nu modifică ratingul**, dar contează la victorii/înfrângeri;
+- scorul la seturi nu contează, doar victoria.
+
+Ratingul nu se modifică incremental, ci se **reconstruiește**: din ratingul inițial al fiecărui jucător se aplică, în ordine cronologică (data turneului), toate turneele încheiate. Astfel, când administratorul corectează un rezultat într-un turneu încheiat, șterge un rezultat sau un turneu, ori schimbă ratingul inițial al unui jucător, se recalculează corect și toate turneele de după. Recalcularea are loc și la pornirea aplicației.
+
+Unde se vede: coloana *Rating* din clasament; în tabelul unui turneu încheiat, sub fiecare nume, ratingul înainte → după; în lista meciurilor, schimbarea din fiecare meci; în „Profilul meu”, *Evoluția ratingului* pe turnee.
 
 Departajarea la egalitate de puncte: punctele din meciurile directe dintre jucătorii la egalitate, apoi raportul seturilor din aceste meciuri, apoi raportul seturilor din toate meciurile, apoi poziția în grupă. O victorie tehnică se socotește la seturi ca victorie la scor alb (3:0 la best of 5).
 
@@ -85,7 +104,7 @@ Necesar: JDK 21, Maven 3.9+ (inclus în IntelliJ), Docker Desktop pentru baza de
    ```
 4. Deschideți **http://localhost:8080**.
 
-Profilul `dev` încarcă 10 jucători demonstrativi, două turnee (unul comercial în desfășurare, unul cu înscrierea deschisă) și creează conturile:
+Profilul `dev` încarcă 10 jucători demonstrativi, trei turnee (unul încheiat, cu rating calculat; unul comercial în desfășurare; unul cu înscrierea deschisă) și creează conturile:
 
 | Utilizator | Parolă | Rol |
 |---|---|---|
@@ -106,7 +125,7 @@ psql -U postgres -f database/create_database.sql
 
 ## Baza de date
 
-- **Scripturile de creare a tabelelor:** `src/main/resources/db/migration/` (`V1__jucatori_si_utilizatori.sql`, `V2__jucator_mana_si_echipament.sql`, `V3__turnee.sql`). Le aplică automat **Flyway** la pornirea aplicației, în ordinea versiunilor; nu e nevoie să le rulați manual.
+- **Scripturile de creare a tabelelor:** `src/main/resources/db/migration/` (`V1__jucatori_si_utilizatori.sql`, `V2__jucator_mana_si_echipament.sql`, `V3__turnee.sql`, `V4__rating_elo.sql`). Le aplică automat **Flyway** la pornirea aplicației, în ordinea versiunilor; nu e nevoie să le rulați manual.
 - **Modificări de schemă:** nu se editează niciodată un script deja aplicat. Se adaugă unul nou: `V2__descriere.sql`, `V3__...` etc.
 - **Crearea bazei de date și a utilizatorului:** `database/create_database.sql` (fără Docker) sau automat de `docker-compose.yml`.
 - **Baza pentru teste:** `ttm_test`, creată de `database/init/01-create-test-db.sql` la prima pornire a containerului.
@@ -138,6 +157,10 @@ status       REGISTRATION /  seed_rating    rating la start sets_a, sets_b scoru
              IN_PROGRESS /                                  outcome        NORMAL / WALKOVER
              FINISHED                                       winner_id      FK → participant
 commercial, winners_count, entry_fee                        recorded_by, recorded_at
+                                                            rating_delta_a / _b  schimbarea Elo
+
+player (V4): initial_rating — ratingul de pornire; rating, wins, losses — calculate
+rating_history: player_id, tournament_id, rating_before, rating_after, k_factor, rated_matches
 ```
 
 ---
@@ -186,13 +209,15 @@ src/main/java/md/ttm/
 ├── model/                       entitățile JPA și enumerările
 │   ├── player/                  Player, PlayStyle, PlayHand
 │   ├── user/                    AppUser, Role
-│   └── tournament/              Tournament, TournamentParticipant, TournamentMatch, PrizeDistribution …
+│   ├── tournament/              Tournament, TournamentParticipant, TournamentMatch, PrizeDistribution …
+│   └── rating/                  RatingHistory
 ├── repository/                  interfețele Spring Data pentru acces la baza de date
 ├── service/                     logica de business (tranzacții, reguli, permisiuni)
 │   ├── player/                  jucători și clasament
 │   ├── user/                    conturi, înregistrare
-│   └── tournament/              turnee, generarea meciurilor (RoundRobinScheduler),
-│                                tabelul și departajarea (StandingsCalculator)
+│   ├── tournament/              turnee, generarea meciurilor (RoundRobinScheduler),
+│   │                            tabelul și departajarea (StandingsCalculator)
+│   └── rating/                  formulele Elo, calculul pe turneu, recalcularea cronologică
 └── ui/                          paginile Vaadin
     ├── layout/                  structura comună (meniu, bara de sus)
     ├── components/              componente reutilizabile (notificări, etichete, adaptare la telefon)

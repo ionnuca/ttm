@@ -2,6 +2,7 @@ package md.ttm.ui.tournament;
 
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.dom.Element;
+import md.ttm.model.rating.RatingHistory;
 import md.ttm.model.tournament.TournamentParticipant;
 import md.ttm.service.tournament.StandingsCalculator;
 
@@ -22,9 +23,10 @@ class ResultsMatrix extends Div {
      * @param participants participanții în ordinea din grupă
      * @param standings    rândurile calculate, în aceeași ordine
      * @param highlighted  participantul evidențiat (utilizatorul curent), poate fi {@code null}
+     * @param ratingChanges ratingul înainte/după turneu, pe jucător (gol dacă turneul nu e încheiat)
      */
     ResultsMatrix(List<TournamentParticipant> participants, List<StandingsCalculator.Row> standings,
-                  Long highlighted) {
+                  Long highlighted, Map<Long, RatingHistory> ratingChanges) {
         getStyle()
                 .set("overflow-x", "auto")
                 .set("max-width", "100%")
@@ -55,7 +57,7 @@ class ResultsMatrix extends Div {
             if (own) {
                 tr.getStyle().set("background", "var(--lumo-primary-color-10pct)");
             }
-            tr.appendChild(nameCell(participant, own));
+            tr.appendChild(nameCell(participant, own, ratingChanges.get(participant.getPlayer().getId())));
 
             Map<Long, StandingsCalculator.Cell> cells = row.cells();
             for (TournamentParticipant opponent : participants) {
@@ -76,7 +78,7 @@ class ResultsMatrix extends Div {
     }
 
     /** Numele rămâne vizibil la derularea orizontală a tabelului (pe telefon). */
-    private static Element nameCell(TournamentParticipant participant, boolean own) {
+    private static Element nameCell(TournamentParticipant participant, boolean own, RatingHistory change) {
         String background = own
                 ? "linear-gradient(var(--lumo-primary-color-10pct), var(--lumo-primary-color-10pct)), var(--lumo-base-color)"
                 : "var(--lumo-base-color)";
@@ -90,10 +92,23 @@ class ResultsMatrix extends Div {
         name.appendChild(seed, fullName);
         name.getStyle().set("font-weight", "500");
         Element rating = new Element("div");
-        rating.setText("rating " + participant.getSeedRating());
         rating.getStyle()
                 .set("font-size", "var(--lumo-font-size-xs)")
                 .set("color", "var(--lumo-secondary-text-color)");
+        if (change == null) {
+            rating.setText("rating " + participant.getSeedRating());
+        } else {
+            Element values = new Element("span");
+            values.setText("rating " + change.getRatingBefore() + " → " + change.getRatingAfter() + " ");
+            Element delta = new Element("span");
+            int d = change.getChange();
+            delta.setText(d > 0 ? "+" + d : String.valueOf(d));
+            delta.getStyle()
+                    .set("font-weight", "600")
+                    .set("color", d > 0 ? "var(--lumo-success-text-color)"
+                            : d < 0 ? "var(--lumo-error-text-color)" : "inherit");
+            rating.appendChild(values, delta);
+        }
         td.appendChild(name, rating);
         return td;
     }

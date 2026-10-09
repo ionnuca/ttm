@@ -10,12 +10,15 @@ import md.ttm.model.tournament.TournamentMatch;
 import md.ttm.model.tournament.TournamentParticipant;
 import md.ttm.model.tournament.TournamentStatus;
 import md.ttm.model.user.AppUser;
+import md.ttm.model.rating.RatingHistory;
 import md.ttm.repository.AppUserRepository;
+import md.ttm.repository.RatingHistoryRepository;
 import md.ttm.repository.PlayerRepository;
 import md.ttm.repository.TournamentMatchRepository;
 import md.ttm.repository.TournamentParticipantRepository;
 import md.ttm.repository.TournamentRepository;
 import md.ttm.security.SecurityUtils;
+import md.ttm.service.rating.RatingService;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -53,12 +56,18 @@ public class TournamentService {
     private final TournamentMatchRepository matchRepository;
     private final PlayerRepository playerRepository;
     private final AppUserRepository userRepository;
+    private final RatingHistoryRepository historyRepository;
+    private final RatingService ratingService;
 
     public TournamentService(TournamentRepository tournamentRepository,
                              TournamentParticipantRepository participantRepository,
                              TournamentMatchRepository matchRepository,
                              PlayerRepository playerRepository,
-                             AppUserRepository userRepository) {
+                             AppUserRepository userRepository,
+                             RatingHistoryRepository historyRepository,
+                             RatingService ratingService) {
+        this.historyRepository = historyRepository;
+        this.ratingService = ratingService;
         this.tournamentRepository = tournamentRepository;
         this.participantRepository = participantRepository;
         this.matchRepository = matchRepository;
@@ -123,7 +132,12 @@ public class TournamentService {
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public void delete(Long tournamentId) {
-        tournamentRepository.delete(requireTournament(tournamentId));
+        Tournament tournament = requireTournament(tournamentId);
+        boolean rated = tournament.getStatus() == TournamentStatus.FINISHED;
+        tournamentRepository.deleteWithChildren(tournament.getId());
+        if (rated) {
+            ratingService.recalculateAll();
+        }
     }
 
     // ------------------------------------------------------------------
@@ -273,7 +287,11 @@ public class TournamentService {
                 && matchRepository.countByTournamentIdAndOutcomeIsNull(tournament.getId()) == 0) {
             tournament.setStatus(TournamentStatus.FINISHED);
             tournament.setFinishedAt(Instant.now());
-            tournamentRepository.save(tournament);
+            tournamentRepository.saveAndFlush(tournament);
+        }
+        // turneu încheiat acum sau rezultat corectat într-un turneu încheiat: ratingul se recalculează
+        if (tournament.getStatus() == TournamentStatus.FINISHED) {
+            ratingService.recalculateAll();
         }
         return match;
     }
@@ -290,7 +308,9 @@ public class TournamentService {
         if (tournament.getStatus() == TournamentStatus.FINISHED) {
             tournament.setStatus(TournamentStatus.IN_PROGRESS);
             tournament.setFinishedAt(null);
-            tournamentRepository.save(tournament);
+            tournamentRepository.saveAndFlush(tournament);
+            // turneul redeschis nu mai contează la rating până la încheiere
+            ratingService.recalculateAll();
         }
     }
 
@@ -347,8 +367,14 @@ public class TournamentService {
         boolean canRecord = (tournament.getStatus() == TournamentStatus.IN_PROGRESS && (admin || own != null))
                 || (tournament.getStatus() == TournamentStatus.FINISHED && admin);
 
+        Map<Long, RatingHistory> ratingChanges = new HashMap<>();
+        if (tournament.getStatus() == TournamentStatus.FINISHED) {
+            historyRepository.findByTournamentId(tournament.getId())
+                    .forEach(h -> ratingChanges.put(h.getPlayer().getId(), h));
+        }
+
         return new TournamentDetails(tournament, participants, matches, standings, pool, prizes, own,
-                admin, canSelfRegister, canRecord);
+                admin, canSelfRegister, canRecord, ratingChanges);
     }
 
     private static List<StandingsCalculator.Row> standings(Tournament tournament,

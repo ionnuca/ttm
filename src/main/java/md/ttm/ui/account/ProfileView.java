@@ -5,8 +5,10 @@ import md.ttm.model.player.PlayStyle;
 import md.ttm.model.player.Player;
 import md.ttm.model.user.AppUser;
 import md.ttm.service.player.PlayerService;
+import md.ttm.service.rating.RatingService;
 import md.ttm.service.user.UserService;
 import md.ttm.ui.components.Notifications;
+import md.ttm.ui.player.RatingHistoryList;
 import md.ttm.ui.layout.MainLayout;
 import md.ttm.ui.player.PlayerDetailsFields;
 import com.vaadin.flow.component.Component;
@@ -40,7 +42,7 @@ public class ProfileView extends VerticalLayout {
     private final PlayerService playerService;
     private final UserService userService;
 
-    public ProfileView(PlayerService playerService, UserService userService) {
+    public ProfileView(PlayerService playerService, UserService userService, RatingService ratingService) {
         this.playerService = playerService;
         this.userService = userService;
         setMaxWidth("44rem");
@@ -54,7 +56,9 @@ public class ProfileView extends VerticalLayout {
         add(title, account);
 
         if (user.getPlayer() != null) {
-            add(createStats(user.getPlayer()), createPlayerForm(user.getPlayer()));
+            add(createStats(user.getPlayer()), createPlayerForm(user.getPlayer()),
+                    new RatingHistoryList(ratingService.findHistory(user.getPlayer().getId()),
+                            user.getPlayer().getInitialRating()));
         } else {
             add(new Paragraph("Acest cont nu are un profil de jucător."));
         }

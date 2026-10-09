@@ -67,6 +67,13 @@ await check('guest: echipamentul unui jucător', async () => {
   await expectText(page, 'Dignics 09C');
   await shot(page, '01b-guest-echipament');
 });
+await check('guest: turneu încheiat cu rating', async () => {
+  await page.goto(`${BASE}/turnee`);
+  await page.getByText('Cupa de vară').first().click();
+  await expectText(page, 'Meciuri jucate: 45 din 45');
+  await expectText(page, 'Sub nume: ratingul înainte → după turneu');
+  await shot(page, '28-guest-turneu-incheiat-rating');
+});
 await check('guest: pagina admin redirecționează la login', async () => {
   await page.goto(`${BASE}/utilizatori`);
   await page.waitForURL(/login/, { timeout: 10000 });
@@ -176,6 +183,8 @@ await check('utilizator: profil', async () => {
   await expectText(page, 'Date personale');
   await expectText(page, 'Echipament');
   await expectText(page, 'Mâna de joc');
+  await expectText(page, 'Evoluția ratingului');
+  await expectText(page, 'Cupa de vară');
   await shot(page, '11-utilizator-profil');
 });
 await check('utilizator: introduce un rezultat', async () => {
