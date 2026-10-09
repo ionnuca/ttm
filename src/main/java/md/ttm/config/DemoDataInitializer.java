@@ -34,7 +34,7 @@ import java.util.List;
  * Se încarcă doar dacă nu există încă niciun jucător.
  * <p>
  * Creează și un cont de test: utilizator {@code jucator}, parolă {@code jucator123},
- * plus două turnee: unul în desfășurare și unul cu înscrierea deschisă.
+ * plus trei turnee: unul încheiat, unul în desfășurare și unul cu înscrierea deschisă.
  */
 @Component
 @Profile("demo")
@@ -88,11 +88,12 @@ public class DemoDataInitializer implements ApplicationRunner {
         AppUser demoUser = new AppUser("jucator", passwordEncoder.encode("jucator123"), Role.USER, first);
         userRepository.save(demoUser);
         createDemoTournaments();
-        log.info("Date demonstrative încărcate: 10 jucători, 2 turnee și utilizatorul 'jucator' (parola 'jucator123')");
+        log.info("Date demonstrative încărcate: 10 jucători, 3 turnee și utilizatorul 'jucator' (parola 'jucator123')");
     }
 
     /**
-     * Un turneu comercial în desfășurare, cu câteva rezultate, și unul cu înscrierea deschisă.
+     * Un turneu încheiat (cu rating calculat), unul comercial în desfășurare, cu câteva rezultate,
+     * și unul cu înscrierea deschisă.
      * Operațiile trec prin serviciu, ca administrator, la fel ca din interfață.
      */
     private void createDemoTournaments() {
@@ -102,9 +103,29 @@ public class DemoDataInitializer implements ApplicationRunner {
         try {
             List<Player> players = playerRepository.findAllByOrderByRatingDescLastNameAscFirstNameAsc();
 
+            // Un turneu încheiat (toți jucătorii), ca să existe istoric de rating
+            Long summerId = tournamentService.create(
+                    new TournamentForm("Cupa de vară", LocalDate.now().minusDays(60))).getId();
+            players.forEach(p -> tournamentService.addParticipant(summerId, p.getId()));
+            tournamentService.start(summerId, TournamentSettings.roundRobin(5));
+            int game = 0;
+            for (TournamentMatch match : tournamentService.findDetails(summerId).orElseThrow().matches()) {
+                MatchResultForm result;
+                if (game == 7) {
+                    result = MatchResultForm.walkover(match.getParticipantB().getId());
+                } else if (game % 6 == 2) {
+                    result = MatchResultForm.sets(2, 3); // surpriză: câștigă jucătorul mai slab
+                } else {
+                    result = game % 2 == 0 ? MatchResultForm.sets(3, 1) : MatchResultForm.sets(3, 2);
+                }
+                tournamentService.recordResult(match.getId(), result);
+                game++;
+            }
+
             Long autumnId = tournamentService.create(
                     new TournamentForm("Cupa de toamnă", LocalDate.now().minusDays(1))).getId();
-            players.subList(0, 6).forEach(p -> tournamentService.addParticipant(autumnId, p.getId()));
+            byLastName(players, "Popescu", "Rusu", "Ciobanu", "Lungu", "Moraru", "Țurcanu")
+                    .forEach(p -> tournamentService.addParticipant(autumnId, p.getId()));
             tournamentService.start(autumnId, TournamentSettings.commercial(5, 3, new BigDecimal("100")));
             int i = 0;
             for (TournamentMatch match : tournamentService.findDetails(autumnId).orElseThrow().matches()) {
@@ -124,14 +145,20 @@ public class DemoDataInitializer implements ApplicationRunner {
 
             Long sundayId = tournamentService.create(
                     new TournamentForm("Turneul de duminică", LocalDate.now().plusDays(3))).getId();
-            players.subList(1, 5).forEach(p -> tournamentService.addParticipant(sundayId, p.getId()));
+            byLastName(players, "Rusu", "Ciobanu", "Lungu", "Moraru")
+                    .forEach(p -> tournamentService.addParticipant(sundayId, p.getId()));
         } finally {
             SecurityContextHolder.getContext().setAuthentication(previous);
         }
     }
 
+    private static List<Player> byLastName(List<Player> players, String... lastNames) {
+        List<String> names = List.of(lastNames);
+        return players.stream().filter(p -> names.contains(p.getLastName())).toList();
+    }
+
     private Player save(String firstName, String lastName, PlayStyle style, PlayHand hand, String city, String phone,
-                        int rating, int wins, int losses, String blade, String forehand, String backhand) {
+                        int rating, int unusedWins, int unusedLosses, String blade, String forehand, String backhand) {
         Player player = new Player(firstName, lastName);
         player.setPlayStyle(style);
         player.setPlayHand(hand);
@@ -140,9 +167,8 @@ public class DemoDataInitializer implements ApplicationRunner {
         player.setBackhandRubber(backhand);
         player.setCity(city);
         player.setPhone(phone);
+        player.setInitialRating(rating);
         player.setRating(rating);
-        player.setWins(wins);
-        player.setLosses(losses);
         return playerRepository.save(player);
     }
 }

@@ -8,6 +8,7 @@ import md.ttm.model.user.AppUser;
 import md.ttm.repository.AppUserRepository;
 import md.ttm.repository.PlayerRepository;
 import md.ttm.security.SecurityUtils;
+import md.ttm.service.rating.RatingService;
 import md.ttm.service.tournament.TournamentService;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
@@ -28,9 +29,11 @@ public class PlayerService {
     private final PlayerRepository playerRepository;
     private final AppUserRepository userRepository;
     private final TournamentService tournamentService;
+    private final RatingService ratingService;
 
     public PlayerService(PlayerRepository playerRepository, AppUserRepository userRepository,
-                         TournamentService tournamentService) {
+                         TournamentService tournamentService, RatingService ratingService) {
+        this.ratingService = ratingService;
         this.tournamentService = tournamentService;
         this.playerRepository = playerRepository;
         this.userRepository = userRepository;
@@ -57,12 +60,20 @@ public class PlayerService {
         return playerRepository.findById(id);
     }
 
-    /** Creează sau actualizează un jucător (administrator). */
+    /**
+     * Creează sau actualizează un jucător (administrator). Ratingul curent și statisticile
+     * nu se editează direct: se recalculează din ratingul inițial și din turneele încheiate.
+     */
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public Player save(Player player) {
         normalize(player);
-        return playerRepository.save(player);
+        if (player.getId() == null) {
+            player.setRating(player.getInitialRating());
+        }
+        Player saved = playerRepository.saveAndFlush(player);
+        ratingService.recalculateAll();
+        return saved;
     }
 
     /** Șterge un jucător și contul de utilizator asociat, dacă există (administrator). */

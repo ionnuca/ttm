@@ -1,11 +1,13 @@
 package md.ttm.service.tournament;
 
+import md.ttm.model.rating.RatingHistory;
 import md.ttm.model.tournament.Tournament;
 import md.ttm.model.tournament.TournamentMatch;
 import md.ttm.model.tournament.TournamentParticipant;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Tot ce afișează pagina unui turneu, plus ce are voie să facă utilizatorul curent.
@@ -14,6 +16,7 @@ import java.util.List;
  * @param standings    tabelul (gol înainte de începerea turneului), în ordinea din grupă
  * @param prizePool    suma acumulată (doar la turneele comerciale)
  * @param ownParticipant participarea utilizatorului curent, dacă e înscris
+ * @param ratingChanges  ratingul înainte/după turneu, pe jucător (doar la turneele încheiate)
  */
 public record TournamentDetails(
         Tournament tournament,
@@ -25,7 +28,8 @@ public record TournamentDetails(
         TournamentParticipant ownParticipant,
         boolean admin,
         boolean canSelfRegister,
-        boolean canRecordResults) {
+        boolean canRecordResults,
+        Map<Long, RatingHistory> ratingChanges) {
 
     public long playedMatches() {
         return matches.stream().filter(TournamentMatch::isPlayed).count();

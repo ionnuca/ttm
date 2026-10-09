@@ -38,6 +38,7 @@ import md.ttm.ui.account.LoginView;
 import md.ttm.ui.components.Badges;
 import md.ttm.ui.components.Notifications;
 import md.ttm.ui.layout.MainLayout;
+import md.ttm.ui.player.RatingHistoryList;
 
 import java.util.List;
 import java.util.Map;
@@ -295,11 +296,13 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
 
         Long own = details.ownParticipant() != null ? details.ownParticipant().getId() : null;
         Span legend = new Span("În fiecare celulă: sus — punctele (2 victorie, 1 înfrângere, 0 înfrângere tehnică), "
-                + "jos — scorul la seturi. W — victorie tehnică, L — înfrângere tehnică.");
+                + "jos — scorul la seturi. W — victorie tehnică, L — înfrângere tehnică."
+                + (details.tournament().getStatus() == TournamentStatus.FINISHED
+                ? " Sub nume: ratingul înainte → după turneu (Elo)." : ""));
         legend.getStyle()
                 .set("font-size", "var(--lumo-font-size-s)")
                 .set("color", "var(--lumo-secondary-text-color)");
-        section.add(heading, new ResultsMatrix(details.participants(), details.standings(), own), legend);
+        section.add(heading, new ResultsMatrix(details.participants(), details.standings(), own, details.ratingChanges()), legend);
         return section;
     }
 
@@ -344,8 +347,8 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         boolean aWon = match.isPlayed() && match.getWinner().getId().equals(a.getId());
         boolean bWon = match.isPlayed() && match.getWinner().getId().equals(b.getId());
 
-        Span nameA = matchName(a, aWon, true);
-        Span nameB = matchName(b, bWon, false);
+        Span nameA = matchName(a, aWon, true, match.getRatingDeltaA());
+        Span nameB = matchName(b, bWon, false, match.getRatingDeltaB());
         Span result;
         if (!match.isPlayed()) {
             result = new Span("–:–");
@@ -384,8 +387,19 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         return row;
     }
 
-    private static Span matchName(TournamentParticipant participant, boolean winner, boolean alignRight) {
+    /** Numele jucătorului, cu schimbarea de rating din meci (la turneele încheiate). */
+    private static Span matchName(TournamentParticipant participant, boolean winner, boolean alignRight,
+                                  Integer ratingDelta) {
         Span name = new Span(participant.getPlayer().getDisplayName());
+        if (ratingDelta != null) {
+            Span delta = RatingHistoryList.change(ratingDelta);
+            delta.getStyle().set("font-size", "var(--lumo-font-size-xs)").set("margin", "0 0.35em");
+            if (alignRight) {
+                name.addComponentAsFirst(delta);
+            } else {
+                name.add(delta);
+            }
+        }
         name.getStyle()
                 .set("flex", "1")
                 .set("min-width", "0")

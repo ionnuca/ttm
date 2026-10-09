@@ -9,6 +9,7 @@ import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.html.H4;
+import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.radiobutton.RadioButtonGroup;
 import com.vaadin.flow.component.textfield.IntegerField;
 import com.vaadin.flow.component.textfield.TextField;
@@ -26,9 +27,7 @@ public class PlayerFormDialog extends Dialog {
     private final RadioButtonGroup<PlayStyle> playStyle = new RadioButtonGroup<>("Stil de joc");
     private final TextField city = new TextField("Oraș");
     private final TextField phone = new TextField("Telefon");
-    private final IntegerField rating = new IntegerField("Rating");
-    private final IntegerField wins = new IntegerField("Victorii");
-    private final IntegerField losses = new IntegerField("Înfrângeri");
+    private final IntegerField initialRating = new IntegerField("Rating inițial");
 
     private final BeanValidationBinder<Player> binder = new BeanValidationBinder<>(Player.class);
 
@@ -42,22 +41,19 @@ public class PlayerFormDialog extends Dialog {
         playStyle.setItems(PlayStyle.values());
         playStyle.setItemLabelGenerator(PlayStyle::getLabel);
         phone.setPlaceholder("+373 ...");
-        rating.setMin(0);
-        rating.setMax(5000);
-        rating.setStepButtonsVisible(true);
-        rating.setStep(10);
-        rating.setHelperText("Inițial " + Player.DEFAULT_RATING);
-        wins.setMin(0);
-        losses.setMin(0);
+        initialRating.setMin(0);
+        initialRating.setMax(5000);
+        initialRating.setStepButtonsVisible(true);
+        initialRating.setStep(10);
+        initialRating.setHelperText("Punctul de plecare (implicit " + Player.DEFAULT_RATING
+                + "). Ratingul curent = ratingul inițial + schimbările din turneele încheiate.");
 
         binder.forField(lastName).asRequired("Introduceți numele").bind("lastName");
         binder.forField(firstName).asRequired("Introduceți prenumele").bind("firstName");
         binder.forField(playStyle).asRequired("Alegeți stilul de joc").bind("playStyle");
         binder.forField(city).bind("city");
         binder.forField(phone).bind("phone");
-        binder.forField(rating).asRequired("Introduceți ratingul").bind("rating");
-        binder.forField(wins).asRequired("Introduceți numărul de victorii").bind("wins");
-        binder.forField(losses).asRequired("Introduceți numărul de înfrângeri").bind("losses");
+        binder.forField(initialRating).asRequired("Introduceți ratingul inițial").bind("initialRating");
         PlayerDetailsFields details = new PlayerDetailsFields(binder);
         binder.readBean(player);
 
@@ -65,11 +61,19 @@ public class PlayerFormDialog extends Dialog {
         details.addPlayHandTo(form);
         form.add(city, phone);
         details.addEquipmentTo(form);
-        H4 statsTitle = new H4("Rating și statistici");
+        H4 statsTitle = new H4("Rating");
         statsTitle.getStyle().set("margin", "var(--lumo-space-m) 0 0");
-        form.add(statsTitle, rating, wins, losses);
+        form.add(statsTitle, initialRating);
         form.setColspan(statsTitle, 2);
-        form.setColspan(rating, 2);
+        if (player.getId() != null) {
+            Span current = new Span("Rating curent: " + player.getRating() + " · victorii / înfrângeri: "
+                    + player.getWins() + " / " + player.getLosses() + " (calculate din turnee)");
+            current.getStyle()
+                    .set("font-size", "var(--lumo-font-size-s)")
+                    .set("color", "var(--lumo-secondary-text-color)")
+                    .set("align-self", "center");
+            form.add(current);
+        }
         form.setResponsiveSteps(
                 new FormLayout.ResponsiveStep("0", 1),
                 new FormLayout.ResponsiveStep("28rem", 2));

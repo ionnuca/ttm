@@ -79,6 +79,10 @@ public class Player {
 
     @Min(value = 0, message = "Ratingul nu poate fi negativ")
     @Max(value = 5000, message = "Ratingul maxim este 5000")
+    @Column(name = "initial_rating", nullable = false)
+    private int initialRating = DEFAULT_RATING;
+
+    /** Ratingul curent, calculat din ratingul inițial și turneele încheiate (vezi RatingService). */
     @Column(name = "rating", nullable = false)
     private int rating = DEFAULT_RATING;
 
@@ -194,6 +198,14 @@ public class Player {
     /** Are completat cel puțin un element de echipament. */
     public boolean hasEquipment() {
         return blade != null || forehandRubber != null || backhandRubber != null;
+    }
+
+    public int getInitialRating() {
+        return initialRating;
+    }
+
+    public void setInitialRating(int initialRating) {
+        this.initialRating = initialRating;
     }
 
     public int getRating() {
