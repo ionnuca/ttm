@@ -134,8 +134,7 @@ public class TournamentService {
     public void delete(Long tournamentId) {
         Tournament tournament = requireTournament(tournamentId);
         boolean rated = tournament.getStatus() == TournamentStatus.FINISHED;
-        tournamentRepository.delete(tournament);
-        tournamentRepository.flush();
+        tournamentRepository.deleteWithChildren(tournament.getId());
         if (rated) {
             ratingService.recalculateAll();
         }
