@@ -5,10 +5,14 @@ name: Capturi interfață
 # ale paginilor principale, pentru fiecare rol, pe desktop și pe telefon.
 on:
   workflow_dispatch:
+  push:
+    branches: [etapa-2-turnee]
 
 jobs:
   screenshots:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     services:
       postgres:
@@ -60,6 +64,15 @@ jobs:
           npm install --no-save --no-package-lock playwright@1.49.1
           npx playwright install --with-deps chromium
           node screenshots.mjs ../../screenshots
+
+      - name: Publică capturile (temporar)
+        if: always() && github.event_name == 'push'
+        run: |
+          mkdir -p screenshots && cp app.log screenshots/ || true
+          cd screenshots
+          git init -q && git checkout -q -b ui-capturi
+          git add -A && git -c user.name=ci -c user.email=ci@localhost commit -qm "Capturi ${GITHUB_SHA}"
+          git push -qf "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}" ui-capturi
 
       - uses: actions/upload-artifact@v5
         if: always()
