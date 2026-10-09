@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    name: Teste și build de producție
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: ttm_test
+          POSTGRES_USER: ttm
+          POSTGRES_PASSWORD: ttm
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ttm -d ttm_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Teste (mvn verify)
+        run: mvn -B verify
+        env:
+          TEST_DB_URL: jdbc:postgresql://localhost:5432/ttm_test
+
+      - name: Build de producție
+        run: mvn -B -Pproduction -DskipTests package
+
+      - name: Rezumat
+        if: always()
+        run: |
+          tests=0; failures=0; errors=0; skipped=0
+          for f in target/surefire-reports/TEST-*.xml; do
+            [ -f "$f" ] || continue
+            line=$(grep -m1 -o '<testsuite[^>]*>' "$f")
+            tests=$((tests + $(echo "$line" | sed -E 's/.* tests="([0-9]+)".*/\1/')))
+            failures=$((failures + $(echo "$line" | sed -E 's/.* failures="([0-9]+)".*/\1/')))
+            errors=$((errors + $(echo "$line" | sed -E 's/.* errors="([0-9]+)".*/\1/')))
+            skipped=$((skipped + $(echo "$line" | sed -E 's/.* skipped="([0-9]+)".*/\1/')))
+          done
+          echo "::notice title=Teste::rulate ${tests}, eșuate ${failures}, erori ${errors}, ignorate ${skipped}"
+          jar=$(ls target/ttm-*.jar 2>/dev/null | head -1)
+          if [ -n "$jar" ]; then
+            echo "::notice title=Build::${jar} ($(du -h "$jar" | cut -f1))"
+          fi
+
+      - name: Rapoartele testelor
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: surefire-reports
+          path: target/surefire-reports/

@@ -1,0 +1,47 @@
+# Pornire completă (aplicație + bază de date):   docker compose up -d --build
+# Doar baza de date (pentru rulare din IDE):        docker compose up -d db
+# Setările se citesc din fișierul .env (vezi .env.example).
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: ttm-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ttm
+      POSTGRES_USER: ttm
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-ttm}
+      TZ: Europe/Chisinau
+    ports:
+      - "5432:5432"
+    volumes:
+      - ttm-pgdata:/var/lib/postgresql/data
+      # Scripturile rulează o singură dată, la crearea volumului (creează baza ttm_test pentru teste)
+      - ./database/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ttm -d ttm"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    container_name: ttm-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/ttm
+      DB_USER: ttm
+      DB_PASSWORD: ${DB_PASSWORD:-ttm}
+      APP_ADMIN_USERNAME: ${APP_ADMIN_USERNAME:-admin}
+      APP_ADMIN_PASSWORD: ${APP_ADMIN_PASSWORD:-}
+      APP_REGISTRATION_ENABLED: ${APP_REGISTRATION_ENABLED:-true}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-}
+      TZ: Europe/Chisinau
+    ports:
+      - "8080:8080"
+
+volumes:
+  ttm-pgdata:

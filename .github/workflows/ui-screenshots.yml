@@ -1,0 +1,70 @@
+name: Capturi interfață
+
+# Pornit manual (Actions → Capturi interfață → Run workflow).
+# Construiește aplicația, o pornește cu date demonstrative și salvează capturi de ecran
+# ale paginilor principale, pentru fiecare rol, pe desktop și pe telefon.
+on:
+  workflow_dispatch:
+
+jobs:
+  screenshots:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: ttm
+          POSTGRES_USER: ttm
+          POSTGRES_PASSWORD: ttm
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ttm -d ttm"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+
+      - name: Build de producție
+        run: mvn -B -Pproduction -DskipTests package
+
+      - name: Pornește aplicația
+        env:
+          DB_URL: jdbc:postgresql://localhost:5432/ttm
+          APP_ADMIN_PASSWORD: admin12345
+          SPRING_PROFILES_ACTIVE: demo
+        run: |
+          nohup java -jar target/ttm-*.jar > app.log 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:8080/ > /dev/null; then echo "Aplicația a pornit"; exit 0; fi
+            sleep 2
+          done
+          echo "Aplicația nu a pornit"; cat app.log; exit 1
+
+      - name: Capturi de ecran
+        working-directory: .github/scripts
+        run: |
+          npm install --no-save --no-package-lock playwright@1.49.1
+          npx playwright install --with-deps chromium
+          node screenshots.mjs ../../screenshots
+
+      - uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: capturi-interfata
+          path: |
+            screenshots/
+            app.log
