@@ -8,6 +8,7 @@ import md.ttm.ui.account.ProfileView;
 import md.ttm.ui.account.RegisterView;
 import md.ttm.ui.components.Responsive;
 import md.ttm.ui.player.PlayersView;
+import md.ttm.ui.tournament.TournamentsView;
 import md.ttm.ui.user.UsersView;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.applayout.AppLayout;
@@ -75,6 +76,7 @@ public class MainLayout extends AppLayout {
     private static SideNav createNavigation() {
         SideNav nav = new SideNav();
         nav.addItem(new SideNavItem("Jucători", PlayersView.class, VaadinIcon.TROPHY.create()));
+        nav.addItem(new SideNavItem("Turnee", TournamentsView.class, VaadinIcon.FLAG_CHECKERED.create()));
         if (SecurityUtils.isAuthenticated()) {
             nav.addItem(new SideNavItem("Profilul meu", ProfileView.class, VaadinIcon.USER.create()));
         }

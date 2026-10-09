@@ -77,6 +77,20 @@ await check('guest: înregistrare', async () => {
   await expectText(page, 'Cont nou');
   await shot(page, '03-guest-inregistrare');
 });
+await check('guest: lista turneelor', async () => {
+  await page.goto(`${BASE}/turnee`);
+  await expectText(page, 'Cupa de toamnă');
+  await expectText(page, 'Turneul de duminică');
+  await shot(page, '20-guest-turnee');
+});
+await check('guest: turneu în desfășurare (tabel)', async () => {
+  await page.getByText('Cupa de toamnă').first().click();
+  await expectText(page, 'Tabelul turneului');
+  await expectText(page, 'Meciuri jucate: 9 din 15');
+  await expectText(page, 'Suma acumulată: 600 lei');
+  await expectNoText(page, 'Mă înscriu');
+  await shot(page, '21-guest-turneu-tabel');
+});
 await ctx.close();
 
 // ---------- Administrator, desktop ----------
@@ -118,6 +132,22 @@ await check('admin: dialog utilizator nou', async () => {
   await shot(page, '09-admin-utilizator-nou');
   await page.keyboard.press('Escape');
 });
+await check('admin: turneu nou (comercial)', async () => {
+  await page.goto(`${BASE}/turnee`);
+  await page.getByRole('button', { name: 'Turneu nou' }).click();
+  await expectText(page, 'Tipul turneului');
+  await page.getByText('Turneu comercial (cu taxă de participare și premii)').click();
+  await expectText(page, '2 câștigători (60% / 40%)');
+  await shot(page, '22-admin-turneu-nou');
+  await page.keyboard.press('Escape');
+});
+await check('admin: turneu cu înscriere deschisă', async () => {
+  await page.goto(`${BASE}/turnee`);
+  await page.getByText('Turneul de duminică').first().click();
+  await expectText(page, 'Participanți înscriși (4)');
+  await expectText(page, 'Începe turneul');
+  await shot(page, '23-admin-turneu-inscriere');
+});
 await ctx.close();
 
 // ---------- Utilizator logat, desktop ----------
@@ -137,6 +167,26 @@ await check('utilizator: profil', async () => {
   await expectText(page, 'Mâna de joc');
   await shot(page, '11-utilizator-profil');
 });
+await check('utilizator: introduce un rezultat', async () => {
+  await page.goto(`${BASE}/turnee`);
+  await page.getByText('Cupa de toamnă').first().click();
+  await expectText(page, 'Tabelul turneului');
+  await page.getByRole('button', { name: /^Introdu rezultatul/ }).first().click();
+  await expectText(page, 'Rezultatul meciului');
+  await page.getByRole('button', { name: '3:1', exact: true }).click();
+  await shot(page, '24-utilizator-dialog-rezultat');
+  await page.getByRole('button', { name: 'Salvează' }).click();
+  await expectText(page, 'Meciuri jucate: 10 din 15');
+  await shot(page, '25-utilizator-turneu-dupa-rezultat');
+});
+await check('utilizator: se înscrie la turneu', async () => {
+  await page.goto(`${BASE}/turnee`);
+  await page.getByText('Turneul de duminică').first().click();
+  await page.getByRole('button', { name: 'Mă înscriu' }).click();
+  await expectText(page, 'Participanți înscriși (5)');
+  await expectText(page, 'Mă retrag');
+  await shot(page, '26-utilizator-inscris');
+});
 await ctx.close();
 
 // ---------- Telefon ----------
@@ -147,6 +197,12 @@ await check('telefon: guest', async () => {
   await page.goto(`${BASE}/`);
   await expectText(page, 'Clasament jucători');
   await shot(page, '12-telefon-guest-jucatori');
+});
+await check('telefon: turneu', async () => {
+  await page.goto(`${BASE}/turnee`);
+  await page.getByText('Cupa de toamnă').first().click();
+  await expectText(page, 'Tabelul turneului');
+  await shot(page, '27-telefon-turneu');
 });
 await check('telefon: admin', async () => {
   await login(page, 'admin', 'admin12345');
