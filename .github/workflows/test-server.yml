@@ -13,7 +13,12 @@ jobs:
       - name: server-setup.sh (răspunsuri automate)
         run: |
           curl -fsSLO https://raw.githubusercontent.com/ionnuca/ttm/main/deploy/server-setup.sh
-          printf 'localhost\nci@example.com\n\n\n\nParola-Test-123\nParola-Test-123\n\n' | sudo bash server-setup.sh 2>&1 | tee setup.log
+          set +e
+          printf 'localhost\nci@example.com\n\n\n\nParola-Test-123\nParola-Test-123\n\n' | sudo bash -x server-setup.sh > setup.log 2>&1
+          rc=$?
+          tail -40 setup.log | while IFS= read -r l; do echo "::warning::$l"; done
+          [ $rc -eq 0 ] || exit 1
+          set -e
           sudo cat /opt/ttm/.env | grep -v PASSWORD
           sudo ls -la /opt/ttm /etc/cron.d/ttm-backup
           swapon --show; sudo ufw status
