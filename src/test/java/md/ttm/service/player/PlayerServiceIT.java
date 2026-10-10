@@ -127,6 +127,7 @@ class PlayerServiceIT {
         own.setForehandRubber("Tenergy 05");
         own.setBackhandRubber("");
         own.setRating(3000);
+        own.setInitialRating(3000);
         own.setWins(99);
         Player saved = playerService.updateOwnProfile(own);
 
@@ -150,6 +151,22 @@ class PlayerServiceIT {
 
         assertThatThrownBy(() -> playerService.updateOwnProfile(other))
                 .isInstanceOf(BusinessException.class);
+    }
+
+    @Test
+    @WithMockUser(username = "ion", roles = "ADMIN")
+    void administratorulIsiPoateStabiliRatingulInitialDinProfil() {
+        userService.register(new RegistrationForm("Ion", "Nuca", "ion", "parola-ion"));
+        entityManager.flush();
+        entityManager.clear();
+        Player own = userRepository.findByUsername("ion").orElseThrow().getPlayer();
+        entityManager.clear();
+
+        own.setInitialRating(1500);
+        Player saved = playerService.updateOwnProfile(own);
+
+        assertThat(saved.getInitialRating()).isEqualTo(1500);
+        assertThat(saved.getRating()).isEqualTo(1500);
     }
 
     private static Player player(String firstName, String lastName, int rating) {

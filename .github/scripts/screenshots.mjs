@@ -58,7 +58,7 @@ let page = await ctx.newPage();
 // Iconițele (Safari pe iPhone le cere automat)
 {
   const probe = await browser.newContext();
-  for (const path of ['/apple-touch-icon-precomposed.png', '/apple-touch-icon.png', '/favicon.ico', '/icons/icon.png']) {
+  for (const path of ['/apple-touch-icon-precomposed.png', '/apple-touch-icon.png', '/favicon.ico', '/icons/icon.png', '/icons/favicon.svg', '/icons/favicon-32.png']) {
     await check(`iconiță ${path}`, async () => {
       const res = await probe.request.get(`${BASE}${path}`, { maxRedirects: 0 });
       const type = res.headers()['content-type'] ?? '';
@@ -72,6 +72,8 @@ await check('guest: lista jucătorilor', async () => {
   await page.goto(`${BASE}/`);
   await expectText(page, 'Clasament jucători');
   await expectText(page, 'Popescu Ion');
+  await expectText(page, 'Versiunea ');
+  if (!(await page.locator('link[rel="icon"][href*="favicon.svg"]').count())) throw new Error('lipsește <link rel="icon"> spre favicon.svg');
   await expectNoText(page, 'Telefon');
   await expectNoText(page, 'Adaugă jucător');
   await shot(page, '01-guest-jucatori');

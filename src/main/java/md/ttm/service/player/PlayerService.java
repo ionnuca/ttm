@@ -101,7 +101,8 @@ public class PlayerService {
 
     /**
      * Actualizează profilul de jucător al utilizatorului autentificat.
-     * Se preiau doar datele personale și echipamentul; ratingul și statisticile nu pot fi modificate de jucător.
+     * Se preiau datele personale și echipamentul. Ratingul și statisticile nu pot fi modificate de jucător;
+     * administratorul își poate stabili ratingul inițial, iar ratingul curent se recalculează.
      */
     @PreAuthorize("isAuthenticated()")
     @Transactional
@@ -124,7 +125,20 @@ public class PlayerService {
         own.setForehandRubber(edited.getForehandRubber());
         own.setBackhandRubber(edited.getBackhandRubber());
         normalize(own);
-        return playerRepository.save(own);
+        boolean initialRatingChanged = SecurityUtils.isAdmin()
+                && edited.getInitialRating() != own.getInitialRating();
+        if (initialRatingChanged) {
+            if (edited.getInitialRating() < 0) {
+                throw new BusinessException("Ratingul inițial nu poate fi negativ");
+            }
+            own.setInitialRating(edited.getInitialRating());
+        }
+        Player saved = playerRepository.saveAndFlush(own);
+        if (initialRatingChanged) {
+            ratingService.recalculateAll();
+            return playerRepository.findById(saved.getId()).orElseThrow();
+        }
+        return saved;
     }
 
     private static void normalize(Player player) {

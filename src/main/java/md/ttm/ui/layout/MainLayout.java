@@ -1,6 +1,8 @@
 package md.ttm.ui.layout;
 
 import md.ttm.model.user.AppUser;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.info.BuildProperties;
 import md.ttm.model.user.Role;
 import md.ttm.security.SecurityUtils;
 import md.ttm.service.user.UserService;
@@ -38,12 +40,14 @@ public class MainLayout extends AppLayout {
     /** Elemente ascunse pe telefon, ca bara de sus să încapă pe ecran. */
     private final List<Component> hiddenWhenNarrow = new ArrayList<>();
 
-    public MainLayout(AuthenticationContext authenticationContext, UserService userService) {
+    public MainLayout(AuthenticationContext authenticationContext, UserService userService,
+                      ObjectProvider<BuildProperties> buildProperties) {
         setPrimarySection(Section.DRAWER);
         Component title = createTitle();
         hiddenWhenNarrow.add(title);
         addToNavbar(new DrawerToggle(), title, createUserArea(authenticationContext, userService));
-        addToDrawer(createDrawerHeader(), new Scroller(createNavigation()));
+        BuildProperties build = buildProperties.getIfAvailable();
+        addToDrawer(createDrawerHeader(build == null ? null : build.getVersion()), new Scroller(createNavigation()));
         Responsive.onNarrowChange(this, narrow -> hiddenWhenNarrow.forEach(c -> c.setVisible(!narrow)));
     }
 
@@ -56,7 +60,7 @@ public class MainLayout extends AppLayout {
         return title;
     }
 
-    private static Component createDrawerHeader() {
+    private static Component createDrawerHeader(String version) {
         Span logo = new Span("TTM");
         logo.getStyle()
                 .set("font-size", "var(--lumo-font-size-xl)")
@@ -67,6 +71,13 @@ public class MainLayout extends AppLayout {
                 .set("font-size", "var(--lumo-font-size-s)")
                 .set("color", "var(--lumo-secondary-text-color)");
         Div header = new Div(logo, subtitle);
+        if (version != null) {
+            Span versionLabel = new Span("Versiunea " + version);
+            versionLabel.getStyle()
+                    .set("font-size", "var(--lumo-font-size-xs)")
+                    .set("color", "var(--lumo-tertiary-text-color)");
+            header.add(versionLabel);
+        }
         header.getStyle()
                 .set("display", "flex")
                 .set("flex-direction", "column")
