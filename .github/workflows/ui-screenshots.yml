@@ -5,6 +5,8 @@ name: Capturi interfață
 # ale paginilor principale, pentru fiecare rol, pe desktop și pe telefon.
 on:
   workflow_dispatch:
+  push:
+    branches: [etapa-4-grupe]
 
 jobs:
   screenshots:
