@@ -75,11 +75,7 @@ public class PlayerView extends VerticalLayout implements HasUrlParameter<Long>,
         Player player = profile.player();
         title = player.getDisplayName() + " | TTM";
 
-        add(createHeader(profile), createStats(profile.stats(), player, profile));
-        if (photoService.canEdit(player.getId())) {
-            add(new PhotoEditor(player, photoService, this::refresh));
-        }
-        add(createEquipment(player),
+        add(createHeader(profile), createStats(profile.stats(), player, profile), createEquipment(player),
                 new RatingHistoryList(profile.ratingHistory(), player.getInitialRating()));
 
         H3 matchesTitle = new H3("Meciuri (" + profile.matches().size() + ")");
@@ -111,19 +107,22 @@ public class PlayerView extends VerticalLayout implements HasUrlParameter<Long>,
         if (SecurityUtils.isAdmin() && player.getPhone() != null) {
             text.add(secondary("Telefon: " + player.getPhone()));
         }
+        if (photoService.canEdit(player.getId())) {
+            text.add(new PhotoEditor(player, photoService, this::refresh, false));
+        }
         text.setPadding(false);
         text.setSpacing(false);
+        text.setWidth(null);
+        text.getStyle().set("flex", "1 1 14rem").set("min-width", "0");
 
         HorizontalLayout header = new HorizontalLayout(
                 PlayerAvatar.of(player, photoService.version(player.getId()), "4.5rem"), text);
         header.setAlignItems(FlexComponent.Alignment.CENTER);
         header.setWidthFull();
         if (SecurityUtils.isAdmin()) {
-            Div spacer = new Div();
-            spacer.getStyle().set("flex-grow", "1");
             Button edit = new Button("Editează", VaadinIcon.EDIT.create(), e -> openEditor(player));
             edit.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
-            header.add(spacer, edit);
+            header.add(edit);
         }
         header.getStyle().set("flex-wrap", "wrap");
         return header;

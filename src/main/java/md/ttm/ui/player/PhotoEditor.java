@@ -28,6 +28,14 @@ public class PhotoEditor extends HorizontalLayout {
     private final Button delete = new Button("Șterge poza", VaadinIcon.TRASH.create());
 
     public PhotoEditor(Player player, PlayerPhotoService photoService, Runnable onChange) {
+        this(player, photoService, onChange, true);
+    }
+
+    /**
+     * @param showAvatar {@code false} = doar butoanele (avatarul e afișat în altă parte a paginii,
+     *                   iar {@code onChange} o reîmprospătează)
+     */
+    public PhotoEditor(Player player, PlayerPhotoService photoService, Runnable onChange, boolean showAvatar) {
         this.player = player;
         this.photoService = photoService;
         this.onChange = onChange;
@@ -75,6 +83,7 @@ public class PhotoEditor extends HorizontalLayout {
         controls.setWidth(null);
 
         avatar = createAvatar();
+        avatar.setVisible(showAvatar);
         add(avatar, controls);
     }
 
@@ -86,6 +95,7 @@ public class PhotoEditor extends HorizontalLayout {
 
     private void changed() {
         Avatar updated = createAvatar();
+        updated.setVisible(avatar.isVisible());
         replace(avatar, updated);
         avatar = updated;
         if (onChange != null) {
