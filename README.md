@@ -192,11 +192,50 @@ Toate setările se pot da prin variabile de mediu (sau în `.env` pentru Docker 
 | `DB_USER` / `DB_PASSWORD` | `ttm` / `ttm` | Credențialele bazei de date |
 | `APP_ADMIN_USERNAME` | `admin` | Administratorul creat la prima pornire |
 | `APP_ADMIN_PASSWORD` | *(gol)* | Parola lui; dacă lipsește, se generează și se afișează **o singură dată** în log |
+| `APP_ADMIN_FIRST_NAME` / `APP_ADMIN_LAST_NAME` | *(gol)* | Opțional: numele administratorului; cu ambele completate primește și profil de jucător |
 | `APP_REGISTRATION_ENABLED` | `true` | Permite crearea de conturi din pagina „Cont nou” |
-| `SPRING_PROFILES_ACTIVE` | *(gol)* | `dev` = dezvoltare locală, `demo` = doar date demonstrative |
+| `SPRING_PROFILES_ACTIVE` | *(gol)* | `dev` = dezvoltare locală, `demo` = date demonstrative complete, `seed` = doar 10 jucători de test (într-o bază goală) |
+| `JAVA_OPTS` | `-Xmx1g` (producție) | Opțiunile JVM, de ex. memoria maximă |
 | `PORT` | `8080` | Portul HTTP |
 
 Administratorul se creează doar dacă nu există încă niciun administrator activ, deci schimbarea ulterioară a `APP_ADMIN_PASSWORD` nu modifică parola; aceasta se schimbă din „Profilul meu”.
+
+---
+
+## Producție (VPS)
+
+Configurația de producție e în `deploy/`: PostgreSQL (fără port public), aplicația și **Caddy**, care obține automat certificatul HTTPS de la Let's Encrypt. Merge pe orice VPS cu Ubuntu 22.04/24.04 și minimum 2 GB RAM (recomandat 4 GB), pe procesor x86 sau ARM.
+
+**Publicarea automată.** Workflow-ul `Publicare` (`.github/workflows/deploy.yml`) rulează după fiecare CI reușit pe `main`:
+1. construiește imaginea de producție (amd64 + arm64);
+2. pornește configurația de producție completă și verifică HTTPS-ul, crearea administratorului, jucătorii de test și backup-ul;
+3. publică imaginea în `ghcr.io/ionnuca/ttm`;
+4. dacă serverul e configurat, o instalează pe server prin SSH și așteaptă pornirea aplicației.
+
+**Prima instalare** (o singură dată):
+1. Pe server, ca utilizator cu drept de `sudo`:
+   ```bash
+   curl -fsSLO https://raw.githubusercontent.com/ionnuca/ttm/main/deploy/server-setup.sh
+   sudo bash server-setup.sh
+   ```
+   Scriptul instalează Docker, firewall-ul (22, 80, 443), swap, actualizările automate de securitate și backup-ul zilnic, apoi întreabă domeniul, emailul pentru HTTPS, utilizatorul, numele și parola administratorului și dacă se adaugă jucătorii de test. Rezultatul e `/opt/ttm/.env` (parola bazei de date se generează aleatoriu).
+2. **DNS:** o înregistrare de tip **A** pentru domeniu (de ex. `turnee.exemplu.md`) spre IP-ul serverului.
+3. **GitHub** → *Settings → Secrets and variables → Actions* → trei secrete afișate de script la final: `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`.
+4. **GitHub** → *Actions → Publicare → Run workflow*. După 1–2 minute aplicația e la `https://<domeniu>`.
+
+De aici înainte, orice modificare ajunsă pe `main` se publică singură.
+
+**Pe server** (`/opt/ttm`):
+
+| Ce | Comanda |
+|---|---|
+| Starea containerelor | `docker compose ps` |
+| Jurnalul aplicației | `docker compose logs -f app` |
+| Repornire | `docker compose restart app` |
+| Backup manual | `./backup.sh` (automat zilnic la 03:30, se păstrează 14 zile în `backups/`) |
+| Restaurare | `docker compose exec -T db pg_restore -U ttm -d ttm --clean --if-exists < backups/<fișier>.dump` |
+
+Copiile de rezervă stau pe același server. Pentru siguranță, descărcați periodic una pe alt calculator: `scp <utilizator>@<server>:/opt/ttm/backups/<fișier>.dump .`
 
 ---
 
