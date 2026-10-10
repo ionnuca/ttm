@@ -123,6 +123,7 @@ public class PlayersView extends VerticalLayout {
 
         Grid.Column<RankedPlayer> name = grid.addComponentColumn(this::nameCell)
                 .setHeader("Nume Prenume")
+                .setAutoWidth(true)
                 .setFlexGrow(3)
                 .setSortable(true)
                 .setComparator(byName);
