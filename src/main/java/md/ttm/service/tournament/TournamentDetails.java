@@ -17,6 +17,7 @@ import java.util.Map;
  * @param prizePool    suma acumulată (doar la turneele comerciale)
  * @param ownParticipant participarea utilizatorului curent, dacă e înscris
  * @param ratingChanges  ratingul înainte/după turneu, pe jucător (doar la turneele încheiate)
+ * @param groups         la „Grupe + finale”: grupele etapei 1, apoi finalele (gol la Round Robin)
  */
 public record TournamentDetails(
         Tournament tournament,
@@ -29,7 +30,23 @@ public record TournamentDetails(
         boolean admin,
         boolean canSelfRegister,
         boolean canRecordResults,
-        Map<Long, RatingHistory> ratingChanges) {
+        Map<Long, RatingHistory> ratingChanges,
+        List<GroupView> groups) {
+
+    public List<GroupView> groupStage() {
+        return groups.stream().filter(g -> !g.group().isFinal()).toList();
+    }
+
+    public List<GroupView> finals() {
+        return groups.stream().filter(g -> g.group().isFinal()).toList();
+    }
+
+    /** Etapa 1 s-a terminat și se poate porni etapa 2. */
+    public boolean canStartFinals() {
+        return admin && tournament.isGroupsFormat()
+                && tournament.getStage() == md.ttm.model.tournament.TournamentStage.GROUPS
+                && !groupStage().isEmpty() && groupStage().stream().allMatch(GroupView::complete);
+    }
 
     public long playedMatches() {
         return matches.stream().filter(TournamentMatch::isPlayed).count();

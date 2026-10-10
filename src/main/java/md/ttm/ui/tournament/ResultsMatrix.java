@@ -20,7 +20,7 @@ class ResultsMatrix extends Div {
     private static final String STICKY = "position:sticky;left:0;z-index:1;";
 
     /**
-     * @param participants participanții în ordinea din grupă
+     * @param participants participanții în ordinea din grupă (numerotați 1, 2, 3 … în această ordine)
      * @param standings    rândurile calculate, în aceeași ordine
      * @param highlighted  participantul evidențiat (utilizatorul curent), poate fi {@code null}
      * @param ratingChanges ratingul înainte/după turneu, pe jucător (gol dacă turneul nu e încheiat)
@@ -41,8 +41,8 @@ class ResultsMatrix extends Div {
 
         Element head = new Element("tr");
         head.appendChild(headerCell("Jucător").setAttribute("style", headerStyle() + STICKY + "text-align:left;"));
-        for (TournamentParticipant p : participants) {
-            head.appendChild(headerCell(String.valueOf(p.getSeed())));
+        for (int i = 1; i <= participants.size(); i++) {
+            head.appendChild(headerCell(String.valueOf(i)));
         }
         head.appendChild(headerCell("Seturi"), headerCell("Puncte"), headerCell("Loc"));
         table.appendChild(new Element("thead").appendChild(head));
@@ -57,7 +57,7 @@ class ResultsMatrix extends Div {
             if (own) {
                 tr.getStyle().set("background", "var(--lumo-primary-color-10pct)");
             }
-            tr.appendChild(nameCell(participant, own, ratingChanges.get(participant.getPlayer().getId())));
+            tr.appendChild(nameCell(i + 1, participant, own, ratingChanges.get(participant.getPlayer().getId())));
 
             Map<Long, StandingsCalculator.Cell> cells = row.cells();
             for (TournamentParticipant opponent : participants) {
@@ -78,14 +78,14 @@ class ResultsMatrix extends Div {
     }
 
     /** Numele rămâne vizibil la derularea orizontală a tabelului (pe telefon). */
-    private static Element nameCell(TournamentParticipant participant, boolean own, RatingHistory change) {
+    private static Element nameCell(int number, TournamentParticipant participant, boolean own, RatingHistory change) {
         String background = own
                 ? "linear-gradient(var(--lumo-primary-color-10pct), var(--lumo-primary-color-10pct)), var(--lumo-base-color)"
                 : "var(--lumo-base-color)";
         Element td = cell(null, STICKY + "background:" + background + ";text-align:left;white-space:nowrap;");
         Element name = new Element("div");
         Element seed = new Element("span");
-        seed.setText(participant.getSeed() + ". ");
+        seed.setText(number + ". ");
         seed.getStyle().set("color", "var(--lumo-secondary-text-color)");
         Element fullName = new Element("span");
         fullName.setText(participant.getPlayer().getDisplayName());

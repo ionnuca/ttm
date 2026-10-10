@@ -34,6 +34,11 @@ public class TournamentMatch {
     @JoinColumn(name = "tournament_id", nullable = false)
     private Tournament tournament;
 
+    /** Grupa meciului; {@code null} la turneele Round Robin simple. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "group_id")
+    private TournamentGroup group;
+
     @Column(name = "round_no", nullable = false)
     private int roundNo;
 
@@ -80,6 +85,20 @@ public class TournamentMatch {
         this.roundNo = roundNo;
         this.participantA = a;
         this.participantB = b;
+    }
+
+    public TournamentMatch(Tournament tournament, TournamentGroup group, int roundNo,
+                           TournamentParticipant a, TournamentParticipant b) {
+        this(tournament, roundNo, a, b);
+        this.group = group;
+    }
+
+    public TournamentGroup getGroup() {
+        return group;
+    }
+
+    public boolean involves(Long participantId) {
+        return participantA.getId().equals(participantId) || participantB.getId().equals(participantId);
     }
 
     public boolean isPlayed() {

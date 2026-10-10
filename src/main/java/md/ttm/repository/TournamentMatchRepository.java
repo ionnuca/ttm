@@ -16,6 +16,7 @@ public interface TournamentMatchRepository extends JpaRepository<TournamentMatch
               join fetch m.participantA a join fetch a.player
               join fetch m.participantB b join fetch b.player
               left join fetch m.winner
+              left join fetch m.group
             where m.tournament.id = :tournamentId
             order by m.roundNo, m.id""")
     List<TournamentMatch> findByTournamentIdWithParticipants(@Param("tournamentId") Long tournamentId);
@@ -23,10 +24,13 @@ public interface TournamentMatchRepository extends JpaRepository<TournamentMatch
     @Query("""
             select m from TournamentMatch m
               join fetch m.tournament
+              left join fetch m.group
               join fetch m.participantA a join fetch a.player
               join fetch m.participantB b join fetch b.player
             where m.id = :id""")
     Optional<TournamentMatch> findByIdWithParticipants(@Param("id") Long id);
 
     long countByTournamentIdAndOutcomeIsNull(Long tournamentId);
+
+    long countByGroupIdAndOutcomeIsNull(Long groupId);
 }

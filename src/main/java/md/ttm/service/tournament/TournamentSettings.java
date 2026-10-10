@@ -16,6 +16,7 @@ public class TournamentSettings {
     private boolean commercial;
     private Integer winnersCount = 1;
     private BigDecimal entryFee;
+    private Integer groupCount = 2;
 
     public static TournamentSettings roundRobin(int bestOf) {
         TournamentSettings settings = new TournamentSettings();
@@ -29,6 +30,21 @@ public class TournamentSettings {
         settings.setWinnersCount(winners);
         settings.setEntryFee(entryFee);
         return settings;
+    }
+
+    public static TournamentSettings groups(int bestOf, int groupCount) {
+        TournamentSettings settings = roundRobin(bestOf);
+        settings.setFormat(TournamentFormat.GROUPS_FINALS);
+        settings.setGroupCount(groupCount);
+        return settings;
+    }
+
+    public Integer getGroupCount() {
+        return groupCount;
+    }
+
+    public void setGroupCount(Integer groupCount) {
+        this.groupCount = groupCount;
     }
 
     public TournamentFormat getFormat() {

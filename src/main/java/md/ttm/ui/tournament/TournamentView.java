@@ -29,8 +29,10 @@ import md.ttm.model.player.Player;
 import md.ttm.model.tournament.Tournament;
 import md.ttm.model.tournament.TournamentMatch;
 import md.ttm.model.tournament.TournamentParticipant;
+import md.ttm.model.tournament.TournamentStage;
 import md.ttm.model.tournament.TournamentStatus;
 import md.ttm.security.SecurityUtils;
+import md.ttm.service.tournament.GroupView;
 import md.ttm.service.tournament.PrizePlace;
 import md.ttm.service.tournament.TournamentDetails;
 import md.ttm.service.tournament.TournamentService;
@@ -94,7 +96,9 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         if (details.prizePool() != null) {
             add(createPrizes(details));
         }
-        if (details.tournament().isStarted()) {
+        if (details.tournament().isStarted() && details.tournament().isGroupsFormat()) {
+            addGroupsTournament(details);
+        } else if (details.tournament().isStarted()) {
             add(createStandings(details), createMatches(details));
         } else {
             add(createRegistration(details));
@@ -128,13 +132,14 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
             titleRow.add(delete);
         }
 
-        String configuration = t.isStarted()
-                ? t.getFormat().getLabel() + " · best of " + t.getBestOf() + " · "
-                : "";
+        String configuration = t.isStarted() ? TournamentLabels.configuration(t) + " · " : "";
         Span meta = new Span(TournamentLabels.longDate(t.getTournamentDate()) + " · "
                 + configuration + details.participants().size() + " participanți");
         meta.getStyle().set("color", "var(--lumo-secondary-text-color)");
         HorizontalLayout metaRow = new HorizontalLayout(meta, TournamentLabels.statusBadge(t.getStatus()));
+        if (t.isGroupsFormat() && t.getStage() != null && t.getStatus() == TournamentStatus.IN_PROGRESS) {
+            metaRow.add(Badges.badge(t.getStage().getLabel(), Badges.Tone.CONTRAST));
+        }
         metaRow.setAlignItems(FlexComponent.Alignment.CENTER);
         metaRow.getStyle().set("flex-wrap", "wrap");
 
@@ -162,9 +167,10 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
                 .set("gap", "var(--lumo-space-s) var(--lumo-space-l)")
                 .set("margin-top", "var(--lumo-space-s)");
         for (PrizePlace prize : details.prizes()) {
-            Span place = new Span("Locul " + prize.place() + ": ");
+            Span place = new Span(prize.title() + ": ");
             place.getStyle().set("color", "var(--lumo-secondary-text-color)");
-            Span amount = new Span(TournamentLabels.money(prize.amount()) + " (" + prize.percentage() + "%)");
+            Span amount = new Span(TournamentLabels.money(prize.amount())
+                    + (prize.percentage() != null ? " (" + prize.percentage() + "%)" : " (taxa de participare)"));
             amount.getStyle().set("font-weight", "600");
             Span item = new Span(place, amount);
             if (prize.winnerName() != null) {
@@ -294,7 +300,16 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         heading.setAlignItems(FlexComponent.Alignment.BASELINE);
         heading.getStyle().set("flex-wrap", "wrap");
 
-        Long own = details.ownParticipant() != null ? details.ownParticipant().getId() : null;
+        section.add(heading, new ResultsMatrix(details.participants(), details.standings(), ownId(details),
+                details.ratingChanges()), legend(details));
+        return section;
+    }
+
+    private static Long ownId(TournamentDetails details) {
+        return details.ownParticipant() != null ? details.ownParticipant().getId() : null;
+    }
+
+    private static Span legend(TournamentDetails details) {
         Span legend = new Span("În fiecare celulă: sus — punctele (2 victorie, 1 înfrângere, 0 înfrângere tehnică), "
                 + "jos — scorul la seturi. W — victorie tehnică, L — înfrângere tehnică."
                 + (details.tournament().getStatus() == TournamentStatus.FINISHED
@@ -302,8 +317,7 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         legend.getStyle()
                 .set("font-size", "var(--lumo-font-size-s)")
                 .set("color", "var(--lumo-secondary-text-color)");
-        section.add(heading, new ResultsMatrix(details.participants(), details.standings(), own, details.ratingChanges()), legend);
-        return section;
+        return legend;
     }
 
     private Component createMatches(TournamentDetails details) {
@@ -320,7 +334,13 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
             section.add(hint);
         }
 
-        Map<Integer, List<TournamentMatch>> rounds = details.matches().stream()
+        section.add(rounds(details, details.matches(), details.canRecordResults()));
+        return section;
+    }
+
+    /** Meciurile grupate pe tururi, câte un card pentru fiecare tur. */
+    private Component rounds(TournamentDetails details, List<TournamentMatch> matches, boolean editable) {
+        Map<Integer, List<TournamentMatch>> rounds = matches.stream()
                 .collect(Collectors.groupingBy(TournamentMatch::getRoundNo, TreeMap::new, Collectors.toList()));
         Div roundsLayout = new Div();
         roundsLayout.getStyle()
@@ -328,20 +348,108 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
                 .set("grid-template-columns", "repeat(auto-fill, minmax(min(100%, 22rem), 1fr))")
                 .set("gap", "var(--lumo-space-m)")
                 .set("width", "100%");
-        Long own = details.ownParticipant() != null ? details.ownParticipant().getId() : null;
-        rounds.forEach((round, matches) -> {
+        Long own = ownId(details);
+        rounds.forEach((round, roundMatches) -> {
             Div roundCard = card();
             H4 roundTitle = new H4("Turul " + round);
             roundTitle.getStyle().set("margin", "0 0 var(--lumo-space-xs)");
             roundCard.add(roundTitle);
-            matches.forEach(match -> roundCard.add(matchRow(details, match, own)));
+            roundMatches.forEach(match -> roundCard.add(matchRow(details, match, own, editable)));
             roundsLayout.add(roundCard);
         });
-        section.add(roundsLayout);
+        return roundsLayout;
+    }
+
+    // ------------------------------------------------------------------
+    // „Grupe + finale”
+    // ------------------------------------------------------------------
+
+    private void addGroupsTournament(TournamentDetails details) {
+        Tournament t = details.tournament();
+        if (details.canStartFinals()) {
+            add(createStartFinalsCard(details));
+        }
+        if (!details.finals().isEmpty()) {
+            add(stageTitle(TournamentStage.FINALS, details.finals()));
+            for (GroupView group : details.finals()) {
+                add(groupSection(details, group, details.canRecordResults()));
+            }
+        }
+        add(stageTitle(TournamentStage.GROUPS, details.groupStage()));
+        if (t.getStage() == TournamentStage.FINALS) {
+            add(hint("Rezultatele din grupe au stabilit calificarea și nu mai pot fi modificate."));
+        }
+        boolean groupsEditable = details.canRecordResults() && t.getStage() == TournamentStage.GROUPS;
+        for (GroupView group : details.groupStage()) {
+            add(groupSection(details, group, groupsEditable));
+        }
+        add(legend(details));
+    }
+
+    private static Component stageTitle(TournamentStage stage, List<GroupView> groups) {
+        long played = groups.stream().mapToLong(GroupView::playedMatches).sum();
+        long total = groups.stream().mapToLong(g -> g.matches().size()).sum();
+        H3 title = new H3(stage.getLabel());
+        title.getStyle().set("margin-bottom", "0");
+        Span progress = new Span("Meciuri jucate: " + played + " din " + total);
+        progress.getStyle().set("color", "var(--lumo-secondary-text-color)");
+        HorizontalLayout heading = new HorizontalLayout(title, progress);
+        heading.setAlignItems(FlexComponent.Alignment.BASELINE);
+        heading.getStyle().set("flex-wrap", "wrap").set("margin-top", "var(--lumo-space-l)");
+        return heading;
+    }
+
+    /** O grupă: tabelul-matrice și meciurile ei. */
+    private Component groupSection(TournamentDetails details, GroupView group, boolean editable) {
+        VerticalLayout section = new VerticalLayout();
+        section.setPadding(false);
+        H4 name = new H4(group.group().getName());
+        name.getStyle().set("margin", "var(--lumo-space-s) 0 0");
+        section.add(name, new ResultsMatrix(group.members(), group.standings(), ownId(details), details.ratingChanges()));
+        if (!group.carried().isEmpty()) {
+            section.add(hint(group.carried().size() == 1
+                    ? "1 meci e preluat din etapa 1 (jucătorii s-au întâlnit deja în grupă) și nu se mai joacă."
+                    : group.carried().size() + " meciuri sunt preluate din etapa 1 (jucătorii s-au întâlnit deja "
+                    + "în grupă) și nu se mai joacă."));
+        }
+        if (!group.matches().isEmpty()) {
+            section.add(rounds(details, group.matches(), editable));
+        }
         return section;
     }
 
-    private Component matchRow(TournamentDetails details, TournamentMatch match, Long own) {
+    private Component createStartFinalsCard(TournamentDetails details) {
+        Div card = card();
+        card.getStyle()
+                .set("border-color", "var(--lumo-success-color-50pct)")
+                .set("background", "var(--lumo-success-color-10pct)");
+        Span text = new Span("Etapa 1 s-a terminat. Alegeți câți jucători din fiecare grupă trec în Finala 1; "
+                + "ceilalți joacă în Finala 2.");
+        Button start = new Button("Începe etapa 2", VaadinIcon.PLAY.create(), e -> new StartFinalsDialog(
+                details.groupStage(), qualifiers -> {
+                    tournamentService.startFinals(tournamentId, qualifiers);
+                    Notifications.success("Etapa 2 a început");
+                    refresh();
+                }).open());
+        start.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_SUCCESS);
+        HorizontalLayout row = new HorizontalLayout(text, start);
+        row.setAlignItems(FlexComponent.Alignment.CENTER);
+        row.setWidthFull();
+        row.getStyle().set("flex-wrap", "wrap");
+        text.getStyle().set("flex", "1");
+        card.add(row);
+        return card;
+    }
+
+    private static Span hint(String text) {
+        Span hint = new Span(text);
+        hint.getStyle()
+                .set("font-size", "var(--lumo-font-size-s)")
+                .set("color", "var(--lumo-secondary-text-color)");
+        return hint;
+    }
+
+    private Component matchRow(TournamentDetails details, TournamentMatch match, Long own, boolean editable) {
         TournamentParticipant a = match.getParticipantA();
         TournamentParticipant b = match.getParticipantB();
         boolean aWon = match.isPlayed() && match.getWinner().getId().equals(a.getId());
@@ -374,7 +482,7 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
             row.getStyle().set("background", "var(--lumo-primary-color-10pct)").set("border-radius", "var(--lumo-border-radius-s)");
         }
 
-        if (details.canRecordResults()) {
+        if (editable) {
             Button enter = new Button(match.isPlayed() ? VaadinIcon.EDIT.create() : VaadinIcon.PLUS.create(),
                     e -> openResultDialog(details, match));
             enter.addThemeVariants(ButtonVariant.LUMO_ICON, ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL);

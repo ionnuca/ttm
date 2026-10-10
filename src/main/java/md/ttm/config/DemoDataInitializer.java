@@ -34,7 +34,8 @@ import java.util.List;
  * Se încarcă doar dacă nu există încă niciun jucător.
  * <p>
  * Creează și un cont de test: utilizator {@code jucator}, parolă {@code jucator123},
- * plus trei turnee: unul încheiat, unul în desfășurare și unul cu înscrierea deschisă.
+ * plus patru turnee: unul încheiat, unul în desfășurare, unul „Grupe + finale” cu etapa 1 jucată
+ * și unul cu înscrierea deschisă.
  */
 @Component
 @Profile("demo")
@@ -88,7 +89,7 @@ public class DemoDataInitializer implements ApplicationRunner {
         AppUser demoUser = new AppUser("jucator", passwordEncoder.encode("jucator123"), Role.USER, first);
         userRepository.save(demoUser);
         createDemoTournaments();
-        log.info("Date demonstrative încărcate: 10 jucători, 3 turnee și utilizatorul 'jucator' (parola 'jucator123')");
+        log.info("Date demonstrative încărcate: 10 jucători, 4 turnee și utilizatorul 'jucator' (parola 'jucator123')");
     }
 
     /**
@@ -141,6 +142,27 @@ public class DemoDataInitializer implements ApplicationRunner {
                 };
                 tournamentService.recordResult(match.getId(), result);
                 i++;
+            }
+
+            // Turneu „Grupe + finale”: 9 jucători în 3 grupe, etapa 1 încheiată, gata pentru etapa 2
+            Long winterId = tournamentService.create(
+                    new TournamentForm("Liga de iarnă", LocalDate.now())).getId();
+            players.stream().limit(9).forEach(p -> tournamentService.addParticipant(winterId, p.getId()));
+            TournamentSettings winterSettings = TournamentSettings.groups(5, 3);
+            winterSettings.setCommercial(true);
+            winterSettings.setWinnersCount(2);
+            winterSettings.setEntryFee(new BigDecimal("50"));
+            tournamentService.start(winterId, winterSettings);
+            int w = 0;
+            for (TournamentMatch match : tournamentService.findDetails(winterId).orElseThrow().matches()) {
+                MatchResultForm result = switch (w % 4) {
+                    case 0 -> MatchResultForm.sets(3, 1);
+                    case 1 -> MatchResultForm.sets(3, 2);
+                    case 2 -> MatchResultForm.sets(1, 3); // surpriză
+                    default -> MatchResultForm.sets(3, 0);
+                };
+                tournamentService.recordResult(match.getId(), result);
+                w++;
             }
 
             Long sundayId = tournamentService.create(

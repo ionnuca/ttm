@@ -43,7 +43,11 @@ final class TournamentLabels {
 
     /** De exemplu „Round robin · best of 5”. */
     static String configuration(Tournament tournament) {
-        return tournament.getFormat().getLabel() + " · best of " + tournament.getBestOf();
+        String format = tournament.getFormat().getLabel();
+        if (tournament.isGroupsFormat() && tournament.getGroupCount() != null) {
+            format += " (" + tournament.getGroupCount() + " grupe)";
+        }
+        return format + " · best of " + tournament.getBestOf();
     }
 
     static Span statusBadge(TournamentStatus status) {
