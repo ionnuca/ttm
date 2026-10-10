@@ -27,8 +27,10 @@ public class SecurityConfig extends VaadinWebSecurity {
     @Override
     protected void configure(HttpSecurity http) throws Exception {
         // Iconițele cerute automat de browsere și telefoane (Safari pe iPhone: apple-touch-icon*.png)
+        // și pozele jucătorilor (publice, ca și numele lor)
         http.authorizeHttpRequests(auth -> auth.requestMatchers(
-                "/favicon.ico", "/apple-touch-icon.png", "/apple-touch-icon-precomposed.png", "/icons/**")
+                "/favicon.ico", "/apple-touch-icon.png", "/apple-touch-icon-precomposed.png", "/icons/**",
+                "/foto/**")
                 .permitAll());
         super.configure(http);
         setLoginView(http, LoginView.class);

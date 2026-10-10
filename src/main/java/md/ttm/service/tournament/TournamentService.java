@@ -341,6 +341,26 @@ public class TournamentService {
         return matches;
     }
 
+    /**
+     * Încheie manual un turneu în desfășurare (administrator sau manager de turnee). Meciurile fără rezultat
+     * rămân nejucate și nu contează la rating; clasamentul și premiile se stabilesc din meciurile jucate.
+     *
+     * @return numărul meciurilor rămase fără rezultat
+     */
+    @PreAuthorize("hasAnyRole('ADMIN', 'TOURNAMENT_MANAGER')")
+    @Transactional
+    public long finishManually(Long tournamentId) {
+        Tournament tournament = tournamentRepository.findById(tournamentId)
+                .orElseThrow(() -> new BusinessException("Turneul nu mai există"));
+        if (tournament.getStatus() != TournamentStatus.IN_PROGRESS) {
+            throw new BusinessException("Doar un turneu în desfășurare poate fi încheiat");
+        }
+        long unplayed = matchRepository.countByTournamentIdAndOutcomeIsNull(tournamentId);
+        finish(tournament);
+        ratingService.recalculateAll();
+        return unplayed;
+    }
+
     private void finish(Tournament tournament) {
         tournament.setStatus(TournamentStatus.FINISHED);
         tournament.setFinishedAt(Instant.now());

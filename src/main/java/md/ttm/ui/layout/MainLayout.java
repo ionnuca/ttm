@@ -13,6 +13,8 @@ import md.ttm.ui.components.Responsive;
 import md.ttm.ui.player.PlayersView;
 import md.ttm.ui.tournament.TournamentsView;
 import md.ttm.ui.user.UsersView;
+import md.ttm.ui.match.MatchesView;
+import md.ttm.ui.admin.SettingsView;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.applayout.AppLayout;
 import com.vaadin.flow.component.applayout.DrawerToggle;
@@ -89,11 +91,13 @@ public class MainLayout extends AppLayout {
         SideNav nav = new SideNav();
         nav.addItem(new SideNavItem("Jucători", PlayersView.class, VaadinIcon.TROPHY.create()));
         nav.addItem(new SideNavItem("Turnee", TournamentsView.class, VaadinIcon.FLAG_CHECKERED.create()));
+        nav.addItem(new SideNavItem("Meciuri", MatchesView.class, VaadinIcon.LIST_UL.create()));
         if (SecurityUtils.isAuthenticated()) {
             nav.addItem(new SideNavItem("Profilul meu", ProfileView.class, VaadinIcon.USER.create()));
         }
         if (SecurityUtils.isAdmin()) {
             nav.addItem(new SideNavItem("Utilizatori", UsersView.class, VaadinIcon.USERS.create()));
+            nav.addItem(new SideNavItem("Setări", SettingsView.class, VaadinIcon.COG.create()));
         }
         return nav;
     }

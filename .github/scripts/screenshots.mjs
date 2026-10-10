@@ -1,13 +1,25 @@
 // Capturi de ecran ale paginilor principale, folosit de workflow-ul "Capturi interfață".
 // Utilizare: node screenshots.mjs <director-destinație>
 import { chromium } from 'playwright';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, readFileSync, unlinkSync } from 'node:fs';
 
 const BASE = process.env.BASE_URL ?? 'http://localhost:8080';
 const OUT = process.argv[2] ?? 'screenshots';
 mkdirSync(OUT, { recursive: true });
 
 const browser = await chromium.launch();
+// O poză de test 64 x 64 (PNG), pentru încărcarea în profil
+const PHOTO_PNG = (await (async () => {
+  const p = await browser.newPage();
+  const data = await p.evaluate(() => {
+    const c = document.createElement('canvas'); c.width = 64; c.height = 64;
+    const g = c.getContext('2d'); g.fillStyle = '#1676F3'; g.fillRect(0, 0, 64, 64);
+    g.fillStyle = '#E23434'; g.beginPath(); g.arc(28, 28, 18, 0, Math.PI * 2); g.fill();
+    return c.toDataURL('image/png').split(',')[1];
+  });
+  await p.close();
+  return data;
+})());
 const failures = [];
 
 async function settle(page) {
@@ -78,11 +90,24 @@ await check('guest: lista jucătorilor', async () => {
   await expectNoText(page, 'Adaugă jucător');
   await shot(page, '01-guest-jucatori');
 });
-await check('guest: echipamentul unui jucător', async () => {
+await check('guest: pagina jucătorului (detalii, statistici, meciuri)', async () => {
   await page.getByText('Popescu Ion').first().click();
+  await page.waitForURL(/\/jucator\/\d+/, { timeout: 10000 });
   await expectText(page, 'Butterfly Viscaria');
   await expectText(page, 'Dignics 09C');
-  await shot(page, '01b-guest-echipament');
+  await expectText(page, 'Meciuri jucate');
+  await expectText(page, 'Evoluția ratingului');
+  await expectText(page, 'Meciuri (');
+  await expectNoText(page, 'Alege o poză');
+  await shot(page, '01b-guest-jucator');
+});
+await check('guest: meciurile', async () => {
+  await page.goto(`${BASE}/meciuri`);
+  await expectText(page, 'ultimele');
+  await expectText(page, 'Cupa de vară');
+  await shot(page, '15-guest-meciuri');
+  await page.locator('input[placeholder="Caută după jucător sau turneu"]').fill('Sârbu');
+  await expectText(page, 'Sârbu Cristina');
 });
 await check('guest: turneu încheiat cu rating', async () => {
   await page.goto(`${BASE}/turnee`);
@@ -231,6 +256,34 @@ await check('admin: finalele după începerea etapei 2', async () => {
   await expectText(page, 'nu mai pot fi modificate');
   await shot(page, '31-admin-finale');
 });
+await check('admin: încheierea manuală a turneului', async () => {
+  await page.getByRole('button', { name: 'Încheie turneul' }).click();
+  await expectText(page, 'Încheiați turneul?');
+  await expectText(page, 'rămân nejucate');
+  await shot(page, '36-admin-incheie-turneul');
+  await page.getByRole('button', { name: 'Încheie turneul' }).last().click();
+  await expectText(page, 'Turneu încheiat');
+  await expectText(page, 'nejucat');
+  await shot(page, '37-admin-turneu-incheiat-manual');
+});
+await check('admin: setări și backup', async () => {
+  await page.goto(`${BASE}/setari`);
+  await expectText(page, 'Backup bază de date');
+  await shot(page, '38-admin-setari');
+  const [download] = await Promise.all([
+    page.waitForEvent('download', { timeout: 20000 }),
+    page.getByRole('button', { name: 'Descarcă backup-ul' }).click(),
+  ]);
+  const name = download.suggestedFilename();
+  if (!/^ttm-backup-\d{4}-\d{2}-\d{2}-\d{6}\.sql$/.test(name)) throw new Error(`nume neașteptat: ${name}`);
+  const file = `${OUT}/${name}`;
+  await download.saveAs(file);
+  const content = readFileSync(file, 'utf8');
+  for (const part of ['-- TTM – backup', 'COPY public."player"', 'COPY public."tournament_match"', 'COMMIT;']) {
+    if (!content.includes(part)) throw new Error(`backup-ul nu conține ${part}`);
+  }
+  unlinkSync(file);
+});
 await ctx.close();
 
 // ---------- Utilizator logat, desktop ----------
@@ -242,6 +295,15 @@ await check('utilizator: lista fără telefon', async () => {
   await expectNoText(page, 'Telefon');
   await expectNoText(page, 'Utilizatori');
   await shot(page, '10-utilizator-jucatori');
+});
+await check('utilizator: poza de profil', async () => {
+  await page.goto(`${BASE}/profil`);
+  await page.locator('vaadin-upload input[type=file]').setInputFiles({
+    name: 'poza.png', mimeType: 'image/png', buffer: Buffer.from(PHOTO_PNG, 'base64') });
+  await expectText(page, 'Poza a fost salvată');
+  await page.waitForFunction(() => [...document.querySelectorAll('vaadin-avatar')]
+    .some(a => String(a.img || a.getAttribute('img') || '').includes('foto/jucator/')), null, { timeout: 10000 });
+  await expectText(page, 'Șterge poza');
 });
 await check('utilizator: profil', async () => {
   await page.goto(`${BASE}/profil`);
@@ -333,9 +395,18 @@ await check('telefon: admin', async () => {
 });
 await check('telefon: admin atinge un jucător', async () => {
   await page.getByText('Rusu Mihai').first().click();
+  await page.waitForURL(/\/jucator\/\d+/, { timeout: 10000 });
+  await expectText(page, 'Meciuri jucate');
+  await shot(page, '13b-telefon-jucator');
+  await page.getByRole('button', { name: 'Editează' }).click();
   await expectText(page, 'Editare jucător');
-  await shot(page, '13b-telefon-admin-editare');
+  await shot(page, '13c-telefon-admin-editare');
   await page.keyboard.press('Escape');
+});
+await check('telefon: meciuri', async () => {
+  await page.goto(`${BASE}/meciuri`);
+  await expectText(page, 'ultimele');
+  await shot(page, '16-telefon-meciuri');
 });
 await check('telefon: admin utilizatori', async () => {
   await page.goto(`${BASE}/utilizatori`);

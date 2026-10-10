@@ -11,18 +11,21 @@ Aplicație web (instalabilă și pe telefon, ca PWA) pentru gestionarea jucător
 | Funcționalitate | Guest (nelogat) | Utilizator logat | Manager de turnee | Administrator |
 |---|:---:|:---:|:---:|:---:|
 | Clasamentul jucătorilor (ordonat după rating, căutare, sortare) | ✅ | ✅ | ✅ | ✅ |
-| Mâna de joc în clasament; echipamentul (lemn, fețe forehand/backhand) la click pe jucător | ✅ | ✅ | ✅ | ✅ |
+| Pagina jucătorului (click în clasament sau în meciuri): date, echipament, statistici (meciuri, victorii, procent, seturi, turnee, cel mai bun rating), evoluția ratingului, toate meciurile lui | ✅ | ✅ | ✅ | ✅ |
+| „Meciuri”: ultimele 200 de meciuri cu rezultat, din toate turneele, cu căutare după jucător sau turneu | ✅ | ✅ | ✅ | ✅ |
+| Poza de profil (din „Profilul meu”; decupată pătrat și micșorată automat) | – | ✅ propria | ✅ propria | ✅ oricui |
 | Coloana „Telefon” în clasament | – | – | – | ✅ |
 | Adăugare / editare / ștergere jucători | – | – | – | ✅ |
 | Cont nou (înregistrare simplă: nume, prenume, utilizator, parolă) | ✅ | – | – | – |
-| „Profilul meu”: date personale, stil și mână de joc, oraș, telefon, echipament, schimbarea parolei | – | ✅ | ✅ | ✅ |
+| „Profilul meu”: poza, date personale, stil și mână de joc, oraș, telefon, echipament, schimbarea parolei (administratorul își stabilește aici și ratingul inițial) | – | ✅ | ✅ | ✅ |
 | „Utilizatori”: lista completă, adăugare, editare (rol, blocare, parolă), ștergere | – | – | – | ✅ |
 | „Turnee”: lista turneelor, tabelul și meciurile fiecărui turneu | ✅ | ✅ | ✅ | ✅ |
 | Înscriere / retragere la un turneu (cât timp înscrierea e deschisă) | – | ✅ | ✅ | ✅ |
 | Introducerea rezultatelor (participanții turneului) | – | ✅ | ✅ | ✅ |
-| Creare (nume, dată), editare, ștergere turneu; adăugare/scoatere participanți; „Începe turneul” și „Începe etapa 2”; corectarea rezultatelor, inclusiv după încheiere | – | – | ✅ | ✅ |
+| Creare (nume, dată), editare, ștergere turneu; adăugare/scoatere participanți; „Începe turneul” și „Începe etapa 2”; „Încheie turneul” manual; corectarea rezultatelor, inclusiv după încheiere | – | – | ✅ | ✅ |
+| „Setări”: versiunea aplicației, descărcarea unui backup al bazei de date la momentul curent | – | – | – | ✅ |
 
-Interfața se adaptează la telefon: în clasament, numele, stilul de joc și orașul apar într-o singură coloană, iar administratorul editează sau șterge un jucător atingând rândul respectiv. Aplicația se poate adăuga pe ecranul telefonului („Add to Home Screen”).
+Interfața se adaptează la telefon: în clasament, numele, stilul de joc și orașul apar într-o singură coloană; atingerea unui jucător deschide pagina lui, de unde administratorul îl poate edita sau șterge. Aplicația se poate adăuga pe ecranul telefonului („Add to Home Screen”).
 
 Reguli:
 - Fiecare utilizator este un jucător: la crearea unui cont se creează automat și profilul de jucător, cu ratingul inițial 1000.
@@ -38,6 +41,7 @@ Reguli:
 2. **Înscrierea**: utilizatorii logați se înscriu singuri; organizatorul (administratorul sau managerul de turnee) poate adăuga sau scoate orice jucător.
 3. **Începerea** (organizatorul, butonul „Începe turneul”): se alege configurarea – tipul (Round robin), numărul de seturi (best of 3/5/7) și, opțional, **turneu comercial**: taxa de participare și numărul de câștigători, cu împărțirea sumei acumulate (taxa × participanți): 1 câștigător – 100%; 2 – 60% / 40%; 3 – 50% / 30% / 20%. Dialogul arată pe loc suma acumulată și premiile. La confirmare, înscrierea se închide, se formează grupa cu jucătorii ordonați după rating (descrescător) și se generează toate meciurile, pe tururi (fiecare cu fiecare, metoda Berger).
 4. **Rezultatele**: le introduc participanții turneului sau organizatorul: scorul la seturi (ex. 3:1) sau **W – victorie tehnică**, când adversarul refuză jocul. După ultimul rezultat, turneul devine „Încheiat”; din acel moment doar organizatorul (administratorul sau managerul de turnee) mai poate corecta.
+   **Încheierea manuală:** organizatorul poate încheia oricând un turneu în desfășurare („Încheie turneul”). Meciurile fără rezultat rămân „nejucate” și nu contează la clasament sau la rating; ratingul se calculează din meciurile jucate.
 5. **Tabelul** se actualizează după fiecare rezultat: matrice cu fiecare întâlnire scrisă ca fracție (sus punctele: 2 victorie, 1 înfrângere, 0 înfrângere tehnică; jos scorul la seturi), apoi coloanele *Seturi* (câștigate/pierdute), *Puncte* și *Loc*.
 
 ### Turnee „Grupe + finale”
@@ -137,7 +141,7 @@ psql -U postgres -f database/create_database.sql
 
 ## Baza de date
 
-- **Scripturile de creare a tabelelor:** `src/main/resources/db/migration/` (`V1__jucatori_si_utilizatori.sql`, `V2__jucator_mana_si_echipament.sql`, `V3__turnee.sql`, `V4__rating_elo.sql`, `V5__grupe_si_finale.sql`, `V6__rol_manager_turnee.sql`). Le aplică automat **Flyway** la pornirea aplicației, în ordinea versiunilor; nu e nevoie să le rulați manual.
+- **Scripturile de creare a tabelelor:** `src/main/resources/db/migration/` (`V1__jucatori_si_utilizatori.sql`, `V2__jucator_mana_si_echipament.sql`, `V3__turnee.sql`, `V4__rating_elo.sql`, `V5__grupe_si_finale.sql`, `V6__rol_manager_turnee.sql`, `V7__poze_jucatori.sql`). Le aplică automat **Flyway** la pornirea aplicației, în ordinea versiunilor; nu e nevoie să le rulați manual.
 - **Modificări de schemă:** nu se editează niciodată un script deja aplicat. Se adaugă unul nou: `V2__descriere.sql`, `V3__...` etc.
 - **Crearea bazei de date și a utilizatorului:** `database/create_database.sql` (fără Docker) sau automat de `docker-compose.yml`.
 - **Baza pentru teste:** `ttm_test`, creată de `database/init/01-create-test-db.sql` la prima pornire a containerului.
@@ -178,6 +182,8 @@ tournament (V5): format ROUND_ROBIN / GROUPS_FINALS; stage GROUPS / FINALS; grou
 tournament_group: tournament_id, stage (GROUPS / FINALS), position, name ("Grupa A", "Finala 1"…)
 tournament_group_member: group_id, participant_id, seed (poziția în grupă)
 tournament_match.group_id: grupa sau finala din care face parte meciul
+
+player_photo (V7): player_id (PK, FK → player), content (JPEG 400 x 400), content_type, updated_at
 ```
 
 ---
@@ -234,6 +240,11 @@ De aici înainte, orice modificare ajunsă pe `main` se publică singură.
 | Repornire | `docker compose restart app` |
 | Backup manual | `./backup.sh` (automat zilnic la 03:30, se păstrează 14 zile în `backups/`) |
 | Restaurare | `docker compose exec -T db pg_restore -U ttm -d ttm --clean --if-exists < backups/<fișier>.dump` |
+
+**Backup din aplicație:** administratorul descarcă oricând, din *Setări → Descarcă backup-ul*, un fișier `ttm-backup-<data>-<ora>.sql` cu toate datele (fără schemă, pe care o creează Flyway). Restaurarea, pe o bază cu aceeași versiune a schemei, înlocuiește toate datele într-o singură tranzacție:
+```bash
+docker compose exec -T db psql -U ttm -d ttm < ttm-backup-2026-10-10-190507.sql
+```
 
 Copiile de rezervă stau pe același server. Pentru siguranță, descărcați periodic una pe alt calculator: `scp <utilizator>@<server>:/opt/ttm/backups/<fișier>.dump .`
 

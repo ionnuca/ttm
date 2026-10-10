@@ -1,6 +1,7 @@
 package md.ttm.repository;
 
 import md.ttm.model.tournament.TournamentMatch;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -29,6 +30,30 @@ public interface TournamentMatchRepository extends JpaRepository<TournamentMatch
               join fetch m.participantB b join fetch b.player
             where m.id = :id""")
     Optional<TournamentMatch> findByIdWithParticipants(@Param("id") Long id);
+
+    /** Ultimele meciuri cu rezultat, din toate turneele, cele mai noi primele. */
+    @Query("""
+            select m from TournamentMatch m
+              join fetch m.tournament
+              left join fetch m.group
+              join fetch m.participantA a join fetch a.player
+              join fetch m.participantB b join fetch b.player
+              left join fetch m.winner
+            where m.outcome is not null
+            order by m.recordedAt desc nulls last, m.id desc""")
+    List<TournamentMatch> findRecentPlayed(Pageable pageable);
+
+    /** Meciurile cu rezultat ale unui jucător, cele mai noi primele. */
+    @Query("""
+            select m from TournamentMatch m
+              join fetch m.tournament t
+              left join fetch m.group
+              join fetch m.participantA a join fetch a.player pa
+              join fetch m.participantB b join fetch b.player pb
+              left join fetch m.winner
+            where m.outcome is not null and (pa.id = :playerId or pb.id = :playerId)
+            order by t.tournamentDate desc, m.recordedAt desc nulls last, m.id desc""")
+    List<TournamentMatch> findPlayedByPlayerId(@Param("playerId") Long playerId);
 
     long countByTournamentIdAndOutcomeIsNull(Long tournamentId);
 
