@@ -1,0 +1,66 @@
+# Configurația de producție. Pe server se află în /opt/ttm/docker-compose.yml,
+# alături de Caddyfile, backup.sh și .env (creat de server-setup.sh, niciodată urcat în Git).
+#   Pornire / actualizare:  docker compose pull && docker compose up -d
+#   Jurnalul aplicației:    docker compose logs -f app
+name: ttm
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_DB: ttm
+      POSTGRES_USER: ttm
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Setați DB_PASSWORD în .env}
+      TZ: Europe/Chisinau
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ttm -d ttm"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    # Baza de date nu are porturi publice: e accesibilă doar aplicației, în rețeaua internă Docker
+
+  app:
+    image: ${TTM_IMAGE:-ghcr.io/ionnuca/ttm:latest}
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/ttm
+      DB_USER: ttm
+      DB_PASSWORD: ${DB_PASSWORD}
+      APP_ADMIN_USERNAME: ${APP_ADMIN_USERNAME:-admin}
+      APP_ADMIN_PASSWORD: ${APP_ADMIN_PASSWORD:-}
+      APP_ADMIN_FIRST_NAME: ${APP_ADMIN_FIRST_NAME:-}
+      APP_ADMIN_LAST_NAME: ${APP_ADMIN_LAST_NAME:-}
+      APP_REGISTRATION_ENABLED: ${APP_REGISTRATION_ENABLED:-true}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-}
+      JAVA_OPTS: ${JAVA_OPTS:--Xmx1g}
+      TZ: Europe/Chisinau
+    expose:
+      - "8080"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: always
+    depends_on:
+      - app
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?Setați APP_DOMAIN în .env}
+      ACME_EMAIL: ${ACME_EMAIL:?Setați ACME_EMAIL în .env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  pgdata:
+  caddy-data:
+  caddy-config:

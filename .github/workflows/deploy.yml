@@ -1,0 +1,153 @@
+name: Publicare
+
+# După fiecare CI reușit pe main (sau pornit manual din Actions → Publicare → Run workflow):
+#  1. construiește JAR-ul de producție și imaginea Docker (amd64 + arm64);
+#  2. pornește configurația de producție completă (PostgreSQL + aplicație + Caddy HTTPS) și o verifică;
+#  3. publică imaginea în GitHub Container Registry (ghcr.io/ionnuca/ttm);
+#  4. dacă serverul e configurat (secretele DEPLOY_*), o instalează pe server prin SSH.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: publicare
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}
+
+jobs:
+  image:
+    name: Imaginea de producție
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Build de producție
+        run: |
+          mvn -B -Pproduction -DskipTests package
+          mkdir -p image
+          cp target/ttm-*.jar image/app.jar
+          cp deploy/Dockerfile image/
+
+      - name: Verificarea configurației de producție (HTTPS, administrator, jucători de test)
+        working-directory: deploy
+        run: |
+          docker build -q -t ttm:verificare ../image
+          cat > .env <<'ENV'
+          APP_DOMAIN=localhost
+          ACME_EMAIL=ci@example.com
+          DB_PASSWORD=verificare-ci
+          APP_ADMIN_USERNAME=ionnuca
+          APP_ADMIN_PASSWORD=verificare-ci
+          APP_ADMIN_FIRST_NAME=Ion
+          APP_ADMIN_LAST_NAME=Nuca
+          SPRING_PROFILES_ACTIVE=seed
+          TTM_IMAGE=ttm:verificare
+          ENV
+          docker compose -f docker-compose.prod.yml up -d
+          ok=false
+          for i in $(seq 1 60); do
+            if curl -skf https://localhost/ > /dev/null; then ok=true; break; fi
+            sleep 3
+          done
+          docker compose -f docker-compose.prod.yml logs app > app.log
+          if ! $ok; then cat app.log; docker compose -f docker-compose.prod.yml logs caddy; exit 1; fi
+          curl -sk https://localhost/ | grep -qi "<html" || { echo "Răspuns neașteptat"; exit 1; }
+          grep -q "Cont de administrator creat: 'ionnuca'" app.log || { cat app.log; echo "::error::Administratorul nu a fost creat"; exit 1; }
+          grep -q "10 jucători de test adăugați" app.log || { cat app.log; echo "::error::Jucătorii de test lipsesc"; exit 1; }
+          players=$(docker compose -f docker-compose.prod.yml exec -T db psql -U ttm -d ttm -tAc "select count(*) from player")
+          admin=$(docker compose -f docker-compose.prod.yml exec -T db psql -U ttm -d ttm -tAc \
+            "select p.first_name || ' ' || p.last_name from app_user u join player p on p.id = u.player_id where u.username = 'ionnuca' and u.role = 'ADMIN'")
+          echo "Jucători: $players; administrator: $admin"
+          [ "$players" = "11" ] && [ "$admin" = "Ion Nuca" ] || { echo "::error::Date inițiale greșite"; exit 1; }
+          ./backup.sh
+          echo "### Verificarea producției: HTTPS ok, $players jucători, administrator $admin, backup ok" >> "$GITHUB_STEP_SUMMARY"
+          docker compose -f docker-compose.prod.yml down -v
+          rm -f .env
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publicarea imaginii (amd64 + arm64)
+        uses: docker/build-push-action@v6
+        with:
+          context: image
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:latest
+            ${{ env.IMAGE }}:${{ github.event.workflow_run.head_sha || github.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.description=TTM – tenis de masă
+
+  deploy:
+    name: Instalare pe server
+    needs: image
+    runs-on: ubuntu-latest
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+    steps:
+      - name: Serverul nu e configurat încă
+        if: env.DEPLOY_HOST == ''
+        run: echo "::notice::Imaginea e publicată. Pentru instalarea automată adăugați secretele DEPLOY_HOST, DEPLOY_USER și DEPLOY_SSH_KEY (vezi README, secțiunea Producție)."
+
+      - uses: actions/checkout@v5
+        if: env.DEPLOY_HOST != ''
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Cheia SSH
+        if: env.DEPLOY_HOST != ''
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy
+          chmod 600 ~/.ssh/deploy
+          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Actualizarea aplicației pe server
+        if: env.DEPLOY_HOST != ''
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SSH="ssh -i $HOME/.ssh/deploy $DEPLOY_USER@$DEPLOY_HOST"
+          scp -i ~/.ssh/deploy deploy/docker-compose.prod.yml "$DEPLOY_USER@$DEPLOY_HOST:/opt/ttm/docker-compose.yml"
+          scp -i ~/.ssh/deploy deploy/Caddyfile deploy/backup.sh "$DEPLOY_USER@$DEPLOY_HOST:/opt/ttm/"
+          echo "$TOKEN" | $SSH "docker login ghcr.io -u ${{ github.actor }} --password-stdin"
+          $SSH "cd /opt/ttm && chmod +x backup.sh && docker compose pull -q && docker compose up -d --remove-orphans; rc=\$?; docker logout ghcr.io; exit \$rc"
+          $SSH "docker image prune -f > /dev/null"
+          for i in $(seq 1 40); do
+            if $SSH "cd /opt/ttm && docker compose logs app 2>&1 | grep -q 'Started TtmApplication'"; then
+              echo "### Aplicația a pornit pe server" >> "$GITHUB_STEP_SUMMARY"
+              $SSH "cd /opt/ttm && docker compose ps"
+              exit 0
+            fi
+            sleep 3
+          done
+          $SSH "cd /opt/ttm && docker compose ps && docker compose logs --tail 100 app"
+          echo "::error::Aplicația nu a pornit pe server în 2 minute"
+          exit 1

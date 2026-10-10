@@ -1,0 +1,9 @@
+# Caddy obține și reînnoiește automat certificatul HTTPS (Let's Encrypt) pentru APP_DOMAIN.
+{
+	email {$ACME_EMAIL}
+}
+
+{$APP_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy app:8080
+}
