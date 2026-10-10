@@ -8,35 +8,36 @@ Aplicație web (instalabilă și pe telefon, ca PWA) pentru gestionarea jucător
 
 ## Funcționalități
 
-| Funcționalitate | Guest (nelogat) | Utilizator logat | Administrator |
-|---|:---:|:---:|:---:|
-| Clasamentul jucătorilor (ordonat după rating, căutare, sortare) | ✅ | ✅ | ✅ |
-| Mâna de joc în clasament; echipamentul (lemn, fețe forehand/backhand) la click pe jucător | ✅ | ✅ | ✅ |
-| Coloana „Telefon” în clasament | – | – | ✅ |
-| Adăugare / editare / ștergere jucători | – | – | ✅ |
-| Cont nou (înregistrare simplă: nume, prenume, utilizator, parolă) | ✅ | – | – |
-| „Profilul meu”: date personale, stil și mână de joc, oraș, telefon, echipament, schimbarea parolei | – | ✅ | ✅ |
-| „Utilizatori”: lista completă, adăugare, editare (rol, blocare, parolă), ștergere | – | – | ✅ |
-| „Turnee”: lista turneelor, tabelul și meciurile fiecărui turneu | ✅ | ✅ | ✅ |
-| Înscriere / retragere la un turneu (cât timp înscrierea e deschisă) | – | ✅ | ✅ |
-| Introducerea rezultatelor (participanții turneului) | – | ✅ | ✅ |
-| Creare (nume, dată), editare, ștergere turneu; adăugare/scoatere participanți; „Începe turneul” cu alegerea configurării; ștergerea unui rezultat | – | – | ✅ |
+| Funcționalitate | Guest (nelogat) | Utilizator logat | Manager de turnee | Administrator |
+|---|:---:|:---:|:---:|:---:|
+| Clasamentul jucătorilor (ordonat după rating, căutare, sortare) | ✅ | ✅ | ✅ | ✅ |
+| Mâna de joc în clasament; echipamentul (lemn, fețe forehand/backhand) la click pe jucător | ✅ | ✅ | ✅ | ✅ |
+| Coloana „Telefon” în clasament | – | – | – | ✅ |
+| Adăugare / editare / ștergere jucători | – | – | – | ✅ |
+| Cont nou (înregistrare simplă: nume, prenume, utilizator, parolă) | ✅ | – | – | – |
+| „Profilul meu”: date personale, stil și mână de joc, oraș, telefon, echipament, schimbarea parolei | – | ✅ | ✅ | ✅ |
+| „Utilizatori”: lista completă, adăugare, editare (rol, blocare, parolă), ștergere | – | – | – | ✅ |
+| „Turnee”: lista turneelor, tabelul și meciurile fiecărui turneu | ✅ | ✅ | ✅ | ✅ |
+| Înscriere / retragere la un turneu (cât timp înscrierea e deschisă) | – | ✅ | ✅ | ✅ |
+| Introducerea rezultatelor (participanții turneului) | – | ✅ | ✅ | ✅ |
+| Creare (nume, dată), editare, ștergere turneu; adăugare/scoatere participanți; „Începe turneul” și „Începe etapa 2”; corectarea rezultatelor, inclusiv după încheiere | – | – | ✅ | ✅ |
 
 Interfața se adaptează la telefon: în clasament, numele, stilul de joc și orașul apar într-o singură coloană, iar administratorul editează sau șterge un jucător atingând rândul respectiv. Aplicația se poate adăuga pe ecranul telefonului („Add to Home Screen”).
 
 Reguli:
 - Fiecare utilizator este un jucător: la crearea unui cont se creează automat și profilul de jucător, cu ratingul inițial 1000.
 - Ștergerea unui jucător șterge și contul lui; ștergerea unui utilizator șterge și profilul de jucător.
+- **Managerul de turnee** (rol atribuit de administrator în „Utilizatori”) conduce turneele de la creare până la încheiere, dar nu are acces la pagina „Utilizatori”, nu vede telefoanele și nu editează jucătorii. Ca orice cont, este și jucător, deci se poate înscrie la turnee.
 - Administratorul nu își poate șterge propriul cont, nu își poate retrage drepturile și trebuie să rămână mereu cel puțin un administrator activ.
 - Ratingul curent și statisticile (victorii / înfrângeri) se calculează automat din turneele încheiate; administratorul stabilește doar **ratingul inițial** al fiecărui jucător.
 - Un jucător care a jucat într-un turneu început nu mai poate fi șters, ca rezultatele să rămână complete.
 
 ### Turnee
 
-1. **Crearea** (administrator): doar numele și data. Înscrierea se deschide imediat.
-2. **Înscrierea**: utilizatorii logați se înscriu singuri; administratorul poate adăuga sau scoate orice jucător.
-3. **Începerea** (administrator, butonul „Începe turneul”): se alege configurarea – tipul (Round robin), numărul de seturi (best of 3/5/7) și, opțional, **turneu comercial**: taxa de participare și numărul de câștigători, cu împărțirea sumei acumulate (taxa × participanți): 1 câștigător – 100%; 2 – 60% / 40%; 3 – 50% / 30% / 20%. Dialogul arată pe loc suma acumulată și premiile. La confirmare, înscrierea se închide, se formează grupa cu jucătorii ordonați după rating (descrescător) și se generează toate meciurile, pe tururi (fiecare cu fiecare, metoda Berger).
-4. **Rezultatele**: le introduc participanții turneului sau administratorul: scorul la seturi (ex. 3:1) sau **W – victorie tehnică**, când adversarul refuză jocul. După ultimul rezultat, turneul devine „Încheiat”; din acel moment doar administratorul mai poate corecta.
+1. **Crearea** (administrator sau manager de turnee): doar numele și data. Înscrierea se deschide imediat.
+2. **Înscrierea**: utilizatorii logați se înscriu singuri; organizatorul (administratorul sau managerul de turnee) poate adăuga sau scoate orice jucător.
+3. **Începerea** (organizatorul, butonul „Începe turneul”): se alege configurarea – tipul (Round robin), numărul de seturi (best of 3/5/7) și, opțional, **turneu comercial**: taxa de participare și numărul de câștigători, cu împărțirea sumei acumulate (taxa × participanți): 1 câștigător – 100%; 2 – 60% / 40%; 3 – 50% / 30% / 20%. Dialogul arată pe loc suma acumulată și premiile. La confirmare, înscrierea se închide, se formează grupa cu jucătorii ordonați după rating (descrescător) și se generează toate meciurile, pe tururi (fiecare cu fiecare, metoda Berger).
+4. **Rezultatele**: le introduc participanții turneului sau organizatorul: scorul la seturi (ex. 3:1) sau **W – victorie tehnică**, când adversarul refuză jocul. După ultimul rezultat, turneul devine „Încheiat”; din acel moment doar organizatorul (administratorul sau managerul de turnee) mai poate corecta.
 5. **Tabelul** se actualizează după fiecare rezultat: matrice cu fiecare întâlnire scrisă ca fracție (sus punctele: 2 victorie, 1 înfrângere, 0 înfrângere tehnică; jos scorul la seturi), apoi coloanele *Seturi* (câștigate/pierdute), *Puncte* și *Loc*.
 
 ### Turnee „Grupe + finale”
@@ -44,7 +45,7 @@ Reguli:
 Tipul se alege la „Începe turneul”, împreună cu **numărul de grupe** (minimum 2, cu cel puțin 2 jucători în fiecare).
 
 1. **Etapa 1 — Grupe.** Jucătorii sunt repartizați în grupe în **șerpuială** după rating (A, B, C, C, B, A, A, B…), ca grupele să fie echilibrate. Fiecare grupă joacă Round Robin, cu tabel propriu.
-2. **Începe etapa 2** (administrator, după ultimul rezultat din grupe): se alege câți jucători din fiecare grupă se califică. Primii N din fiecare grupă joacă în **Finala 1**, ceilalți în **Finala 2**. Dialogul arată componența finalelor înainte de confirmare.
+2. **Începe etapa 2** (organizatorul, după ultimul rezultat din grupe): se alege câți jucători din fiecare grupă se califică. Primii N din fiecare grupă joacă în **Finala 1**, ceilalți în **Finala 2**. Dialogul arată componența finalelor înainte de confirmare.
 3. **Etapa 2 — Finale.** Ambele finale se joacă Round Robin. Jucătorii care s-au întâlnit deja în aceeași grupă **nu mai joacă** între ei: rezultatul din etapa 1 se preia în tabelul finalei (fiecare meci contează o singură dată la rating). După pornirea etapei 2, rezultatele din grupe nu mai pot fi modificate, pentru că au stabilit calificarea.
 4. **Premii (turneu comercial):** câștigătorul Finalei 2 primește cât **taxa de participare**; restul sumei acumulate se împarte între premiații Finalei 1, ca la turneul comercial obișnuit (100% / 60–40% / 50–30–20%).
 5. Turneul se încheie după ultimul rezultat din finale; ratingul Elo se calculează pe toate meciurile din ambele etape.
@@ -120,6 +121,7 @@ Profilul `dev` încarcă 10 jucători demonstrativi, trei turnee (unul încheiat
 |---|---|---|
 | `admin` | `admin12345` | Administrator |
 | `jucator` | `jucator123` | Utilizator (legat de jucătorul „Popescu Ion”) |
+| `manager` | `manager123` | Manager de turnee (legat de jucătorul „Lungu Victor”) |
 
 În modul de dezvoltare, modificările din clasele Java se aplică după repornirea aplicației.
 
@@ -135,7 +137,7 @@ psql -U postgres -f database/create_database.sql
 
 ## Baza de date
 
-- **Scripturile de creare a tabelelor:** `src/main/resources/db/migration/` (`V1__jucatori_si_utilizatori.sql`, `V2__jucator_mana_si_echipament.sql`, `V3__turnee.sql`, `V4__rating_elo.sql`, `V5__grupe_si_finale.sql`). Le aplică automat **Flyway** la pornirea aplicației, în ordinea versiunilor; nu e nevoie să le rulați manual.
+- **Scripturile de creare a tabelelor:** `src/main/resources/db/migration/` (`V1__jucatori_si_utilizatori.sql`, `V2__jucator_mana_si_echipament.sql`, `V3__turnee.sql`, `V4__rating_elo.sql`, `V5__grupe_si_finale.sql`, `V6__rol_manager_turnee.sql`). Le aplică automat **Flyway** la pornirea aplicației, în ordinea versiunilor; nu e nevoie să le rulați manual.
 - **Modificări de schemă:** nu se editează niciodată un script deja aplicat. Se adaugă unul nou: `V2__descriere.sql`, `V3__...` etc.
 - **Crearea bazei de date și a utilizatorului:** `database/create_database.sql` (fără Docker) sau automat de `docker-compose.yml`.
 - **Baza pentru teste:** `ttm_test`, creată de `database/init/01-create-test-db.sql` la prima pornire a containerului.
@@ -149,7 +151,7 @@ player                                  app_user
 id            PK                        id             PK
 first_name    nume                      username       unic, litere mici
 last_name     prenume                   password_hash  BCrypt
-play_style    ATTACK / DEFENCE          role           USER / ADMIN
+play_style    ATTACK / DEFENCE          role           USER / TOURNAMENT_MANAGER / ADMIN
 play_hand     RIGHT / LEFT
 city                                    enabled
 phone         (vizibil doar adminului)  player_id      FK → player.id (unic)

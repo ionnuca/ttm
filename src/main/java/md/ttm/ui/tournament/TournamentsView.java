@@ -26,7 +26,7 @@ import md.ttm.ui.layout.MainLayout;
 import java.util.Comparator;
 
 /**
- * Lista turneelor. Administratorul poate crea un turneu nou; click pe un turneu deschide pagina lui.
+ * Lista turneelor. Administratorul și managerul de turnee pot crea un turneu nou; click pe un turneu deschide pagina lui.
  */
 @Route(value = "turnee", layout = MainLayout.class)
 @PageTitle("Turnee | TTM")
@@ -41,7 +41,7 @@ public class TournamentsView extends VerticalLayout {
         this.tournamentService = tournamentService;
         setSizeFull();
         add(createHeader());
-        if (SecurityUtils.isAdmin()) {
+        if (SecurityUtils.canManageTournaments()) {
             Button create = new Button("Turneu nou", VaadinIcon.PLUS.create(), e -> openCreateDialog());
             create.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
             add(create);

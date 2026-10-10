@@ -47,7 +47,7 @@ import java.util.Set;
  *     <li>Oricine poate vedea turneele.</li>
  *     <li>Utilizatorul logat se poate înscrie / retrage cât timp înscrierea e deschisă.</li>
  *     <li>Participanții unui turneu început pot introduce rezultatele meciurilor lui.</li>
- *     <li>Administratorul face orice: creează turneul (nume și dată), îl pornește alegând
+ *     <li>Administratorul și managerul de turnee fac orice cu turneele: creează turneul (nume și dată), îl pornește alegând
  *     configurarea (tip, seturi, turneu comercial), corectează rezultate.</li>
  * </ul>
  */
@@ -106,8 +106,8 @@ public class TournamentService {
         return tournamentRepository.findById(tournamentId).map(this::details);
     }
 
-    /** Jucătorii care pot fi adăugați de administrator (încă neînscriși), după rating. */
-    @PreAuthorize("hasRole('ADMIN')")
+    /** Jucătorii care pot fi adăugați de organizator (încă neînscriși), după rating. */
+    @PreAuthorize("hasAnyRole('ADMIN', 'TOURNAMENT_MANAGER')")
     public List<Player> findPlayersNotRegistered(Long tournamentId) {
         Set<Long> registered = new HashSet<>();
         participantRepository.findByTournamentIdWithPlayer(tournamentId)
@@ -121,7 +121,7 @@ public class TournamentService {
     // Administrare turneu
     // ------------------------------------------------------------------
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TOURNAMENT_MANAGER')")
     @Transactional
     public Tournament create(TournamentForm form) {
         Tournament tournament = new Tournament();
@@ -129,7 +129,7 @@ public class TournamentService {
         return tournamentRepository.save(tournament);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TOURNAMENT_MANAGER')")
     @Transactional
     public Tournament update(Long tournamentId, TournamentForm form) {
         Tournament tournament = requireTournament(tournamentId);
@@ -141,7 +141,7 @@ public class TournamentService {
     }
 
     /** Șterge turneul cu toți participanții și meciurile lui. */
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TOURNAMENT_MANAGER')")
     @Transactional
     public void delete(Long tournamentId) {
         Tournament tournament = requireTournament(tournamentId);
@@ -178,7 +178,7 @@ public class TournamentService {
         participantRepository.delete(participant);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TOURNAMENT_MANAGER')")
     @Transactional
     public TournamentParticipant addParticipant(Long tournamentId, Long playerId) {
         Player player = playerRepository.findById(playerId)
@@ -186,7 +186,7 @@ public class TournamentService {
         return register(requireTournament(tournamentId), player);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TOURNAMENT_MANAGER')")
     @Transactional
     public void removeParticipant(Long tournamentId, Long participantId) {
         requireOpenTournament(tournamentId);
@@ -214,7 +214,7 @@ public class TournamentService {
      * Stabilește configurarea turneului (tip, seturi, turneu comercial), închide înscrierea,
      * formează grupa (jucătorii ordonați după rating, descrescător) și generează toate meciurile.
      */
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TOURNAMENT_MANAGER')")
     @Transactional
     public void start(Long tournamentId, TournamentSettings settings) {
         Tournament tournament = requireOpenTournament(tournamentId);
@@ -272,7 +272,7 @@ public class TournamentService {
      * ceilalți în Finala 2. Ambele finale se joacă Round Robin; perechile care s-au întâlnit deja
      * în aceeași grupă nu mai joacă, iar rezultatul lor se preia în tabelul finalei.
      */
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TOURNAMENT_MANAGER')")
     @Transactional
     public void startFinals(Long tournamentId, int qualifiers) {
         Tournament tournament = requireTournament(tournamentId);
@@ -360,7 +360,7 @@ public class TournamentService {
     // ------------------------------------------------------------------
 
     /**
-     * Înregistrează (sau corectează) rezultatul unui meci. Permis administratorului și,
+     * Înregistrează (sau corectează) rezultatul unui meci. Permis administratorului, managerului de turnee și,
      * cât timp turneul e în desfășurare, oricărui participant al turneului.
      * Când toate meciurile au rezultat, turneul trece automat în starea „Încheiat”.
      */
@@ -420,8 +420,8 @@ public class TournamentService {
         return match;
     }
 
-    /** Șterge rezultatul unui meci (administrator). Un turneu încheiat redevine „în desfășurare”. */
-    @PreAuthorize("hasRole('ADMIN')")
+    /** Șterge rezultatul unui meci (administrator sau manager de turnee). Un turneu încheiat redevine „în desfășurare”. */
+    @PreAuthorize("hasAnyRole('ADMIN', 'TOURNAMENT_MANAGER')")
     @Transactional
     public void clearResult(Long matchId) {
         TournamentMatch match = matchRepository.findByIdWithParticipants(matchId)
@@ -492,10 +492,10 @@ public class TournamentService {
                         .filter(p -> p.getPlayer().getId().equals(player.getId()))
                         .findFirst())
                 .orElse(null);
-        boolean admin = SecurityUtils.isAdmin();
+        boolean manager = SecurityUtils.canManageTournaments();
         boolean canSelfRegister = tournament.isRegistrationOpen() && currentPlayer.isPresent() && own == null;
-        boolean canRecord = (tournament.getStatus() == TournamentStatus.IN_PROGRESS && (admin || own != null))
-                || (tournament.getStatus() == TournamentStatus.FINISHED && admin);
+        boolean canRecord = (tournament.getStatus() == TournamentStatus.IN_PROGRESS && (manager || own != null))
+                || (tournament.getStatus() == TournamentStatus.FINISHED && manager);
 
         Map<Long, RatingHistory> ratingChanges = new HashMap<>();
         if (tournament.getStatus() == TournamentStatus.FINISHED) {
@@ -504,7 +504,7 @@ public class TournamentService {
         }
 
         return new TournamentDetails(tournament, participants, matches, standings, pool, prizes, own,
-                admin, canSelfRegister, canRecord, ratingChanges, groups);
+                manager, canSelfRegister, canRecord, ratingChanges, groups);
     }
 
     private static List<StandingsCalculator.Row> standings(Tournament tournament,
@@ -635,11 +635,11 @@ public class TournamentService {
         if (tournament.getStatus() == TournamentStatus.REGISTRATION) {
             throw new BusinessException("Turneul nu a început încă");
         }
-        if (SecurityUtils.isAdmin()) {
+        if (SecurityUtils.canManageTournaments()) {
             return;
         }
         if (tournament.getStatus() == TournamentStatus.FINISHED) {
-            throw new BusinessException("Turneul s-a încheiat; rezultatele pot fi corectate doar de administrator");
+            throw new BusinessException("Turneul s-a încheiat; rezultatele pot fi corectate doar de administrator sau de managerul de turnee");
         }
         boolean participant = currentPlayer()
                 .map(player -> participantRepository.existsByTournamentIdAndPlayerId(tournament.getId(), player.getId()))

@@ -27,7 +27,7 @@ public record TournamentDetails(
         BigDecimal prizePool,
         List<PrizePlace> prizes,
         TournamentParticipant ownParticipant,
-        boolean admin,
+        boolean manager,
         boolean canSelfRegister,
         boolean canRecordResults,
         Map<Long, RatingHistory> ratingChanges,
@@ -43,7 +43,7 @@ public record TournamentDetails(
 
     /** Etapa 1 s-a terminat și se poate porni etapa 2. */
     public boolean canStartFinals() {
-        return admin && tournament.isGroupsFormat()
+        return manager && tournament.isGroupsFormat()
                 && tournament.getStage() == md.ttm.model.tournament.TournamentStage.GROUPS
                 && !groupStage().isEmpty() && groupStage().stream().allMatch(GroupView::complete);
     }

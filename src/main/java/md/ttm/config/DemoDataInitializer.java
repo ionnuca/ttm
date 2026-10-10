@@ -33,7 +33,8 @@ import java.util.List;
  * Date demonstrative pentru dezvoltare (profilul "demo", inclus automat în profilul "dev").
  * Se încarcă doar dacă nu există încă niciun jucător.
  * <p>
- * Creează și un cont de test: utilizator {@code jucator}, parolă {@code jucator123},
+ * Creează și conturi de test: utilizator {@code jucator} / {@code jucator123} și
+ * managerul de turnee {@code manager} / {@code manager123},
  * plus patru turnee: unul încheiat, unul în desfășurare, unul „Grupe + finale” cu etapa 1 jucată
  * și unul cu înscrierea deschisă.
  */
@@ -71,7 +72,7 @@ public class DemoDataInitializer implements ApplicationRunner {
                 1385, 15, 6, "Butterfly Defence Alpha", "Tenergy 64", "Feint Long III");
         save("Ana", "Ciobanu", PlayStyle.ATTACK, PlayHand.LEFT, "Chișinău", "+373 68 555 010",
                 1350, 14, 7, "Stiga Cybershape Carbon", "DNA Dragon Grip", "DNA Platinum XH");
-        save("Victor", "Lungu", PlayStyle.ATTACK, PlayHand.RIGHT, "Orhei", null,
+        Player lungu = save("Victor", "Lungu", PlayStyle.ATTACK, PlayHand.RIGHT, "Orhei", null,
                 1350, 12, 8, "DHS Hurricane Long 5", "Hurricane 3 Neo", "Tenergy 05");
         save("Elena", "Moraru", PlayStyle.DEFENCE, PlayHand.RIGHT, "Cahul", "+373 60 777 888",
                 1290, 11, 9, "Tibhar Defense Plus", "Evolution MX-P", "Grass D.TecS");
@@ -88,8 +89,9 @@ public class DemoDataInitializer implements ApplicationRunner {
 
         AppUser demoUser = new AppUser("jucator", passwordEncoder.encode("jucator123"), Role.USER, first);
         userRepository.save(demoUser);
+        userRepository.save(new AppUser("manager", passwordEncoder.encode("manager123"), Role.TOURNAMENT_MANAGER, lungu));
         createDemoTournaments();
-        log.info("Date demonstrative încărcate: 10 jucători, 4 turnee și utilizatorul 'jucator' (parola 'jucator123')");
+        log.info("Date demonstrative încărcate: 10 jucători, 4 turnee, utilizatorii 'jucator' (parola 'jucator123') și 'manager' (parola 'manager123')");
     }
 
     /**

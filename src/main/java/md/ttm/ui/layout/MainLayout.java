@@ -1,6 +1,7 @@
 package md.ttm.ui.layout;
 
 import md.ttm.model.user.AppUser;
+import md.ttm.model.user.Role;
 import md.ttm.security.SecurityUtils;
 import md.ttm.service.user.UserService;
 import md.ttm.ui.account.LoginView;
@@ -103,7 +104,9 @@ public class MainLayout extends AppLayout {
                     .set("font-size", "var(--lumo-font-size-s)")
                     .set("color", "var(--lumo-secondary-text-color)");
             if (SecurityUtils.isAdmin()) {
-                user.setText(name + " · Administrator");
+                user.setText(name + " · " + Role.ADMIN.getLabel());
+            } else if (SecurityUtils.hasRole(Role.TOURNAMENT_MANAGER)) {
+                user.setText(name + " · " + Role.TOURNAMENT_MANAGER.getLabel());
             }
             hiddenWhenNarrow.add(user);
             Button logout = new Button("Ieșire", VaadinIcon.SIGN_OUT.create(), e -> authenticationContext.logout());

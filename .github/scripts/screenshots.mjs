@@ -147,6 +147,9 @@ await check('admin: utilizatori', async () => {
 await check('admin: dialog utilizator nou', async () => {
   await page.getByText('Adaugă utilizator').click();
   await expectText(page, 'Utilizator nou');
+  await page.getByRole('dialog').locator('vaadin-select:visible').first().click();
+  await page.getByRole('option', { name: 'Manager de turnee' }).waitFor({ timeout: 10000 });
+  await page.keyboard.press('Escape');
   await shot(page, '09-admin-utilizator-nou');
   await page.keyboard.press('Escape');
 });
@@ -253,6 +256,38 @@ await check('utilizator: se înscrie la turneu', async () => {
   await expectText(page, 'Participanți înscriși (5)');
   await expectText(page, 'Mă retrag');
   await shot(page, '26-utilizator-inscris');
+});
+await ctx.close();
+
+// ---------- Manager de turnee, desktop ----------
+ctx = await browser.newContext(desktop);
+page = await ctx.newPage();
+await check('manager: fără Utilizatori și fără telefoane', async () => {
+  await login(page, 'manager', 'manager123');
+  await expectText(page, 'Manager de turnee');
+  await expectNoText(page, 'Utilizatori');
+  await expectNoText(page, 'Telefon');
+  await expectNoText(page, 'Adaugă jucător');
+  await shot(page, '33-manager-jucatori');
+});
+await check('manager: poate crea turnee', async () => {
+  await page.goto(`${BASE}/turnee`);
+  await page.getByRole('button', { name: 'Turneu nou' }).click();
+  await expectText(page, 'Numele turneului');
+  await shot(page, '34-manager-turneu-nou');
+  await page.keyboard.press('Escape');
+});
+await check('manager: conduce turneul (Începe turneul)', async () => {
+  await page.goto(`${BASE}/turnee`);
+  await page.getByText('Turneul de duminică').first().click();
+  await expectText(page, 'Începe turneul');
+  await expectText(page, 'Adaugă un jucător');
+  await shot(page, '35-manager-turneu-inscriere');
+});
+await check('manager: pagina Utilizatori e interzisă', async () => {
+  await page.goto(`${BASE}/utilizatori`);
+  await settle(page);
+  await expectNoText(page, 'Adaugă utilizator');
 });
 await ctx.close();
 
