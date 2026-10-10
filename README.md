@@ -239,6 +239,26 @@ Copiile de rezervă stau pe același server. Pentru siguranță, descărcați pe
 
 ---
 
+## Ramuri și release
+
+| Ramura | Rol | Ce se întâmplă la push |
+|---|---|---|
+| `develop` | Dezvoltarea de zi cu zi: aici ajung toate modificările | CI (teste + build de producție); **nu** se publică pe server |
+| `main` | Doar versiunile lansate în producție | CI, apoi workflow-ul `Publicare` instalează automat versiunea pe server |
+
+**Release în producție** = aducerea lui `develop` în `main`, după ce CI e verde pe `develop`:
+
+- din GitHub: *Pull requests → New pull request*, `base: main` ← `compare: develop`, apoi *Merge pull request*;
+- sau local:
+  ```bash
+  git checkout main && git pull
+  git merge --no-ff develop -m "Release: <ce conține>"
+  git push
+  git checkout develop
+  ```
+
+La câteva minute după push pe `main`, versiunea nouă rulează pe server. Pentru o funcționalitate mai mare se poate lucra și pe o ramură separată din `develop` (`feature/...`), adusă apoi în `develop`.
+
 ## Teste și build
 
 ```powershell
