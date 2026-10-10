@@ -179,8 +179,8 @@ await check('admin: configurarea la începerea turneului', async () => {
 await check('admin: configurarea „Grupe + finale”', async () => {
   await page.getByRole('button', { name: 'Începe turneul' }).click();
   await expectText(page, 'Tipul turneului');
-  await page.getByLabel('Tipul turneului').click();
-  await page.getByRole('option', { name: 'Grupe + finale' }).click();
+  await page.getByRole('dialog').locator('vaadin-select').first().click();
+  await page.locator('vaadin-select-item', { hasText: 'Grupe + finale' }).click();
   await expectText(page, 'Numărul de grupe');
   await expectText(page, 'Jucători pe grupă: 2, 2');
   await page.getByText('Turneu comercial (cu taxă de participare și premii)').click();
