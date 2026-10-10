@@ -5,6 +5,11 @@ name: Capturi interfață
 # ale paginilor principale, pentru fiecare rol, pe desktop și pe telefon.
 on:
   workflow_dispatch:
+  push:
+    branches: [capturi-dev]
+
+permissions:
+  contents: write
 
 jobs:
   screenshots:
@@ -68,3 +73,12 @@ jobs:
           path: |
             screenshots/
             app.log
+
+      - name: Publică capturile pe ramura capturi-temp
+        if: always()
+        run: |
+          cd screenshots
+          git init -q -b capturi-temp
+          git add -A
+          git -c user.name=ci -c user.email=ci@localhost commit -qm "capturi ${GITHUB_SHA}"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" capturi-temp
