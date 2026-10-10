@@ -11,6 +11,8 @@ on:
     types: [completed]
     branches: [main]
   workflow_dispatch:
+  push:
+    branches: [productie]
 
 permissions:
   contents: read
