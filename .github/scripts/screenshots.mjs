@@ -106,7 +106,7 @@ await check('guest: meciurile', async () => {
   await expectText(page, 'ultimele');
   await expectText(page, 'Cupa de vară');
   await shot(page, '15-guest-meciuri');
-  await page.getByPlaceholder('Caută după jucător sau turneu').fill('Sârbu');
+  await page.locator('input[placeholder="Caută după jucător sau turneu"]').fill('Sârbu');
   await expectText(page, 'Sârbu Cristina');
 });
 await check('guest: turneu încheiat cu rating', async () => {
