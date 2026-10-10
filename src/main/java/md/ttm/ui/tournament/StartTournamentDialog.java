@@ -28,7 +28,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
- * „Începe turneul”: administratorul alege configurarea (tipul, numărul de grupe, numărul de seturi și,
+ * „Începe turneul”: organizatorul (administrator sau manager de turnee) alege configurarea (tipul, numărul de grupe, numărul de seturi și,
  * opțional, turneul comercial) și confirmă închiderea înscrierii.
  */
 class StartTournamentDialog extends Dialog {

@@ -118,7 +118,7 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         titleRow.setWidthFull();
         titleRow.setAlignItems(FlexComponent.Alignment.CENTER);
         titleRow.getStyle().set("flex-wrap", "wrap");
-        if (details.admin()) {
+        if (details.manager()) {
             Div spacer = new Div();
             spacer.getStyle().set("flex-grow", "1");
             titleRow.add(spacer);
@@ -206,7 +206,7 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
                     e -> run(() -> tournamentService.unregisterSelf(tournamentId), "V-ați retras de la turneu"));
             actions.add(leave);
         }
-        if (details.admin()) {
+        if (details.manager()) {
             ComboBox<Player> player = new ComboBox<>("Adaugă un jucător");
             player.setItems(tournamentService.findPlayersNotRegistered(tournamentId));
             player.setItemLabelGenerator(p -> p.getDisplayName() + " (" + p.getRating() + ")");
@@ -254,7 +254,7 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         grid.addColumn(p -> p.getPlayer().getRating()).setHeader("Rating")
                 .setAutoWidth(true).setFlexGrow(0).setTextAlign(ColumnTextAlign.END);
         grid.addColumn(p -> p.getPlayer().getCity() != null ? p.getPlayer().getCity() : "—").setHeader("Oraș");
-        if (details.admin()) {
+        if (details.manager()) {
             grid.addComponentColumn(p -> {
                 Button remove = new Button(VaadinIcon.CLOSE_SMALL.create(), e -> run(
                         () -> tournamentService.removeParticipant(tournamentId, p.getId()),
@@ -326,7 +326,7 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         section.add(new H3("Meciuri"));
         if (!details.canRecordResults() && details.tournament().getStatus() == TournamentStatus.IN_PROGRESS) {
             Span hint = new Span(SecurityUtils.isAuthenticated()
-                    ? "Rezultatele le introduc participanții turneului și administratorul."
+                    ? "Rezultatele le introduc participanții turneului și organizatorii (administratorul, managerul de turnee)."
                     : "Rezultatele le introduc participanții turneului, după autentificare.");
             hint.getStyle()
                     .set("font-size", "var(--lumo-font-size-s)")
@@ -517,7 +517,7 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
     }
 
     private void openResultDialog(TournamentDetails details, TournamentMatch match) {
-        Runnable onClear = details.admin()
+        Runnable onClear = details.manager()
                 ? () -> {
                     tournamentService.clearResult(match.getId());
                     Notifications.success("Rezultat șters");

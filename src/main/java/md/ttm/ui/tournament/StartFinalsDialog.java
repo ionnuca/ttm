@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
- * „Începe etapa 2”: administratorul alege câți jucători din fiecare grupă trec în Finala 1.
+ * „Începe etapa 2”: organizatorul (administrator sau manager de turnee) alege câți jucători din fiecare grupă trec în Finala 1.
  * Dialogul arată pe loc cine se califică.
  */
 class StartFinalsDialog extends Dialog {

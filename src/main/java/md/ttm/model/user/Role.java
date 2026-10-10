@@ -5,6 +5,8 @@ package md.ttm.model.user;
  */
 public enum Role {
     USER("Utilizator"),
+    /** Creează, pornește și conduce turneele; nu are acces la utilizatori și la datele de contact ale jucătorilor. */
+    TOURNAMENT_MANAGER("Manager de turnee"),
     ADMIN("Administrator");
 
     private final String label;

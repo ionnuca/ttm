@@ -43,4 +43,9 @@ public final class SecurityUtils {
     public static boolean isAdmin() {
         return hasRole(Role.ADMIN);
     }
+
+    /** Administratorul sau managerul de turnee: pot crea, porni și conduce turneele. */
+    public static boolean canManageTournaments() {
+        return isAdmin() || hasRole(Role.TOURNAMENT_MANAGER);
+    }
 }
