@@ -1,0 +1,38 @@
+name: Test server-setup
+on:
+  push:
+    branches: [test-server]
+permissions:
+  contents: read
+  packages: read
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - name: server-setup.sh (răspunsuri automate)
+        run: |
+          curl -fsSLO https://raw.githubusercontent.com/ionnuca/ttm/main/deploy/server-setup.sh
+          printf 'localhost\nci@example.com\n\n\n\nParola-Test-123\nParola-Test-123\n\n' | sudo bash server-setup.sh 2>&1 | tee setup.log
+          sudo cat /opt/ttm/.env | grep -v PASSWORD
+          sudo ls -la /opt/ttm /etc/cron.d/ttm-backup
+          swapon --show; sudo ufw status
+      - name: Publicare prin SSH, ca în workflow-ul Publicare
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          sudo cp /home/deploy/.ssh/github_actions ~/deploy_key && sudo chown $USER ~/deploy_key && chmod 600 ~/deploy_key
+          ssh-keyscan -H localhost >> ~/.ssh/known_hosts 2>/dev/null || (mkdir -p ~/.ssh && ssh-keyscan -H localhost >> ~/.ssh/known_hosts)
+          SSH="ssh -i $HOME/deploy_key deploy@localhost"
+          scp -i ~/deploy_key deploy/docker-compose.prod.yml deploy@localhost:/opt/ttm/docker-compose.yml
+          scp -i ~/deploy_key deploy/Caddyfile deploy/backup.sh deploy@localhost:/opt/ttm/
+          echo "$TOKEN" | $SSH "docker login ghcr.io -u ${{ github.actor }} --password-stdin"
+          $SSH "cd /opt/ttm && chmod +x backup.sh && docker compose pull -q && docker compose up -d --remove-orphans; rc=\$?; docker logout ghcr.io; exit \$rc"
+          for i in $(seq 1 40); do
+            if $SSH "cd /opt/ttm && docker compose logs app 2>&1 | grep -q 'Started TtmApplication'"; then break; fi
+            sleep 3
+          done
+          $SSH "cd /opt/ttm && docker compose ps && docker compose logs app | grep -E 'administrator|seed|Started'"
+          curl -skf https://localhost/ | head -c 300; echo
+          $SSH "/opt/ttm/backup.sh"
+          docker run --rm --entrypoint uname ghcr.io/ionnuca/ttm:latest -m
