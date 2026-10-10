@@ -127,6 +127,12 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
                 edit.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
                 titleRow.add(edit);
             }
+            if (details.canFinishManually()) {
+                Button finish = new Button("Încheie turneul", VaadinIcon.FLAG_CHECKERED.create(),
+                        e -> confirmFinish(details));
+                finish.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
+                titleRow.add(finish);
+            }
             Button delete = new Button("Șterge", VaadinIcon.TRASH.create(), e -> confirmDelete(t));
             delete.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_ERROR);
             titleRow.add(delete);
@@ -458,7 +464,10 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         Span nameA = matchName(a, aWon, true, match.getRatingDeltaA());
         Span nameB = matchName(b, bWon, false, match.getRatingDeltaB());
         Span result;
-        if (!match.isPlayed()) {
+        if (!match.isPlayed() && details.tournament().getStatus() == TournamentStatus.FINISHED) {
+            result = Badges.badge("nejucat", Badges.Tone.CONTRAST);
+            result.getElement().setAttribute("title", "Turneul a fost încheiat înainte de acest meci");
+        } else if (!match.isPlayed()) {
             result = new Span("–:–");
             result.getStyle().set("color", "var(--lumo-tertiary-text-color)");
         } else if (match.isWalkover()) {
@@ -541,6 +550,37 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
             Notifications.success("Turneu actualizat");
             refresh();
         }).open();
+    }
+
+    private void confirmFinish(TournamentDetails details) {
+        Tournament tournament = details.tournament();
+        long unplayed = details.unplayedMatches();
+        StringBuilder text = new StringBuilder("„" + tournament.getName() + "” trece în starea „Încheiat”, iar ratingul "
+                + "se recalculează din meciurile jucate.");
+        if (unplayed > 0) {
+            text.append(unplayed == 1 ? " 1 meci nu are rezultat: rămâne nejucat" : " " + unplayed
+                    + " meciuri nu au rezultat: rămân nejucate").append(" și nu contează la clasament sau la rating.");
+        }
+        if (tournament.isGroupsFormat() && tournament.getStage() == TournamentStage.GROUPS) {
+            text.append(" Etapa 2 (finalele) nu se mai joacă.");
+        }
+        text.append(" Rezultatele pot fi corectate și după încheiere.");
+        ConfirmDialog dialog = new ConfirmDialog();
+        dialog.setHeader("Încheiați turneul?");
+        dialog.setText(text.toString());
+        dialog.setCancelable(true);
+        dialog.setCancelText("Anulează");
+        dialog.setConfirmText("Încheie turneul");
+        dialog.addConfirmListener(e -> {
+            try {
+                tournamentService.finishManually(tournamentId);
+                Notifications.success("Turneu încheiat");
+            } catch (RuntimeException ex) {
+                Notifications.error(Notifications.saveError(ex));
+            }
+            refresh();
+        });
+        dialog.open();
     }
 
     private void confirmDelete(Tournament tournament) {

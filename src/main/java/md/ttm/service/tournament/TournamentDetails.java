@@ -2,6 +2,7 @@ package md.ttm.service.tournament;
 
 import md.ttm.model.rating.RatingHistory;
 import md.ttm.model.tournament.Tournament;
+import md.ttm.model.tournament.TournamentStatus;
 import md.ttm.model.tournament.TournamentMatch;
 import md.ttm.model.tournament.TournamentParticipant;
 
@@ -42,6 +43,16 @@ public record TournamentDetails(
     }
 
     /** Etapa 1 s-a terminat și se poate porni etapa 2. */
+    /** Organizatorul poate încheia manual un turneu în desfășurare. */
+    public boolean canFinishManually() {
+        return manager && tournament.getStatus() == TournamentStatus.IN_PROGRESS;
+    }
+
+    /** Meciurile încă fără rezultat (după o încheiere manuală: cele care nu s-au mai jucat). */
+    public long unplayedMatches() {
+        return matches.size() - playedMatches();
+    }
+
     public boolean canStartFinals() {
         return manager && tournament.isGroupsFormat()
                 && tournament.getStage() == md.ttm.model.tournament.TournamentStage.GROUPS

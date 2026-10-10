@@ -6,7 +6,11 @@ import md.ttm.model.player.Player;
 import md.ttm.model.user.AppUser;
 import md.ttm.service.player.PlayerService;
 import md.ttm.security.SecurityUtils;
+import md.ttm.service.player.PlayerPhotoService;
 import md.ttm.service.rating.RatingService;
+import md.ttm.ui.player.PhotoEditor;
+import md.ttm.ui.player.PlayerView;
+import com.vaadin.flow.router.RouterLink;
 import md.ttm.service.user.UserService;
 import md.ttm.ui.components.Notifications;
 import md.ttm.ui.player.RatingHistoryList;
@@ -47,7 +51,8 @@ public class ProfileView extends VerticalLayout {
     private final Span ratingValue = new Span();
     private RatingHistoryList history;
 
-    public ProfileView(PlayerService playerService, UserService userService, RatingService ratingService) {
+    public ProfileView(PlayerService playerService, UserService userService, RatingService ratingService,
+                       PlayerPhotoService photoService) {
         this.playerService = playerService;
         this.userService = userService;
         this.ratingService = ratingService;
@@ -64,7 +69,10 @@ public class ProfileView extends VerticalLayout {
         if (user.getPlayer() != null) {
             history = new RatingHistoryList(ratingService.findHistory(user.getPlayer().getId()),
                     user.getPlayer().getInitialRating());
-            add(createStats(user.getPlayer()), createPlayerForm(user.getPlayer()), history);
+            RouterLink publicPage = new RouterLink("Pagina mea de jucător (statistici și meciuri) →",
+                    PlayerView.class, user.getPlayer().getId());
+            add(publicPage, new PhotoEditor(user.getPlayer(), photoService, null),
+                    createStats(user.getPlayer()), createPlayerForm(user.getPlayer()), history);
         } else {
             add(new Paragraph("Acest cont nu are un profil de jucător."));
         }
