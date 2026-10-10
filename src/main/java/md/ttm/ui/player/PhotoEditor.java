@@ -10,9 +10,13 @@ import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.upload.Upload;
 import com.vaadin.flow.component.upload.receivers.MemoryBuffer;
+import md.ttm.common.BusinessException;
 import md.ttm.model.player.Player;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import md.ttm.service.player.PlayerPhotoService;
 import md.ttm.ui.components.Notifications;
+import md.ttm.ui.components.PhotoViewer;
 import md.ttm.ui.components.PlayerAvatar;
 
 import java.io.IOException;
@@ -20,6 +24,8 @@ import java.io.InputStream;
 
 /** Poza de profil: avatarul mare, „Alege o poză” și „Șterge poza”. */
 public class PhotoEditor extends HorizontalLayout {
+
+    private static final Logger log = LoggerFactory.getLogger(PhotoEditor.class);
 
     private final Player player;
     private final PlayerPhotoService photoService;
@@ -55,14 +61,21 @@ public class PhotoEditor extends HorizontalLayout {
                 photoService.save(player.getId(), in.readAllBytes());
                 Notifications.success("Poza a fost salvată");
                 changed();
+            } catch (BusinessException ex) {
+                Notifications.error(ex.getMessage());
             } catch (IOException | RuntimeException ex) {
-                Notifications.error(ex instanceof RuntimeException r ? Notifications.saveError(r)
-                        : "Poza nu a putut fi citită");
+                log.warn("Poza jucătorului {} nu a putut fi salvată", player.getId(), ex);
+                Notifications.error("Poza nu a putut fi salvată. Încercați o altă poză (JPEG sau PNG).");
             }
             upload.clearFileList();
         });
         upload.addFileRejectedListener(e -> Notifications.error(
-                "Alegeți o poză JPEG sau PNG de cel mult 10 MB"));
+                "Alegeți o poză JPEG sau PNG de cel mult 20 MB"));
+        upload.addFailedListener(e -> {
+            log.warn("Încărcarea pozei a eșuat ({}, {} octeți)", e.getMIMEType(), e.getContentLength(), e.getReason());
+            Notifications.error("Încărcarea pozei a eșuat. Verificați conexiunea și încercați din nou.");
+            upload.clearFileList();
+        });
 
         delete.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_ERROR);
         delete.addClickListener(e -> {
@@ -90,7 +103,7 @@ public class PhotoEditor extends HorizontalLayout {
     private Avatar createAvatar() {
         Long version = photoService.version(player.getId());
         delete.setVisible(version != null);
-        return PlayerAvatar.of(player, version, "5.5rem");
+        return PhotoViewer.clickable(PlayerAvatar.of(player, version, "5.5rem"), player, version);
     }
 
     private void changed() {

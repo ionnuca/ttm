@@ -305,6 +305,36 @@ await check('utilizator: poza de profil', async () => {
     .some(a => String(a.img || a.getAttribute('img') || '').includes('foto/jucator/')), null, { timeout: 10000 });
   await expectText(page, 'Șterge poza');
 });
+await check('utilizator: poză mare (ca de pe telefon, peste 1 MB)', async () => {
+  const big = await page.evaluate(() => {
+    const c = document.createElement('canvas'); c.width = 1400; c.height = 1050;
+    const g = c.getContext('2d'); const img = g.createImageData(c.width, c.height);
+    for (let i = 0; i < img.data.length; i++) img.data[i] = (i % 4 === 3) ? 255 : Math.floor(Math.random() * 256);
+    g.putImageData(img, 0, 0);
+    return c.toDataURL('image/png').split(',')[1];
+  });
+  const buffer = Buffer.from(big, 'base64');
+  if (buffer.length < 1_500_000) throw new Error(`poza de test e prea mică: ${buffer.length} octeți`);
+  await page.getByText('Poza a fost salvată').first().waitFor({ state: 'hidden', timeout: 15000 }).catch(() => {});
+  await page.locator('vaadin-upload input[type=file]').setInputFiles({ name: 'telefon.png', mimeType: 'image/png', buffer });
+  await expectText(page, 'Poza a fost salvată');
+});
+await check('utilizator: poza se deschide mărită', async () => {
+  await page.goto(`${BASE}/profil`);
+  await page.getByText('Pagina mea de jucător').click();
+  await page.waitForURL(/\/jucator\/\d+/, { timeout: 10000 });
+  await page.locator('vaadin-avatar[title="Vezi poza mărită"]').first().click();
+  const img = page.locator('vaadin-dialog-overlay img, img[alt^="Poza lui"]').first();
+  await img.waitFor({ timeout: 10000 });
+  await page.waitForFunction(() => {
+    const i = document.querySelector('img[alt^="Poza lui"]');
+    return i && i.complete && i.naturalWidth > 0;
+  }, null, { timeout: 10000 });
+  const width = await page.evaluate(() => document.querySelector('img[alt^="Poza lui"]').naturalWidth);
+  if (width < 1000) throw new Error(`poza mărită are doar ${width} px lățime`);
+  await shot(page, '39-utilizator-poza-marita');
+  await page.keyboard.press('Escape');
+});
 await check('utilizator: profil', async () => {
   await page.goto(`${BASE}/profil`);
   await expectText(page, 'Date personale');

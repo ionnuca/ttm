@@ -35,6 +35,22 @@ public class PlayerPhotoController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    /** Poza mare, pentru vizualizare: {@code /foto/jucator/<id>/mare?v=<versiune>}. */
+    @GetMapping("/" + PATH + "{playerId}/mare")
+    public ResponseEntity<byte[]> fullPhoto(@PathVariable Long playerId) {
+        return photoService.find(playerId)
+                .map(p -> ResponseEntity.ok()
+                        .contentType(MediaType.parseMediaType(p.getContentType()))
+                        .cacheControl(CacheControl.maxAge(Duration.ofDays(30)).cachePublic())
+                        .body(p.getFullContentOrThumbnail()))
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    /** Adresa pozei mari; {@code null} dacă jucătorul nu are poză. */
+    public static String fullUrl(Long playerId, Long version) {
+        return version == null ? null : PATH + playerId + "/mare?v=" + version;
+    }
+
     /** Adresa pozei, relativă la rădăcina aplicației; {@code null} dacă jucătorul nu are poză. */
     public static String url(Long playerId, Long version) {
         return version == null ? null : PATH + playerId + "?v=" + version;

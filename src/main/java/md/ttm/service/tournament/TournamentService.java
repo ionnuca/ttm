@@ -355,10 +355,23 @@ public class TournamentService {
         if (tournament.getStatus() != TournamentStatus.IN_PROGRESS) {
             throw new BusinessException("Doar un turneu în desfășurare poate fi încheiat");
         }
+        if (requiresFinalsBeforeFinish(tournament)) {
+            throw new BusinessException("La un turneu comercial cu două etape premiile se acordă în finale: "
+                    + "începeți etapa 2 înainte de încheiere");
+        }
         long unplayed = matchRepository.countByTournamentIdAndOutcomeIsNull(tournamentId);
         finish(tournament);
         ratingService.recalculateAll();
         return unplayed;
+    }
+
+    /**
+     * La un turneu comercial „Grupe + finale”, câștigătorul Finalei 2 primește obligatoriu cât taxa,
+     * deci turneul se poate încheia doar după formarea finalelor.
+     */
+    static boolean requiresFinalsBeforeFinish(Tournament tournament) {
+        return tournament.isGroupsFormat() && tournament.isCommercial()
+                && tournament.getStage() == TournamentStage.GROUPS;
     }
 
     private void finish(Tournament tournament) {
@@ -639,9 +652,17 @@ public class TournamentService {
         return prizes;
     }
 
+    /**
+     * Jucătorul de pe locul dat al unei finale. Dacă finala s-a încheiat (manual) fără niciun meci jucat,
+     * contează ordinea de calificare din grupe (locul în grupă, apoi ratingul), deci premiile au mereu câștigător.
+     */
     private static String nameAtPlace(GroupView group, int place) {
         if (group == null) {
             return null;
+        }
+        boolean noStandings = group.standings().stream().allMatch(r -> r.place() == 0);
+        if (noStandings) {
+            return place <= group.members().size() ? group.members().get(place - 1).getPlayer().getDisplayName() : null;
         }
         for (int i = 0; i < group.standings().size(); i++) {
             if (group.standings().get(i).place() == place) {

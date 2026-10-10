@@ -1,6 +1,8 @@
 package md.ttm.model.player;
 
+import jakarta.persistence.Basic;
 import jakarta.persistence.Column;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
@@ -18,6 +20,11 @@ public class PlayerPhoto {
 
     @Column(name = "content", nullable = false)
     private byte[] content;
+
+    /** Poza întreagă, pentru vizualizarea mărită; {@code null} la pozele încărcate înainte de V8. */
+    @Basic(fetch = FetchType.LAZY)
+    @Column(name = "full_content")
+    private byte[] fullContent;
 
     @Column(name = "content_type", nullable = false, length = 50)
     private String contentType;
@@ -40,6 +47,11 @@ public class PlayerPhoto {
         return content;
     }
 
+    /** Poza mare, sau miniatura dacă poza a fost încărcată înainte de existența variantei mari. */
+    public byte[] getFullContentOrThumbnail() {
+        return fullContent != null ? fullContent : content;
+    }
+
     public String getContentType() {
         return contentType;
     }
@@ -48,8 +60,9 @@ public class PlayerPhoto {
         return updatedAt;
     }
 
-    public void replace(byte[] content, String contentType) {
+    public void replace(byte[] content, byte[] fullContent, String contentType) {
         this.content = content;
+        this.fullContent = fullContent;
         this.contentType = contentType;
         this.updatedAt = Instant.now();
     }

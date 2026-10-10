@@ -28,6 +28,7 @@ import md.ttm.service.match.PlayerStats;
 import md.ttm.service.player.PlayerPhotoService;
 import md.ttm.service.player.PlayerService;
 import md.ttm.ui.components.Notifications;
+import md.ttm.ui.components.PhotoViewer;
 import md.ttm.ui.components.PlayerAvatar;
 import md.ttm.ui.layout.MainLayout;
 import md.ttm.ui.match.MatchList;
@@ -115,8 +116,9 @@ public class PlayerView extends VerticalLayout implements HasUrlParameter<Long>,
         text.setWidth(null);
         text.getStyle().set("flex", "1 1 14rem").set("min-width", "0");
 
+        Long photoVersion = photoService.version(player.getId());
         HorizontalLayout header = new HorizontalLayout(
-                PlayerAvatar.of(player, photoService.version(player.getId()), "4.5rem"), text);
+                PhotoViewer.clickable(PlayerAvatar.of(player, photoVersion, "4.5rem"), player, photoVersion), text);
         header.setAlignItems(FlexComponent.Alignment.CENTER);
         header.setWidthFull();
         if (SecurityUtils.isAdmin()) {
