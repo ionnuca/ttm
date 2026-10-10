@@ -261,7 +261,7 @@ La câteva minute după push pe `main`, versiunea nouă rulează pe server.
 
 **Versiuni.** Pe `develop` versiunea din `pom.xml` e următoarea versiune în lucru, cu sufixul `-SNAPSHOT` (ex. `1.1.0-SNAPSHOT`). La release:
 1. pe `develop`, versiunea devine cea finală (`1.1.0`), commit „Release 1.1.0”;
-2. `develop` se aduce în `main`, iar commitul primește tag-ul `v1.1.0` (`git tag -a v1.1.0 -m "Release 1.1.0"`, apoi `git push --tags`);
+2. `develop` se aduce în `main`; workflow-ul `Publicare` creează singur tag-ul `v1.1.0` și un GitHub Release cu lista modificărilor;
 3. pe `develop`, versiunea trece la următoarea (`1.2.0-SNAPSHOT`).
 
 Versiunea rulată apare în meniul lateral al aplicației („Versiunea 1.1.0”), iar imaginea Docker e publicată și cu eticheta versiunii (`ghcr.io/ionnuca/ttm:1.1.0`). Pentru o funcționalitate mai mare se poate lucra și pe o ramură separată din `develop` (`feature/...`), adusă apoi în `develop`.
