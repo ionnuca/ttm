@@ -319,6 +319,22 @@ await check('utilizator: poză mare (ca de pe telefon, peste 1 MB)', async () =>
   await page.locator('vaadin-upload input[type=file]').setInputFiles({ name: 'telefon.png', mimeType: 'image/png', buffer });
   await expectText(page, 'Poza a fost salvată');
 });
+await check('utilizator: poza se deschide mărită', async () => {
+  await page.goto(`${BASE}/profil`);
+  await page.getByText('Pagina mea de jucător').click();
+  await page.waitForURL(/\/jucator\/\d+/, { timeout: 10000 });
+  await page.locator('vaadin-avatar[title="Vezi poza mărită"]').first().click();
+  const img = page.locator('vaadin-dialog-overlay img, img[alt^="Poza lui"]').first();
+  await img.waitFor({ timeout: 10000 });
+  await page.waitForFunction(() => {
+    const i = document.querySelector('img[alt^="Poza lui"]');
+    return i && i.complete && i.naturalWidth > 0;
+  }, null, { timeout: 10000 });
+  const width = await page.evaluate(() => document.querySelector('img[alt^="Poza lui"]').naturalWidth);
+  if (width < 1000) throw new Error(`poza mărită are doar ${width} px lățime`);
+  await shot(page, '39-utilizator-poza-marita');
+  await page.keyboard.press('Escape');
+});
 await check('utilizator: profil', async () => {
   await page.goto(`${BASE}/profil`);
   await expectText(page, 'Date personale');
