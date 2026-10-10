@@ -59,6 +59,17 @@ public class Tournament {
     @Column(name = "entry_fee", precision = 10, scale = 2)
     private BigDecimal entryFee;
 
+    /** Etapa curentă (doar la „Grupe + finale”). */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "stage", length = 20)
+    private TournamentStage stage;
+
+    @Column(name = "group_count")
+    private Integer groupCount;
+
+    @Column(name = "qualifiers_per_group")
+    private Integer qualifiersPerGroup;
+
     @Column(name = "started_at")
     private Instant startedAt;
 
@@ -161,6 +172,34 @@ public class Tournament {
 
     public void setEntryFee(BigDecimal entryFee) {
         this.entryFee = entryFee;
+    }
+
+    public boolean isGroupsFormat() {
+        return format == TournamentFormat.GROUPS_FINALS;
+    }
+
+    public TournamentStage getStage() {
+        return stage;
+    }
+
+    public void setStage(TournamentStage stage) {
+        this.stage = stage;
+    }
+
+    public Integer getGroupCount() {
+        return groupCount;
+    }
+
+    public void setGroupCount(Integer groupCount) {
+        this.groupCount = groupCount;
+    }
+
+    public Integer getQualifiersPerGroup() {
+        return qualifiersPerGroup;
+    }
+
+    public void setQualifiersPerGroup(Integer qualifiersPerGroup) {
+        this.qualifiersPerGroup = qualifiersPerGroup;
     }
 
     public Instant getStartedAt() {

@@ -98,6 +98,15 @@ await check('guest: turneu în desfășurare (tabel)', async () => {
   await expectNoText(page, 'Mă înscriu');
   await shot(page, '21-guest-turneu-tabel');
 });
+await check('guest: turneu Grupe + finale (etapa 1)', async () => {
+  await page.goto(`${BASE}/turnee`);
+  await page.getByText('Liga de iarnă').first().click();
+  await expectText(page, 'Etapa 1 — Grupe');
+  await expectText(page, 'Grupa A');
+  await expectText(page, 'Grupa C');
+  await expectNoText(page, 'Începe etapa 2');
+  await shot(page, '29-guest-turneu-grupe');
+});
 await ctx.close();
 
 // ---------- Administrator, desktop ----------
@@ -166,6 +175,39 @@ await check('admin: configurarea la începerea turneului', async () => {
   await shot(page, '23b-admin-incepe-turneul');
   await page.getByRole('button', { name: 'Anulează' }).click();
 });
+await check('admin: configurarea „Grupe + finale”', async () => {
+  await page.getByRole('button', { name: 'Începe turneul' }).click();
+  await expectText(page, 'Tipul turneului');
+  await page.getByLabel('Tipul turneului').click();
+  await page.getByRole('option', { name: 'Grupe + finale' }).click();
+  await expectText(page, 'Numărul de grupe');
+  await expectText(page, 'Jucători pe grupă: 2, 2');
+  await page.getByText('Turneu comercial (cu taxă de participare și premii)').click();
+  await page.getByLabel('Taxa de participare').fill('50');
+  await page.getByLabel('Taxa de participare').press('Tab');
+  await expectText(page, 'Finala 2 · locul 1: 50 lei');
+  await shot(page, '23c-admin-incepe-turneul-grupe');
+  await page.getByRole('button', { name: 'Anulează' }).click();
+});
+await check('admin: dialogul „Începe etapa 2”', async () => {
+  await page.goto(`${BASE}/turnee`);
+  await page.getByText('Liga de iarnă').first().click();
+  await expectText(page, 'Etapa 1 s-a terminat');
+  await page.getByRole('button', { name: 'Începe etapa 2' }).click();
+  await expectText(page, 'Calificați din fiecare grupă în Finala 1');
+  await expectText(page, 'Finala 1 (6 jucători)');
+  await expectText(page, 'Finala 2 (3 jucători)');
+  await shot(page, '30-admin-incepe-etapa-2');
+});
+await check('admin: finalele după începerea etapei 2', async () => {
+  await page.getByRole('dialog').getByRole('button', { name: 'Începe etapa 2' }).click();
+  await expectText(page, 'Etapa 2 — Finale');
+  await expectText(page, 'Finala 1');
+  await expectText(page, 'Finala 2');
+  await expectText(page, 'meciuri sunt preluate din etapa 1');
+  await expectText(page, 'nu mai pot fi modificate');
+  await shot(page, '31-admin-finale');
+});
 await ctx.close();
 
 // ---------- Utilizator logat, desktop ----------
@@ -223,6 +265,12 @@ await check('telefon: turneu', async () => {
   await page.getByText('Cupa de toamnă').first().click();
   await expectText(page, 'Tabelul turneului');
   await shot(page, '27-telefon-turneu');
+});
+await check('telefon: turneu cu finale', async () => {
+  await page.goto(`${BASE}/turnee`);
+  await page.getByText('Liga de iarnă').first().click();
+  await expectText(page, 'Finala 1');
+  await shot(page, '32-telefon-finale');
 });
 await check('telefon: admin', async () => {
   await login(page, 'admin', 'admin12345');

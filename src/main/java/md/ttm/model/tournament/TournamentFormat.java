@@ -1,10 +1,13 @@
 package md.ttm.model.tournament;
 
 /**
- * Sistemul de desfășurare a turneului. Deocamdată doar Round Robin (fiecare cu fiecare).
+ * Sistemul de desfășurare a turneului.
  */
 public enum TournamentFormat {
-    ROUND_ROBIN("Round robin");
+    /** O singură grupă, fiecare cu fiecare. */
+    ROUND_ROBIN("Round robin"),
+    /** Etapa 1: grupe Round Robin; etapa 2: Finala 1 și Finala 2, tot Round Robin. */
+    GROUPS_FINALS("Grupe + finale");
 
     private final String label;
 
