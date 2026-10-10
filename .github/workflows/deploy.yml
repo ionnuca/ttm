@@ -4,7 +4,8 @@ name: Publicare
 #  1. construiește JAR-ul de producție și imaginea Docker (amd64 + arm64);
 #  2. pornește configurația de producție completă (PostgreSQL + aplicație + Caddy HTTPS) și o verifică;
 #  3. publică imaginea în GitHub Container Registry (ghcr.io/ionnuca/ttm);
-#  4. dacă serverul e configurat (secretele DEPLOY_*), o instalează pe server prin SSH.
+#  4. dacă versiunea din pom.xml e finală (fără -SNAPSHOT), creează tag-ul vX.Y.Z și un GitHub Release;
+#  5. dacă serverul e configurat (secretele DEPLOY_*), o instalează pe server prin SSH.
 on:
   workflow_run:
     workflows: [CI]
@@ -28,6 +29,8 @@ jobs:
     name: Imaginea de producție
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.build.outputs.version }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -105,6 +108,28 @@ jobs:
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.description=TTM – tenis de masă
+
+  release:
+    name: Tag și GitHub Release
+    needs: image
+    if: ${{ !endsWith(needs.image.outputs.version, '-SNAPSHOT') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Tag-ul v${{ needs.image.outputs.version }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.image.outputs.version }}
+          SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          if gh release view "v$VERSION" -R "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "Release-ul v$VERSION există deja"
+          else
+            gh release create "v$VERSION" -R "$GITHUB_REPOSITORY" --target "$SHA" \
+              --title "TTM $VERSION" --generate-notes
+            echo "### Release v$VERSION creat" >> "$GITHUB_STEP_SUMMARY"
+          fi
 
   deploy:
     name: Instalare pe server
