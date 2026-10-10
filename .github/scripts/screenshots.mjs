@@ -27,6 +27,7 @@ async function check(description, fn) {
   } catch (e) {
     failures.push(`${description}: ${e.message}`);
     console.error(`EȘEC ${description}: ${e.message}`);
+    if (process.env.GITHUB_ACTIONS) console.log(`::error title=Captură::${description}: ${e.message.split('\n')[0]}`);
   }
 }
 
