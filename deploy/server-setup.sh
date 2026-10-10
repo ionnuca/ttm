@@ -3,7 +3,7 @@
 # Pregătirea unui VPS nou (Ubuntu 22.04 / 24.04) pentru TTM. Se rulează o singură dată:
 #
 #   curl -fsSLO https://raw.githubusercontent.com/ionnuca/ttm/main/deploy/server-setup.sh
-#   sudo bash server-setup.sh
+#   sudo bash server-setup.sh      (ca root: bash server-setup.sh)
 #
 # Ce face:
 #   - actualizări de securitate automate, swap de 2 GB, firewall (SSH, HTTP, HTTPS)
@@ -20,7 +20,7 @@ APP_DIR="/opt/ttm"
 DEPLOY_USER="deploy"
 
 if [[ $EUID -ne 0 ]]; then
-  echo "Rulați cu sudo: sudo bash server-setup.sh" >&2
+  echo "Rulați ca root (bash server-setup.sh) sau cu sudo (sudo bash server-setup.sh)" >&2
   exit 1
 fi
 
@@ -101,6 +101,11 @@ if [[ ! -f "$APP_DIR/.env" ]]; then
   read -rp "Adaug 10 jucători de test la prima pornire? [D/n]: " SEED
   [[ "${SEED,,}" == "n" ]] && PROFILE="" || PROFILE="seed"
 
+  # Memoria pentru Java după memoria serverului (PostgreSQL, Caddy și sistemul au nevoie de restul)
+  MEM_MB=$(awk '/MemTotal/ {print int($2/1024)}' /proc/meminfo)
+  if (( MEM_MB < 3000 )); then HEAP=640m; else HEAP=1g; fi
+  echo "Memorie: ${MEM_MB} MB -> Java -Xmx${HEAP}"
+
   umask 077
   cat > "$APP_DIR/.env" <<ENV
 # Generat de server-setup.sh. Nu urcați acest fișier în Git.
@@ -114,7 +119,7 @@ APP_ADMIN_LAST_NAME=${ADMIN_LAST:-Nuca}
 APP_REGISTRATION_ENABLED=true
 # "seed" adaugă 10 jucători de test doar într-o bază goală; poate rămâne setat
 SPRING_PROFILES_ACTIVE=$PROFILE
-JAVA_OPTS=-Xmx1g
+JAVA_OPTS=-Xmx$HEAP -XX:+UseSerialGC
 TTM_IMAGE=ghcr.io/ionnuca/ttm:latest
 ENV
   chown "$DEPLOY_USER:$DEPLOY_USER" "$APP_DIR/.env"
