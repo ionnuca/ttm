@@ -5,6 +5,7 @@ import md.ttm.model.player.PlayStyle;
 import md.ttm.model.player.Player;
 import md.ttm.model.user.AppUser;
 import md.ttm.service.player.PlayerService;
+import md.ttm.security.SecurityUtils;
 import md.ttm.service.rating.RatingService;
 import md.ttm.service.user.UserService;
 import md.ttm.ui.components.Notifications;
@@ -18,6 +19,7 @@ import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.H3;
+import com.vaadin.flow.component.textfield.IntegerField;
 import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
@@ -32,7 +34,7 @@ import jakarta.annotation.security.PermitAll;
 
 /**
  * Pagina utilizatorului logat: datele proprii de jucător și schimbarea parolei.
- * Ratingul și statisticile sunt doar afișate; le gestionează administratorul (ulterior, rezultatele meciurilor).
+ * Ratingul și statisticile sunt doar afișate; administratorul își poate stabili aici ratingul inițial.
  */
 @Route(value = "profil", layout = MainLayout.class)
 @PageTitle("Profilul meu | TTM")
@@ -41,10 +43,14 @@ public class ProfileView extends VerticalLayout {
 
     private final PlayerService playerService;
     private final UserService userService;
+    private final RatingService ratingService;
+    private final Span ratingValue = new Span();
+    private RatingHistoryList history;
 
     public ProfileView(PlayerService playerService, UserService userService, RatingService ratingService) {
         this.playerService = playerService;
         this.userService = userService;
+        this.ratingService = ratingService;
         setMaxWidth("44rem");
 
         AppUser user = userService.findCurrentUser().orElseThrow();
@@ -56,9 +62,9 @@ public class ProfileView extends VerticalLayout {
         add(title, account);
 
         if (user.getPlayer() != null) {
-            add(createStats(user.getPlayer()), createPlayerForm(user.getPlayer()),
-                    new RatingHistoryList(ratingService.findHistory(user.getPlayer().getId()),
-                            user.getPlayer().getInitialRating()));
+            history = new RatingHistoryList(ratingService.findHistory(user.getPlayer().getId()),
+                    user.getPlayer().getInitialRating());
+            add(createStats(user.getPlayer()), createPlayerForm(user.getPlayer()), history);
         } else {
             add(new Paragraph("Acest cont nu are un profil de jucător."));
         }
@@ -67,15 +73,15 @@ public class ProfileView extends VerticalLayout {
 
     private Component createStats(Player player) {
         HorizontalLayout stats = new HorizontalLayout(
-                stat("Rating", String.valueOf(player.getRating())),
-                stat("Victorii", String.valueOf(player.getWins())),
-                stat("Înfrângeri", String.valueOf(player.getLosses())));
+                stat("Rating", ratingValue, String.valueOf(player.getRating())),
+                stat("Victorii", new Span(), String.valueOf(player.getWins())),
+                stat("Înfrângeri", new Span(), String.valueOf(player.getLosses())));
         stats.getStyle().set("flex-wrap", "wrap");
         return stats;
     }
 
-    private static Component stat(String label, String value) {
-        Span valueSpan = new Span(value);
+    private static Component stat(String label, Span valueSpan, String value) {
+        valueSpan.setText(value);
         valueSpan.getStyle()
                 .set("font-size", "var(--lumo-font-size-xxl)")
                 .set("font-weight", "600")
@@ -113,11 +119,25 @@ public class ProfileView extends VerticalLayout {
         binder.forField(city).bind("city");
         binder.forField(phone).bind("phone");
         PlayerDetailsFields details = new PlayerDetailsFields(binder);
+        IntegerField initialRating = null;
+        if (SecurityUtils.isAdmin()) {
+            // Doar administratorul își poate stabili ratingul inițial; ratingul curent se recalculează
+            initialRating = new IntegerField("Rating inițial");
+            initialRating.setMin(0);
+            initialRating.setMax(5000);
+            initialRating.setStep(10);
+            initialRating.setStepButtonsVisible(true);
+            initialRating.setHelperText("Punctul de plecare; ratingul curent se recalculează din el și din turneele încheiate");
+            binder.forField(initialRating).asRequired("Introduceți ratingul inițial").bind("initialRating");
+        }
         binder.readBean(player);
 
         FormLayout form = new FormLayout(lastName, firstName, playStyle);
         details.addPlayHandTo(form);
         form.add(city, phone);
+        if (initialRating != null) {
+            form.add(initialRating);
+        }
         details.addEquipmentTo(form);
         form.setResponsiveSteps(
                 new FormLayout.ResponsiveStep("0", 1),
@@ -128,6 +148,7 @@ public class ProfileView extends VerticalLayout {
                 try {
                     Player saved = playerService.updateOwnProfile(player);
                     binder.readBean(saved);
+                    refreshRating(saved);
                     Notifications.success("Profil salvat");
                 } catch (RuntimeException ex) {
                     Notifications.error(Notifications.saveError(ex));
@@ -139,6 +160,15 @@ public class ProfileView extends VerticalLayout {
         VerticalLayout section = new VerticalLayout(new H3("Date personale"), form, save);
         section.setPadding(false);
         return section;
+    }
+
+    /** După schimbarea ratingului inițial: ratingul curent și istoricul, fără reîncărcarea paginii. */
+    private void refreshRating(Player saved) {
+        ratingValue.setText(String.valueOf(saved.getRating()));
+        RatingHistoryList updated = new RatingHistoryList(ratingService.findHistory(saved.getId()),
+                saved.getInitialRating());
+        replace(history, updated);
+        history = updated;
     }
 
     private Component createPasswordForm() {

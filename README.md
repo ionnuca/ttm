@@ -239,6 +239,33 @@ Copiile de rezervă stau pe același server. Pentru siguranță, descărcați pe
 
 ---
 
+## Ramuri și release
+
+| Ramura | Rol | Ce se întâmplă la push |
+|---|---|---|
+| `develop` | Dezvoltarea de zi cu zi: aici ajung toate modificările | CI (teste + build de producție); **nu** se publică pe server |
+| `main` | Doar versiunile lansate în producție | CI, apoi workflow-ul `Publicare` instalează automat versiunea pe server |
+
+**Release în producție** = aducerea lui `develop` în `main`, după ce CI e verde pe `develop`:
+
+- din GitHub: *Pull requests → New pull request*, `base: main` ← `compare: develop`, apoi *Merge pull request*;
+- sau local:
+  ```bash
+  git checkout main && git pull
+  git merge --no-ff develop -m "Release: <ce conține>"
+  git push
+  git checkout develop
+  ```
+
+La câteva minute după push pe `main`, versiunea nouă rulează pe server.
+
+**Versiuni.** Pe `develop` versiunea din `pom.xml` e următoarea versiune în lucru, cu sufixul `-SNAPSHOT` (ex. `1.1.0-SNAPSHOT`). La release:
+1. pe `develop`, versiunea devine cea finală (`1.1.0`), commit „Release 1.1.0”;
+2. `develop` se aduce în `main`, iar commitul primește tag-ul `v1.1.0` (`git tag -a v1.1.0 -m "Release 1.1.0"`, apoi `git push --tags`);
+3. pe `develop`, versiunea trece la următoarea (`1.2.0-SNAPSHOT`).
+
+Versiunea rulată apare în meniul lateral al aplicației („Versiunea 1.1.0”), iar imaginea Docker e publicată și cu eticheta versiunii (`ghcr.io/ionnuca/ttm:1.1.0`). Pentru o funcționalitate mai mare se poate lucra și pe o ramură separată din `develop` (`feature/...`), adusă apoi în `develop`.
+
 ## Teste și build
 
 ```powershell

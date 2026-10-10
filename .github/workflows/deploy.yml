@@ -40,7 +40,9 @@ jobs:
           cache: maven
 
       - name: Build de producție
+        id: build
         run: |
+          echo "version=$(mvn -B -q -DforceStdout help:evaluate -Dexpression=project.version)" >> "$GITHUB_OUTPUT"
           mvn -B -Pproduction -DskipTests package
           mkdir -p image
           cp target/ttm-*.jar image/app.jar
@@ -98,6 +100,7 @@ jobs:
           push: true
           tags: |
             ${{ env.IMAGE }}:latest
+            ${{ env.IMAGE }}:${{ steps.build.outputs.version }}
             ${{ env.IMAGE }}:${{ github.event.workflow_run.head_sha || github.sha }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}

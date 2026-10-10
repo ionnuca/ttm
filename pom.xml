@@ -13,7 +13,7 @@
 
     <groupId>md.ttm</groupId>
     <artifactId>ttm</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>1.0.0</version>
     <name>TTM - Table Tennis Manager</name>
     <description>Gestionarea jucătorilor și a turneelor de tenis de masă</description>
 
@@ -94,6 +94,14 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <executions>
+                    <!-- META-INF/build-info.properties: versiunea afișată în meniul aplicației -->
+                    <execution>
+                        <goals>
+                            <goal>build-info</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
             <!--
                 Testele care folosesc baza de date (*IT.java) rulează doar la "mvn verify",
