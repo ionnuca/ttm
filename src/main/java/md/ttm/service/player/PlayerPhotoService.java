@@ -14,17 +14,22 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageReadParam;
+import javax.imageio.ImageReader;
 import javax.imageio.ImageWriter;
+import javax.imageio.stream.ImageInputStream;
 import javax.imageio.stream.ImageOutputStream;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
+import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -39,7 +44,7 @@ import java.util.Optional;
 public class PlayerPhotoService {
 
     public static final int SIZE = 400;
-    public static final int MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+    public static final int MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
     private static final String JPEG = "image/jpeg";
 
     private final PlayerPhotoRepository photoRepository;
@@ -91,12 +96,78 @@ public class PlayerPhotoService {
             throw new BusinessException("Fișierul este gol");
         }
         if (upload.length > MAX_UPLOAD_BYTES) {
-            throw new BusinessException("Imaginea e prea mare (maximum 10 MB)");
+            throw new BusinessException("Imaginea e prea mare (maximum 20 MB)");
         }
         byte[] jpeg = toSquareJpeg(upload);
         PlayerPhoto photo = photoRepository.findById(playerId).orElseGet(() -> new PlayerPhoto(playerId));
         photo.replace(jpeg, JPEG);
         photoRepository.save(photo);
+    }
+
+    /**
+     * Citește imaginea. Pozele mari de pe telefon (12–48 MP) se citesc direct micșorate (subeșantionare),
+     * ca să nu ocupe sute de MB de memorie: latura mică rămâne cel puțin de două ori {@value #SIZE} px.
+     */
+    private static BufferedImage read(byte[] upload) {
+        try (ImageInputStream input = ImageIO.createImageInputStream(new ByteArrayInputStream(upload))) {
+            Iterator<ImageReader> readers = input == null ? null : ImageIO.getImageReaders(input);
+            if (readers == null || !readers.hasNext()) {
+                throw unreadable();
+            }
+            ImageReader reader = readers.next();
+            try {
+                reader.setInput(input, true, true);
+                int width = reader.getWidth(0);
+                int height = reader.getHeight(0);
+                int step = Math.max(1, Math.min(width, height) / (2 * SIZE));
+                ImageReadParam param = reader.getDefaultReadParam();
+                if (step > 1) {
+                    param.setSourceSubsampling(step, step, 0, 0);
+                }
+                return reader.read(0, param);
+            } finally {
+                reader.dispose();
+            }
+        } catch (IOException | RuntimeException e) {
+            if (e instanceof BusinessException business) {
+                throw business;
+            }
+            throw unreadable();
+        }
+    }
+
+    private static BusinessException unreadable() {
+        return new BusinessException("Imaginea nu poate fi citită; folosiți o poză JPEG sau PNG");
+    }
+
+    /** Pozele de telefon sunt adesea salvate „culcate”, cu orientarea corectă doar în datele EXIF. */
+    private static BufferedImage rotate(BufferedImage image, int orientation) {
+        int quarterTurns = switch (orientation) {
+            case 6 -> 1;  // 90° în sensul acelor de ceas
+            case 3 -> 2;  // 180°
+            case 8 -> 3;  // 270°
+            default -> 0;
+        };
+        if (quarterTurns == 0) {
+            return image;
+        }
+        int w = image.getWidth();
+        int h = image.getHeight();
+        boolean swap = quarterTurns % 2 == 1;
+        BufferedImage rotated = new BufferedImage(swap ? h : w, swap ? w : h, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = rotated.createGraphics();
+        try {
+            AffineTransform t = new AffineTransform();
+            switch (quarterTurns) {
+                case 1 -> { t.translate(h, 0); t.quadrantRotate(1); }
+                case 2 -> { t.translate(w, h); t.quadrantRotate(2); }
+                default -> { t.translate(0, w); t.quadrantRotate(3); }
+            }
+            g.drawImage(image, t, null);
+        } finally {
+            g.dispose();
+        }
+        return rotated;
     }
 
     @PreAuthorize("isAuthenticated()")
@@ -113,15 +184,7 @@ public class PlayerPhotoService {
     }
 
     static byte[] toSquareJpeg(byte[] upload) {
-        BufferedImage source;
-        try {
-            source = ImageIO.read(new ByteArrayInputStream(upload));
-        } catch (IOException e) {
-            source = null;
-        }
-        if (source == null) {
-            throw new BusinessException("Imaginea nu poate fi citită; folosiți o poză JPEG sau PNG");
-        }
+        BufferedImage source = rotate(read(upload), ExifOrientation.of(upload));
         int side = Math.min(source.getWidth(), source.getHeight());
         int x = (source.getWidth() - side) / 2;
         int y = (source.getHeight() - side) / 2;

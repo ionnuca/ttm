@@ -305,6 +305,20 @@ await check('utilizator: poza de profil', async () => {
     .some(a => String(a.img || a.getAttribute('img') || '').includes('foto/jucator/')), null, { timeout: 10000 });
   await expectText(page, 'Șterge poza');
 });
+await check('utilizator: poză mare (ca de pe telefon, peste 1 MB)', async () => {
+  const big = await page.evaluate(() => {
+    const c = document.createElement('canvas'); c.width = 1400; c.height = 1050;
+    const g = c.getContext('2d'); const img = g.createImageData(c.width, c.height);
+    for (let i = 0; i < img.data.length; i++) img.data[i] = (i % 4 === 3) ? 255 : Math.floor(Math.random() * 256);
+    g.putImageData(img, 0, 0);
+    return c.toDataURL('image/png').split(',')[1];
+  });
+  const buffer = Buffer.from(big, 'base64');
+  if (buffer.length < 1_500_000) throw new Error(`poza de test e prea mică: ${buffer.length} octeți`);
+  await page.getByText('Poza a fost salvată').first().waitFor({ state: 'hidden', timeout: 15000 }).catch(() => {});
+  await page.locator('vaadin-upload input[type=file]').setInputFiles({ name: 'telefon.png', mimeType: 'image/png', buffer });
+  await expectText(page, 'Poza a fost salvată');
+});
 await check('utilizator: profil', async () => {
   await page.goto(`${BASE}/profil`);
   await expectText(page, 'Date personale');
