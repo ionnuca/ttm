@@ -23,6 +23,18 @@ class PlayerPhotoProcessingTest {
     }
 
     @Test
+    void variantaMarePastreazaProportiileSiSeLimiteazaLa1600() throws IOException {
+        BufferedImage full = PlayerPhotoService.fitWithin(PlayerPhotoService.load(jpeg(4032, 3024, false)),
+                PlayerPhotoService.FULL_SIZE);
+        assertThat(full.getWidth()).isEqualTo(1600);
+        assertThat(full.getHeight()).isEqualTo(1200);
+
+        BufferedImage small = PlayerPhotoService.fitWithin(PlayerPhotoService.load(jpeg(300, 200, false)), 1600);
+        assertThat(small.getWidth()).isEqualTo(300);
+        assertThat(small.getHeight()).isEqualTo(200);
+    }
+
+    @Test
     void orientareaExifSeAplica() throws IOException {
         // 200 x 100: jumătatea stângă roșie, cea dreaptă albastră; EXIF 6 = de rotit 90° în sensul acelor de ceas
         byte[] photo = withOrientation(jpeg(200, 100, true), 6);

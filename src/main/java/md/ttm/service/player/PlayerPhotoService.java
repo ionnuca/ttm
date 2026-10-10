@@ -44,6 +44,8 @@ import java.util.Optional;
 public class PlayerPhotoService {
 
     public static final int SIZE = 400;
+    /** Latura mare a variantei pentru vizualizare. */
+    public static final int FULL_SIZE = 1600;
     public static final int MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
     private static final String JPEG = "image/jpeg";
 
@@ -98,9 +100,9 @@ public class PlayerPhotoService {
         if (upload.length > MAX_UPLOAD_BYTES) {
             throw new BusinessException("Imaginea e prea mare (maximum 20 MB)");
         }
-        byte[] jpeg = toSquareJpeg(upload);
+        BufferedImage source = load(upload);
         PlayerPhoto photo = photoRepository.findById(playerId).orElseGet(() -> new PlayerPhoto(playerId));
-        photo.replace(jpeg, JPEG);
+        photo.replace(toJpeg(squareThumbnail(source)), toJpeg(fitWithin(source, FULL_SIZE)), JPEG);
         photoRepository.save(photo);
     }
 
@@ -119,7 +121,8 @@ public class PlayerPhotoService {
                 reader.setInput(input, true, true);
                 int width = reader.getWidth(0);
                 int height = reader.getHeight(0);
-                int step = Math.max(1, Math.min(width, height) / (2 * SIZE));
+                // destul pentru miniatură (2 x 400 pe latura mică) și pentru varianta mare (1600 pe latura mare)
+                int step = Math.max(1, Math.min(Math.min(width, height) / (2 * SIZE), Math.max(width, height) / FULL_SIZE));
                 ImageReadParam param = reader.getDefaultReadParam();
                 if (step > 1) {
                     param.setSourceSubsampling(step, step, 0, 0);
@@ -183,26 +186,50 @@ public class PlayerPhotoService {
         }
     }
 
+    /** Imaginea încărcată, citită (micșorată dacă e foarte mare) și rotită după EXIF. */
+    static BufferedImage load(byte[] upload) {
+        return rotate(read(upload), ExifOrientation.of(upload));
+    }
+
     static byte[] toSquareJpeg(byte[] upload) {
-        BufferedImage source = rotate(read(upload), ExifOrientation.of(upload));
+        return toJpeg(squareThumbnail(load(upload)));
+    }
+
+    /** Miniatura: pătratul din mijloc, cel mult {@value #SIZE} x {@value #SIZE}. */
+    static BufferedImage squareThumbnail(BufferedImage source) {
         int side = Math.min(source.getWidth(), source.getHeight());
         int x = (source.getWidth() - side) / 2;
         int y = (source.getHeight() - side) / 2;
         int target = Math.min(SIZE, side);
+        return draw(source, x, y, side, side, target, target);
+    }
 
-        BufferedImage result = new BufferedImage(target, target, BufferedImage.TYPE_INT_RGB);
+    /** Toată poza, micșorată proporțional ca latura mare să fie cel mult {@code max} (fără mărire). */
+    static BufferedImage fitWithin(BufferedImage source, int max) {
+        double scale = Math.min(1.0, (double) max / Math.max(source.getWidth(), source.getHeight()));
+        int w = Math.max(1, (int) Math.round(source.getWidth() * scale));
+        int h = Math.max(1, (int) Math.round(source.getHeight() * scale));
+        return draw(source, 0, 0, source.getWidth(), source.getHeight(), w, h);
+    }
+
+    /** Copiază zona (x, y, w, h) din imagine la mărimea (tw, th), pe fond alb (pentru PNG transparent). */
+    private static BufferedImage draw(BufferedImage source, int x, int y, int w, int h, int tw, int th) {
+        BufferedImage result = new BufferedImage(tw, th, BufferedImage.TYPE_INT_RGB);
         Graphics2D g = result.createGraphics();
         try {
             g.setColor(Color.WHITE);
-            g.fillRect(0, 0, target, target);
+            g.fillRect(0, 0, tw, th);
             g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
             g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
             g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g.drawImage(source, 0, 0, target, target, x, y, x + side, y + side, null);
+            g.drawImage(source, 0, 0, tw, th, x, y, x + w, y + h, null);
         } finally {
             g.dispose();
         }
+        return result;
+    }
 
+    static byte[] toJpeg(BufferedImage image) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         ImageWriter writer = ImageIO.getImageWritersByFormatName("jpeg").next();
         try (ImageOutputStream ios = ImageIO.createImageOutputStream(out)) {
@@ -210,7 +237,7 @@ public class PlayerPhotoService {
             ImageWriteParam param = writer.getDefaultWriteParam();
             param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
             param.setCompressionQuality(0.85f);
-            writer.write(null, new IIOImage(result, null, null), param);
+            writer.write(null, new IIOImage(image, null, null), param);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         } finally {

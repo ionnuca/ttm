@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import md.ttm.service.player.PlayerPhotoService;
 import md.ttm.ui.components.Notifications;
+import md.ttm.ui.components.PhotoViewer;
 import md.ttm.ui.components.PlayerAvatar;
 
 import java.io.IOException;
@@ -102,7 +103,7 @@ public class PhotoEditor extends HorizontalLayout {
     private Avatar createAvatar() {
         Long version = photoService.version(player.getId());
         delete.setVisible(version != null);
-        return PlayerAvatar.of(player, version, "5.5rem");
+        return PhotoViewer.clickable(PlayerAvatar.of(player, version, "5.5rem"), player, version);
     }
 
     private void changed() {

@@ -53,6 +53,10 @@ class PlayerPhotoServiceIT {
         BufferedImage stored = ImageIO.read(new ByteArrayInputStream(photo.getContent()));
         assertThat(stored.getWidth()).isEqualTo(PlayerPhotoService.SIZE);
         assertThat(stored.getHeight()).isEqualTo(PlayerPhotoService.SIZE);
+        // varianta mare păstrează toată poza, cu proporțiile ei
+        BufferedImage full = ImageIO.read(new ByteArrayInputStream(photo.getFullContentOrThumbnail()));
+        assertThat(full.getWidth()).isEqualTo(800);
+        assertThat(full.getHeight()).isEqualTo(600);
         assertThat(photoService.versions()).containsKey(own);
 
         assertThatThrownBy(() -> photoService.save(other.getId(), png(100, 100)))
