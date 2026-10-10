@@ -45,7 +45,8 @@ public record TournamentDetails(
     /** Etapa 1 s-a terminat și se poate porni etapa 2. */
     /** Organizatorul poate încheia manual un turneu în desfășurare. */
     public boolean canFinishManually() {
-        return manager && tournament.getStatus() == TournamentStatus.IN_PROGRESS;
+        return manager && tournament.getStatus() == TournamentStatus.IN_PROGRESS
+                && !TournamentService.requiresFinalsBeforeFinish(tournament);
     }
 
     /** Meciurile încă fără rezultat (după o încheiere manuală: cele care nu s-au mai jucat). */

@@ -108,6 +108,37 @@ class GroupsTournamentIT {
                 .containsExactly("Test P1", "Test P2", "Test P5");
     }
 
+    @Test
+    void laIncheiereaManualaCastigatorulFinalei2PrimesteMereuTaxa() {
+        Long id = tournamentWith(8);
+        TournamentSettings settings = TournamentSettings.groups(5, 2);
+        settings.setCommercial(true);
+        settings.setWinnersCount(1);
+        settings.setEntryFee(new BigDecimal("50"));
+        tournamentService.start(id, settings);
+
+        // fără finale nu are cine primi premiile: încheierea manuală așteaptă etapa 2
+        assertThat(details(id).canFinishManually()).isFalse();
+        assertThatThrownBy(() -> tournamentService.finishManually(id))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("etapa 2");
+
+        playAllFavourites(id);
+        tournamentService.startFinals(id, 2);
+        assertThat(details(id).canFinishManually()).isTrue();
+        tournamentService.finishManually(id); // în Finala 2 nu s-a jucat niciun meci
+
+        TournamentDetails done = details(id);
+        assertThat(done.tournament().getStatus()).isEqualTo(TournamentStatus.FINISHED);
+        assertThat(done.prizes()).extracting(PrizePlace::title)
+                .containsExactly("Finala 1 · locul 1", "Finala 2 · locul 1");
+        assertThat(done.prizes()).extracting(PrizePlace::amount)
+                .containsExactly(new BigDecimal("350.00"), new BigDecimal("50.00"));
+        // Finala 2: primul calificat (cel mai bun loc din grupe, apoi ratingul)
+        assertThat(done.prizes().get(1).winnerName()).isEqualTo("Test P5");
+        assertThat(done.prizes().get(0).winnerName()).isNotNull();
+    }
+
     // ------------------------------------------------------------------
 
     /** Câștigă mereu jucătorul cu ratingul mai mare (P1 > P2 > …). */

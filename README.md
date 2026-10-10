@@ -51,7 +51,7 @@ Tipul se alege la „Începe turneul”, împreună cu **numărul de grupe** (mi
 1. **Etapa 1 — Grupe.** Jucătorii sunt repartizați în grupe în **șerpuială** după rating (A, B, C, C, B, A, A, B…), ca grupele să fie echilibrate. Fiecare grupă joacă Round Robin, cu tabel propriu.
 2. **Începe etapa 2** (organizatorul, după ultimul rezultat din grupe): se alege câți jucători din fiecare grupă se califică. Primii N din fiecare grupă joacă în **Finala 1**, ceilalți în **Finala 2**. Dialogul arată componența finalelor înainte de confirmare.
 3. **Etapa 2 — Finale.** Ambele finale se joacă Round Robin. Jucătorii care s-au întâlnit deja în aceeași grupă **nu mai joacă** între ei: rezultatul din etapa 1 se preia în tabelul finalei (fiecare meci contează o singură dată la rating). După pornirea etapei 2, rezultatele din grupe nu mai pot fi modificate, pentru că au stabilit calificarea.
-4. **Premii (turneu comercial):** câștigătorul Finalei 2 primește cât **taxa de participare**; restul sumei acumulate se împarte între premiații Finalei 1, ca la turneul comercial obișnuit (100% / 60–40% / 50–30–20%).
+4. **Premii (turneu comercial):** câștigătorul Finalei 2 primește obligatoriu cât **taxa de participare**; restul sumei acumulate se împarte între premiații Finalei 1, ca la turneul comercial obișnuit (100% / 60–40% / 50–30–20%). De aceea un turneu comercial cu două etape se poate încheia manual doar după „Începe etapa 2”; dacă o finală se încheie fără toate meciurile, premiații se stabilesc din clasamentul ei de până atunci, iar fără niciun meci jucat, după ordinea de calificare (locul în grupă, apoi ratingul).
 5. Turneul se încheie după ultimul rezultat din finale; ratingul Elo se calculează pe toate meciurile din ambele etape.
 
 ### Ratingul (Elo)
