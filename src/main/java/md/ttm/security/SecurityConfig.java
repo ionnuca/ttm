@@ -30,6 +30,7 @@ public class SecurityConfig extends VaadinWebSecurity {
         // și pozele jucătorilor (publice, ca și numele lor)
         http.authorizeHttpRequests(auth -> auth.requestMatchers(
                 "/favicon.ico", "/apple-touch-icon.png", "/apple-touch-icon-precomposed.png", "/icons/**",
+                "/manifest.webmanifest",
                 "/foto/**")
                 .permitAll());
         super.configure(http);
