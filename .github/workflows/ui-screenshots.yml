@@ -64,6 +64,7 @@ jobs:
         run: |
           npm install --no-save --no-package-lock playwright@1.49.1
           npx playwright install --with-deps chromium
+          node icons-probe.mjs ../../screenshots/icons || true
           node screenshots.mjs ../../screenshots
 
       - uses: actions/upload-artifact@v5
