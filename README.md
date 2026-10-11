@@ -14,6 +14,7 @@ Aplicație web (instalabilă și pe telefon, ca PWA) pentru gestionarea jucător
 | Pagina jucătorului (click în clasament sau în meciuri): date, echipament, statistici (meciuri, victorii, procent, seturi, turnee, cel mai bun rating), evoluția ratingului, toate meciurile lui | ✅ | ✅ | ✅ | ✅ |
 | Pagina principală – „Meciuri”: ultimele 200 de meciuri cu rezultat, în carduri de scor, cu căutare după jucător sau turneu (pictograma și titlul aplicației duc aici) | ✅ | ✅ | ✅ | ✅ |
 | „Ghid de utilizare” (`/ajutor`): roluri, organizarea unui turneu, formate, punctele și departajarea în grupă, premii, formula ratingului | ✅ | ✅ | ✅ | ✅ |
+| Limba interfeței: română, rusă sau engleză (comutatorul RO / RU / EN din bara de sus; pentru cei cu cont se salvează în cont, și din „Profilul meu”) | ✅ | ✅ | ✅ | ✅ |
 | Poza de profil (din „Profilul meu”; decupată pătrat și micșorată automat) | – | ✅ propria | ✅ propria | ✅ oricui |
 | Coloana „Telefon” în clasament | – | – | – | ✅ |
 | Adăugare / editare / ștergere jucători | – | – | – | ✅ |
@@ -142,7 +143,7 @@ psql -U postgres -f database/create_database.sql
 
 ## Baza de date
 
-- **Scripturile de creare a tabelelor:** `src/main/resources/db/migration/` (`V1__jucatori_si_utilizatori.sql`, `V2__jucator_mana_si_echipament.sql`, `V3__turnee.sql`, `V4__rating_elo.sql`, `V5__grupe_si_finale.sql`, `V6__rol_manager_turnee.sql`, `V7__poze_jucatori.sql`). Le aplică automat **Flyway** la pornirea aplicației, în ordinea versiunilor; nu e nevoie să le rulați manual.
+- **Scripturile de creare a tabelelor:** `src/main/resources/db/migration/` (`V1__jucatori_si_utilizatori.sql`, `V2__jucator_mana_si_echipament.sql`, `V3__turnee.sql`, `V4__rating_elo.sql`, `V5__grupe_si_finale.sql`, `V6__rol_manager_turnee.sql`, `V7__poze_jucatori.sql`, `V8__poze_marime_mare.sql`, `V9__limba_utilizator.sql`). Le aplică automat **Flyway** la pornirea aplicației, în ordinea versiunilor; nu e nevoie să le rulați manual.
 - **Modificări de schemă:** nu se editează niciodată un script deja aplicat. Se adaugă unul nou: `V2__descriere.sql`, `V3__...` etc.
 - **Crearea bazei de date și a utilizatorului:** `database/create_database.sql` (fără Docker) sau automat de `docker-compose.yml`.
 - **Baza pentru teste:** `ttm_test`, creată de `database/init/01-create-test-db.sql` la prima pornire a containerului.
@@ -300,6 +301,7 @@ src/main/java/md/ttm/
 ├── TtmApplication.java          pornirea aplicației, configurarea PWA
 ├── common/                      excepții și utilitare comune
 ├── config/                      administratorul inițial, datele demonstrative
+├── i18n/                        limbile interfeței: Language, Tr (traducerea), alegerea limbii la deschiderea paginii
 ├── security/                    Spring Security: configurare, încărcarea conturilor
 ├── model/                       entitățile JPA și enumerările
 │   ├── player/                  Player, PlayStyle, PlayHand
@@ -323,8 +325,16 @@ src/main/java/md/ttm/
 src/main/resources/
 ├── application.properties     configurarea implicită
 ├── application-dev.properties profilul de dezvoltare
+├── i18n/ru.json, i18n/en.json traducerile (cheia = textul în română)
+├── help/<limbă>.html          ghidul de utilizare în fiecare limbă
 └── db/migration/              scripturile Flyway
 database/                      scripturi pentru crearea bazei de date
 ```
+
+### Traduceri
+
+Textele interfeței se scriu în română și trec prin `Tr.t(...)`: `Tr.t("Salvează")`, `Tr.t("Meciuri jucate: {0} din {1}", 3, 10)`. Textul românesc este cheia din `i18n/ru.json` și `i18n/en.json`; un text fără traducere apare în română. Mesajele de eroare (`BusinessException`) și cele din adnotările de validare se traduc la fel. `TranslationsTest` pică dacă un text nou nu are traducere în ambele dicționare, deci la adăugarea unui text se completează și cele două fișiere JSON.
+
+Limba paginii: limba salvată în cont (`app_user.language`); pentru vizitatori, cea aleasă în browser (cookie `ttm-lang`); altfel româna.
 
 Securitatea e aplicată pe două niveluri: paginile sunt protejate prin adnotări (`@AnonymousAllowed`, `@PermitAll`, `@RolesAllowed("ADMIN")`), iar serviciile verifică din nou rolul la fiecare operație de modificare (`@PreAuthorize`).
