@@ -70,7 +70,7 @@ let page = await ctx.newPage();
 // Iconițele (Safari pe iPhone le cere automat)
 {
   const probe = await browser.newContext();
-  for (const path of ['/apple-touch-icon-precomposed.png', '/apple-touch-icon.png', '/favicon.ico', '/icons/icon-512.png', '/icons/icon-192.png', '/manifest.webmanifest', '/icons/favicon.svg', '/icons/favicon-32.png']) {
+  for (const path of ['/apple-touch-icon-precomposed.png', '/apple-touch-icon.png', '/favicon.ico', '/icons/icon-512.png', '/icons/icon-192.png', '/manifest.json', '/icons/favicon.svg', '/icons/favicon-32.png']) {
     await check(`iconiță ${path}`, async () => {
       const res = await probe.request.get(`${BASE}${path}`, { maxRedirects: 0 });
       const type = res.headers()['content-type'] ?? '';
@@ -82,7 +82,7 @@ let page = await ctx.newPage();
     await p.goto(`${BASE}/`);
     const apple = await p.evaluate(() => [...document.querySelectorAll('link[rel="apple-touch-icon"]')].map(l => l.getAttribute('href')));
     if (apple.length !== 1 || apple[0] !== 'apple-touch-icon.png') throw new Error(`apple-touch-icon: ${apple.join(', ')}`);
-    const manifest = await (await probe.request.get(`${BASE}/manifest.webmanifest`)).json();
+    const manifest = await (await probe.request.get(`${BASE}/manifest.json`)).json();
     const srcs = manifest.icons.map(i => i.src);
     if (!srcs.every(s => /icons\/icon-(192|512)\.png/.test(s))) throw new Error(`manifest: ${srcs.join(', ')}`);
     await p.close();
