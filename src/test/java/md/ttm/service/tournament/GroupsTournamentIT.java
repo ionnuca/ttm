@@ -98,12 +98,12 @@ class GroupsTournamentIT {
         TournamentDetails done = details(id);
         assertThat(done.tournament().getStatus()).isEqualTo(TournamentStatus.FINISHED);
 
-        // 8 × 100 = 800; Finala 2: 100 (taxa); restul 700 împărțit 60/40 între primii doi din Finala 1
+        // 8 × 100 = 800; Finala 2: 100 (taxa); restul 700 împărțit 60/40 (420 / 280), rotunjit la 50
         assertThat(done.prizePool()).isEqualByComparingTo("800");
         assertThat(done.prizes()).extracting(PrizePlace::title)
                 .containsExactly("Finala 1 · locul 1", "Finala 1 · locul 2", "Finala 2 · locul 1");
         assertThat(done.prizes()).extracting(PrizePlace::amount)
-                .containsExactly(new BigDecimal("420.00"), new BigDecimal("280.00"), new BigDecimal("100.00"));
+                .containsExactly(new BigDecimal("400.00"), new BigDecimal("300.00"), new BigDecimal("100.00"));
         assertThat(done.prizes()).extracting(PrizePlace::winnerName)
                 .containsExactly("Test P1", "Test P2", "Test P5");
     }

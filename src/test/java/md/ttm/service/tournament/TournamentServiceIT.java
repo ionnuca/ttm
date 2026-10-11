@@ -140,7 +140,7 @@ class TournamentServiceIT {
         assertThat(details.prizePool()).isEqualByComparingTo("800");
         assertThat(details.prizes()).extracting(PrizePlace::percentage).containsExactly(50, 30, 20);
         assertThat(details.prizes()).extracting(PrizePlace::amount)
-                .containsExactly(new BigDecimal("400.00"), new BigDecimal("240.00"), new BigDecimal("160.00"));
+                .containsExactly(new BigDecimal("400.00"), new BigDecimal("250.00"), new BigDecimal("150.00"));
     }
 
     @Test

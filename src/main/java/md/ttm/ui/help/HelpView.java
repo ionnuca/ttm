@@ -101,6 +101,8 @@ public class HelpView extends VerticalLayout {
               <tr><td>2</td><td>60% / 40%</td></tr>
               <tr><td>3</td><td>50% / 30% / 20%</td></tr>
             </table>
+            <p>Fiecare premiu se rotunjește la cel mai apropiat multiplu de 50 de lei (de exemplu 420 → 400, 280 → 300, 225 → 250),
+            deci totalul premiilor poate diferi puțin de suma acumulată.</p>
             <p>La <b>Grupe + finale</b>, câștigătorul Finalei 2 primește cât taxa de participare, iar restul sumei se împarte,
             după tabelul de mai sus, între premiații Finalei 1. Un astfel de turneu se poate încheia manual doar după începerea etapei 2.</p>
 

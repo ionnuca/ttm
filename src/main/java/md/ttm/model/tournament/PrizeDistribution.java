@@ -44,20 +44,24 @@ public enum PrizeDistribution {
         return winners() == 1 ? "1 câștigător (" + split + ")" : winners() + " câștigători (" + split + ")";
     }
 
+    /** Premiile se rotunjesc la multipli de 50 de lei. */
+    public static final BigDecimal ROUNDING_STEP = new BigDecimal("50");
+
     /**
-     * Împarte suma pe locuri, rotunjit la bani; diferența de rotunjire merge la locul 1,
-     * astfel încât totalul premiilor să fie exact suma acumulată.
+     * Împarte suma pe locuri după procente; fiecare premiu se rotunjește la cel mai apropiat
+     * multiplu de {@link #ROUNDING_STEP} (25 se rotunjește în sus). Totalul premiilor poate diferi
+     * ușor de suma acumulată.
      */
     public List<BigDecimal> split(BigDecimal pool) {
         List<BigDecimal> amounts = new ArrayList<>();
-        BigDecimal distributed = BigDecimal.ZERO;
         for (int percentage : percentages) {
-            BigDecimal amount = pool.multiply(BigDecimal.valueOf(percentage))
-                    .divide(BigDecimal.valueOf(100), 2, RoundingMode.DOWN);
-            amounts.add(amount);
-            distributed = distributed.add(amount);
+            BigDecimal exact = pool.multiply(BigDecimal.valueOf(percentage)).divide(BigDecimal.valueOf(100));
+            amounts.add(roundToStep(exact));
         }
-        amounts.set(0, amounts.get(0).add(pool.setScale(2, RoundingMode.HALF_UP).subtract(distributed)));
         return amounts;
+    }
+
+    static BigDecimal roundToStep(BigDecimal amount) {
+        return amount.divide(ROUNDING_STEP, 0, RoundingMode.HALF_UP).multiply(ROUNDING_STEP).setScale(2);
     }
 }

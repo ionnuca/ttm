@@ -235,7 +235,7 @@ await check('admin: configurarea la începerea turneului', async () => {
   await page.getByText('2 câștigători (60% / 40%)').click();
   await page.getByLabel('Taxa de participare').fill('50');
   await expectText(page, 'Suma acumulată: 200 lei');
-  await expectText(page, 'locul 2: 80 lei');
+  await expectText(page, 'locul 2: 100 lei');
   await shot(page, '23b-admin-incepe-turneul');
   await page.getByRole('button', { name: 'Anulează' }).click();
 });
