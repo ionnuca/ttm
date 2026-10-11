@@ -64,7 +64,7 @@ public class UserService {
     // Înregistrare publică
     // ------------------------------------------------------------------
 
-    /** Creează un cont nou de tip Utilizator, împreună cu profilul de jucător. */
+    /** Creează un cont nou de tip Utilizator, împreună cu profilul de jucător, în limba interfeței curente. */
     @Transactional
     public AppUser register(RegistrationForm form) {
         if (!registrationEnabled) {
@@ -74,6 +74,7 @@ public class UserService {
         requireValidPassword(form.getPassword());
         Player player = playerRepository.save(newPlayer(form.getFirstName(), form.getLastName()));
         AppUser user = new AppUser(username, passwordEncoder.encode(form.getPassword()), Role.USER, player);
+        user.setLanguage(md.ttm.i18n.Tr.current()); // limba în care s-a completat formularul
         return userRepository.save(user);
     }
 
