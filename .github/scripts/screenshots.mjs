@@ -80,8 +80,26 @@ let page = await ctx.newPage();
   await probe.close();
 }
 
-await check('guest: lista jucătorilor', async () => {
+await check('guest: pagina principală = meciurile', async () => {
   await page.goto(`${BASE}/`);
+  await expectText(page, 'ultimele');
+  await expectText(page, 'Cupa de vară');
+  await shot(page, '00-guest-acasa-meciuri');
+  await page.goto(`${BASE}/jucatori`);
+  await page.getByRole('link', { name: 'TTM – pagina principală' }).click();
+  await page.waitForURL(`${BASE}/`, { timeout: 10000 });
+  await expectText(page, 'ultimele');
+});
+await check('guest: ghidul de utilizare', async () => {
+  await page.goto(`${BASE}/`);
+  await page.getByText('Ghid de utilizare').first().click();
+  await expectText(page, 'Punctele și clasamentul în grupă');
+  await expectText(page, 'Ratingul (Elo)');
+  await expectText(page, 'raportul seturilor');
+  await shot(page, '17-guest-ghid');
+});
+await check('guest: lista jucătorilor', async () => {
+  await page.goto(`${BASE}/jucatori`);
   await expectText(page, 'Clasament jucători');
   await expectText(page, 'Popescu Ion');
   await expectText(page, 'Versiunea ');
@@ -156,6 +174,7 @@ ctx = await browser.newContext(desktop);
 page = await ctx.newPage();
 await check('admin: login și lista jucătorilor', async () => {
   await login(page, 'admin', 'admin12345');
+  await page.goto(`${BASE}/jucatori`);
   await expectText(page, 'Telefon');
   await expectText(page, '+373 69 123 456');
   await shot(page, '04-admin-jucatori');
@@ -291,6 +310,7 @@ ctx = await browser.newContext(desktop);
 page = await ctx.newPage();
 await check('utilizator: lista fără telefon', async () => {
   await login(page, 'jucator', 'jucator123');
+  await page.goto(`${BASE}/jucatori`);
   await expectText(page, 'Profilul meu');
   await expectNoText(page, 'Telefon');
   await expectNoText(page, 'Utilizatori');
@@ -371,6 +391,7 @@ ctx = await browser.newContext(desktop);
 page = await ctx.newPage();
 await check('manager: fără Utilizatori și fără telefoane', async () => {
   await login(page, 'manager', 'manager123');
+  await page.goto(`${BASE}/jucatori`);
   await expectText(page, 'Manager de turnee');
   await expectNoText(page, 'Utilizatori');
   await expectNoText(page, 'Telefon');
@@ -403,7 +424,7 @@ const phone = { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isM
 ctx = await browser.newContext(phone);
 page = await ctx.newPage();
 await check('telefon: guest', async () => {
-  await page.goto(`${BASE}/`);
+  await page.goto(`${BASE}/jucatori`);
   await expectText(page, 'Clasament jucători');
   await shot(page, '12-telefon-guest-jucatori');
 });
@@ -421,6 +442,8 @@ await check('telefon: turneu cu finale', async () => {
 });
 await check('telefon: admin', async () => {
   await login(page, 'admin', 'admin12345');
+  await page.goto(`${BASE}/jucatori`);
+  await expectText(page, 'Clasament jucători');
   await shot(page, '13-telefon-admin-jucatori');
 });
 await check('telefon: admin atinge un jucător', async () => {
@@ -433,8 +456,24 @@ await check('telefon: admin atinge un jucător', async () => {
   await shot(page, '13c-telefon-admin-editare');
   await page.keyboard.press('Escape');
 });
+await check('telefon: după salvarea scorului pagina rămâne la meci', async () => {
+  await page.goto(`${BASE}/turnee`);
+  await page.getByText('Cupa de toamnă').first().click();
+  await expectText(page, 'Tabelul turneului');
+  const enter = page.getByRole('button', { name: /^Introdu rezultatul/ }).last();
+  await enter.scrollIntoViewIfNeeded();
+  await enter.click();
+  await expectText(page, 'Rezultatul meciului');
+  await page.getByRole('button', { name: '3:1', exact: true }).click();
+  await page.getByRole('button', { name: 'Salvează' }).click();
+  await expectText(page, 'Rezultat salvat');
+  await page.waitForTimeout(1000);
+  const title = await page.locator('h2').first().boundingBox();
+  if (!title || title.y >= 0) throw new Error('pagina a sărit la începutul turneului');
+  await page.screenshot({ path: `${OUT}/18-telefon-dupa-scor.png` });
+});
 await check('telefon: meciuri', async () => {
-  await page.goto(`${BASE}/meciuri`);
+  await page.goto(`${BASE}/`);
   await expectText(page, 'ultimele');
   await shot(page, '16-telefon-meciuri');
 });

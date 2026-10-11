@@ -43,6 +43,7 @@ import md.ttm.ui.layout.MainLayout;
 import md.ttm.ui.player.RatingHistoryList;
 
 import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
@@ -80,7 +81,11 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         return title;
     }
 
+    /** Rândurile meciurilor, ca după salvarea unui rezultat pagina să rămână la meciul respectiv. */
+    private final Map<Long, Component> matchRows = new HashMap<>();
+
     private void refresh() {
+        matchRows.clear();
         removeAll();
         RouterLink back = new RouterLink("← Toate turneele", TournamentsView.class);
         back.getStyle().set("font-size", "var(--lumo-font-size-s)");
@@ -486,6 +491,7 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         row.getStyle()
                 .set("padding", "var(--lumo-space-xs) 0")
                 .set("border-top", "1px solid var(--lumo-contrast-10pct)");
+        matchRows.put(match.getId(), row);
         boolean ownMatch = own != null && (own.equals(a.getId()) || own.equals(b.getId()));
         if (ownMatch) {
             row.getStyle().set("background", "var(--lumo-primary-color-10pct)").set("border-radius", "var(--lumo-border-radius-s)");
@@ -531,13 +537,27 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
                     tournamentService.clearResult(match.getId());
                     Notifications.success("Rezultat șters");
                     refresh();
+                    keepInView(match.getId());
                 }
                 : null;
         new MatchResultDialog(match, details.tournament().getSetsToWin(), result -> {
             tournamentService.recordResult(match.getId(), result);
             Notifications.success("Rezultat salvat");
             refresh();
+            keepInView(match.getId());
         }, onClear).open();
+    }
+
+    /**
+     * După reîncărcarea paginii, derulează înapoi la meciul editat (altfel, pe telefon,
+     * pagina sare la începutul turneului).
+     */
+    private void keepInView(Long matchId) {
+        Component row = matchRows.get(matchId);
+        if (row != null) {
+            row.getElement().executeJs("const el = this; requestAnimationFrame(() => "
+                    + "el.scrollIntoView({block: 'center', behavior: 'instant'}));");
+        }
     }
 
     // ------------------------------------------------------------------

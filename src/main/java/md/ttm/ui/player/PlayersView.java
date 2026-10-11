@@ -44,7 +44,7 @@ import java.util.Map;
  *     <li>Administrator: vede și telefonul; poate adăuga, edita și șterge jucători.</li>
  * </ul>
  */
-@Route(value = "", layout = MainLayout.class)
+@Route(value = "jucatori", layout = MainLayout.class)
 @PageTitle("Jucători | TTM")
 @AnonymousAllowed
 public class PlayersView extends VerticalLayout {
