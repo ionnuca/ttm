@@ -7,11 +7,13 @@ import com.vaadin.flow.router.RouterLink;
 import md.ttm.model.player.Player;
 import md.ttm.service.match.MatchSummary;
 import md.ttm.ui.components.Badges;
+import md.ttm.ui.components.PlayerAvatar;
 import md.ttm.ui.player.PlayerView;
 import md.ttm.ui.tournament.TournamentView;
 
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Lista de meciuri: data, turneul (și grupa), cei doi jucători și scorul.
@@ -25,24 +27,85 @@ public class MatchList extends Div {
      * @param perspectivePlayerId jucătorul din perspectiva căruia se arată meciurile; {@code null} = neutru
      */
     public MatchList(List<MatchSummary> matches, Long perspectivePlayerId) {
-        getStyle().set("display", "flex").set("flex-direction", "column").set("width", "100%");
-        for (MatchSummary match : matches) {
-            add(perspectivePlayerId == null ? neutralRow(match) : perspectiveRow(match, perspectivePlayerId));
+        this(matches, perspectivePlayerId, Map.of());
+    }
+
+    /**
+     * @param photoVersions versiunile pozelor jucătorilor (pentru avatarele din cardurile meciurilor)
+     */
+    public MatchList(List<MatchSummary> matches, Long perspectivePlayerId, Map<Long, Long> photoVersions) {
+        if (perspectivePlayerId == null) {
+            // carduri ca o tabelă de scor, câte încap pe un rând
+            getStyle()
+                    .set("display", "grid")
+                    .set("grid-template-columns", "repeat(auto-fill, minmax(min(100%, 19rem), 1fr))")
+                    .set("gap", "var(--lumo-space-m)")
+                    .set("width", "100%");
+            for (MatchSummary match : matches) {
+                add(card(match, photoVersions));
+            }
+        } else {
+            getStyle().set("display", "flex").set("flex-direction", "column").set("width", "100%");
+            for (MatchSummary match : matches) {
+                add(perspectiveRow(match, perspectivePlayerId));
+            }
         }
     }
 
-    private static Component neutralRow(MatchSummary match) {
-        Div line = new Div(
-                name(match.playerA(), match.aWon(), match.rated() ? match.ratingDeltaA() : null, true),
-                score(match.walkover() ? (match.aWon() ? "W : L" : "L : W") : match.setsA() + " : " + match.setsB(),
-                        match.walkover()),
-                name(match.playerB(), !match.aWon(), match.rated() ? match.ratingDeltaB() : null, false));
+    /** Un meci ca tabelă de scor: data și turneul sus, apoi câte un rând pentru fiecare jucător. */
+    private static Component card(MatchSummary match, Map<Long, Long> photoVersions) {
+        Component meta = meta(match);
+        Div head = new Div(meta);
+        head.getStyle().set("display", "flex").set("align-items", "center").set("gap", "var(--lumo-space-s)")
+                .set("justify-content", "space-between");
+        if (match.walkover()) {
+            Span walkover = Badges.badge("tehnic", Badges.Tone.ERROR);
+            walkover.getElement().setAttribute("title", "Victorie tehnică: adversarul nu a jucat");
+            head.add(walkover);
+        }
+        Div card = new Div(head,
+                scoreLine(match.playerA(), match.aWon(), match.walkover() ? (match.aWon() ? "W" : "–")
+                        : String.valueOf(match.setsA()), match.rated() ? match.ratingDeltaA() : null, photoVersions),
+                scoreLine(match.playerB(), !match.aWon(), match.walkover() ? (match.aWon() ? "–" : "W")
+                        : String.valueOf(match.setsB()), match.rated() ? match.ratingDeltaB() : null, photoVersions));
+        card.getStyle()
+                .set("display", "flex")
+                .set("flex-direction", "column")
+                .set("gap", "var(--lumo-space-xs)")
+                .set("padding", "var(--lumo-space-s) var(--lumo-space-m) var(--lumo-space-m)")
+                .set("border", "1px solid var(--lumo-contrast-10pct)")
+                .set("border-radius", "var(--lumo-border-radius-l)")
+                .set("background", "var(--lumo-base-color)")
+                .set("min-width", "0");
+        return card;
+    }
+
+    private static Component scoreLine(Player player, boolean winner, String score, Integer delta,
+                                       Map<Long, Long> photoVersions) {
+        RouterLink name = new RouterLink(player.getDisplayName(), PlayerView.class, player.getId());
+        name.getStyle()
+                .set("font-weight", winner ? "700" : "400")
+                .set("color", winner ? "var(--lumo-body-text-color)" : "var(--lumo-secondary-text-color)")
+                .set("flex", "1")
+                .set("min-width", "0")
+                .set("overflow", "hidden")
+                .set("text-overflow", "ellipsis")
+                .set("white-space", "nowrap");
+        Span sets = new Span(score);
+        sets.getStyle()
+                .set("font-size", "var(--lumo-font-size-l)")
+                .set("font-weight", winner ? "700" : "400")
+                .set("min-width", "1.5rem")
+                .set("text-align", "right")
+                .set("font-variant-numeric", "tabular-nums");
+        Span change = delta == null ? new Span() : delta(delta);
+        change.getStyle().set("min-width", "2.4rem").set("text-align", "right");
+        Div line = new Div(PlayerAvatar.of(player, photoVersions.get(player.getId()), "1.75rem"), name, sets, change);
         line.getStyle()
-                .set("display", "grid")
-                .set("grid-template-columns", "1fr auto 1fr")
+                .set("display", "flex")
                 .set("align-items", "center")
                 .set("gap", "var(--lumo-space-s)");
-        return row(meta(match), line);
+        return line;
     }
 
     private static Component perspectiveRow(MatchSummary match, Long playerId) {
@@ -95,33 +158,7 @@ public class MatchList extends Div {
         return row;
     }
 
-    private static Component name(Player player, boolean winner, Integer delta, boolean alignEnd) {
-        RouterLink link = new RouterLink(player.getDisplayName(), PlayerView.class, player.getId());
-        link.getStyle().set("font-weight", winner ? "700" : "400");
-        Span cell = new Span(link);
-        if (delta != null) {
-            Span d = delta(delta);
-            d.getStyle().set(alignEnd ? "margin-left" : "margin-right", "var(--lumo-space-xs)");
-            if (alignEnd) {
-                cell.add(d);
-            } else {
-                cell.addComponentAsFirst(d);
-            }
-        }
-        cell.getStyle().set("text-align", alignEnd ? "right" : "left").set("min-width", "0")
-                .set("overflow-wrap", "anywhere");
-        return cell;
-    }
 
-    private static Span score(String text, boolean walkover) {
-        Span score = walkover ? Badges.badge(text, Badges.Tone.ERROR) : new Span(text);
-        score.getStyle().set("font-weight", "700").set("min-width", "3.2rem").set("text-align", "center")
-                .set("justify-content", "center");
-        if (walkover) {
-            score.getElement().setAttribute("title", "Victorie tehnică");
-        }
-        return score;
-    }
 
     private static Span delta(int delta) {
         Span span = new Span(delta > 0 ? "+" + delta : String.valueOf(delta));

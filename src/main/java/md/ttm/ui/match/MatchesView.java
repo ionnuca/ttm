@@ -11,16 +11,20 @@ import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.value.ValueChangeMode;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.router.RouteAlias;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
 import md.ttm.service.match.MatchService;
 import md.ttm.service.match.MatchSummary;
+import md.ttm.service.player.PlayerPhotoService;
 import md.ttm.ui.layout.MainLayout;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Locale;
 
 /** Ultimele meciuri cu rezultat, din toate turneele, cu căutare după jucător sau turneu. */
-@Route(value = "meciuri", layout = MainLayout.class)
+@Route(value = "", layout = MainLayout.class)
+@RouteAlias(value = "meciuri", layout = MainLayout.class)
 @PageTitle("Meciuri | TTM")
 @AnonymousAllowed
 public class MatchesView extends VerticalLayout {
@@ -32,9 +36,12 @@ public class MatchesView extends VerticalLayout {
     private final VerticalLayout results = new VerticalLayout();
     private final Span counter = new Span();
 
-    public MatchesView(MatchService matchService) {
-        setMaxWidth("52rem");
+    private final Map<Long, Long> photoVersions;
+
+    public MatchesView(MatchService matchService, PlayerPhotoService photoService) {
+        setMaxWidth("80rem");
         matches = matchService.findRecent(LIMIT);
+        photoVersions = photoService.versions();
 
         H2 title = new H2("Meciuri");
         title.getStyle().set("margin", "0");
@@ -51,6 +58,7 @@ public class MatchesView extends VerticalLayout {
         search.addValueChangeListener(e -> show());
 
         results.setPadding(false);
+        results.setWidthFull();
         results.setSpacing(false);
         add(header, search, results);
         show();
@@ -72,7 +80,7 @@ public class MatchesView extends VerticalLayout {
                     ? "Încă nu s-a jucat niciun meci."
                     : "Niciun meci nu corespunde căutării."));
         } else {
-            results.add(new MatchList(shown, null));
+            results.add(new MatchList(shown, null, photoVersions));
         }
     }
 
