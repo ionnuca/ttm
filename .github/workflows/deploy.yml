@@ -72,6 +72,11 @@ jobs:
             if curl -skf https://localhost/ > /dev/null; then ok=true; break; fi
             sleep 3
           done
+          # serverul web răspunde înainte ca pașii de pornire (administrator, jucători de test) să se termine
+          for i in $(seq 1 40); do
+            if docker compose -f docker-compose.prod.yml logs app 2>&1 | grep -q "Started TtmApplication"; then break; fi
+            sleep 3
+          done
           docker compose -f docker-compose.prod.yml logs app > app.log
           if ! $ok; then cat app.log; docker compose -f docker-compose.prod.yml logs caddy; exit 1; fi
           curl -sk https://localhost/ | grep -qi "<html" || { echo "Răspuns neașteptat"; exit 1; }
