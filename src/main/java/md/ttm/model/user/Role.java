@@ -1,13 +1,14 @@
 package md.ttm.model.user;
 
+import md.ttm.i18n.Tr;
 /**
  * Rolurile conturilor. Vizitatorii neautentificați (Guest) nu au cont, deci nici rol.
  */
 public enum Role {
-    USER("Utilizator"),
+    USER(Tr.key("Utilizator")),
     /** Creează, pornește și conduce turneele; nu are acces la utilizatori și la datele de contact ale jucătorilor. */
-    TOURNAMENT_MANAGER("Manager de turnee"),
-    ADMIN("Administrator");
+    TOURNAMENT_MANAGER(Tr.key("Manager de turnee")),
+    ADMIN(Tr.key("Administrator"));
 
     private final String label;
 
@@ -16,6 +17,6 @@ public enum Role {
     }
 
     public String getLabel() {
-        return label;
+        return Tr.t(label);
     }
 }

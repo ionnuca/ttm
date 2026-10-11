@@ -1,5 +1,6 @@
 package md.ttm.ui.player;
 
+import md.ttm.i18n.Tr;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -67,10 +68,10 @@ public class PlayerView extends VerticalLayout implements HasUrlParameter<Long>,
 
     private void refresh() {
         removeAll();
-        add(new RouterLink("← Clasament", PlayersView.class));
+        add(new RouterLink(Tr.t("← Clasament"), PlayersView.class));
         PlayerProfile profile = playerId == null ? null : matchService.findPlayerProfile(playerId).orElse(null);
         if (profile == null) {
-            add(new H2("Jucătorul nu există"), new Paragraph("Poate a fost șters între timp."));
+            add(new H2(Tr.t("Jucătorul nu există")), new Paragraph(Tr.t("Poate a fost șters între timp.")));
             return;
         }
         Player player = profile.player();
@@ -79,10 +80,10 @@ public class PlayerView extends VerticalLayout implements HasUrlParameter<Long>,
         add(createHeader(profile), createStats(profile.stats(), player, profile), createEquipment(player),
                 new RatingHistoryList(profile.ratingHistory(), player.getInitialRating()));
 
-        H3 matchesTitle = new H3("Meciuri (" + profile.matches().size() + ")");
+        H3 matchesTitle = new H3(Tr.t("Meciuri ({0})", profile.matches().size()));
         add(matchesTitle);
         if (profile.matches().isEmpty()) {
-            add(new Paragraph("Încă nu are meciuri cu rezultat."));
+            add(new Paragraph(Tr.t("Încă nu are meciuri cu rezultat.")));
         } else {
             add(new MatchList(profile.matches(), player.getId()));
         }
@@ -93,12 +94,12 @@ public class PlayerView extends VerticalLayout implements HasUrlParameter<Long>,
         H2 name = new H2(player.getDisplayName());
         name.getStyle().set("margin", "0");
 
-        StringBuilder details = new StringBuilder("Locul " + profile.rank() + " din " + profile.rankedPlayers());
+        StringBuilder details = new StringBuilder(Tr.t("Locul {0} din {1}", profile.rank(), profile.rankedPlayers()));
         if (player.getPlayStyle() != null) {
             details.append(" · ").append(player.getPlayStyle().getLabel());
         }
         if (player.getPlayHand() != null) {
-            details.append(" · mâna ").append(player.getPlayHand().getLabel().toLowerCase());
+            details.append(" · ").append(Tr.t("mâna {0}", player.getPlayHand().getLabel().toLowerCase(Tr.locale())));
         }
         if (player.getCity() != null) {
             details.append(" · ").append(player.getCity());
@@ -106,7 +107,7 @@ public class PlayerView extends VerticalLayout implements HasUrlParameter<Long>,
         Span line = secondary(details.toString());
         VerticalLayout text = new VerticalLayout(name, line);
         if (SecurityUtils.isAdmin() && player.getPhone() != null) {
-            text.add(secondary("Telefon: " + player.getPhone()));
+            text.add(secondary(Tr.t("Telefon: {0}", player.getPhone())));
         }
         if (photoService.canEdit(player.getId())) {
             text.add(new PhotoEditor(player, photoService, this::refresh, false));
@@ -122,7 +123,7 @@ public class PlayerView extends VerticalLayout implements HasUrlParameter<Long>,
         header.setAlignItems(FlexComponent.Alignment.CENTER);
         header.setWidthFull();
         if (SecurityUtils.isAdmin()) {
-            Button edit = new Button("Editează", VaadinIcon.EDIT.create(), e -> openEditor(player));
+            Button edit = new Button(Tr.t("Editează"), VaadinIcon.EDIT.create(), e -> openEditor(player));
             edit.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
             header.add(edit);
         }
@@ -137,18 +138,17 @@ public class PlayerView extends VerticalLayout implements HasUrlParameter<Long>,
                 .set("grid-template-columns", "repeat(auto-fill, minmax(7.5rem, 1fr))")
                 .set("gap", "var(--lumo-space-s)")
                 .set("width", "100%");
-        tiles.add(tile("Rating", String.valueOf(player.getRating()), "locul " + profile.rank()),
-                tile("Cel mai bun rating", String.valueOf(stats.bestRating()), null),
-                tile("Meciuri jucate", String.valueOf(stats.played()), null),
-                tile("Victorii", String.valueOf(stats.wins()),
-                        stats.walkoverWins() > 0 ? "+ " + stats.walkoverWins() + " tehnice" : null),
-                tile("Înfrângeri", String.valueOf(stats.losses()),
-                        stats.walkoverLosses() > 0 ? "+ " + stats.walkoverLosses() + " tehnice" : null),
-                tile("Victorii %", stats.winPercent() == null ? "–" : stats.winPercent() + "%", null),
-                tile("Seturi", stats.setsWon() + " / " + stats.setsLost(), "câștigate / pierdute"),
-                tile("Turnee", String.valueOf(stats.tournaments()), null));
-        Span note = secondary("Statistica include toate meciurile cu rezultat, și din turneele în desfășurare; "
-                + "ratingul se modifică doar la încheierea turneului.");
+        tiles.add(tile(Tr.t("Rating"), String.valueOf(player.getRating()), Tr.t("locul {0}", profile.rank())),
+                tile(Tr.t("Cel mai bun rating"), String.valueOf(stats.bestRating()), null),
+                tile(Tr.t("Meciuri jucate"), String.valueOf(stats.played()), null),
+                tile(Tr.t("Victorii"), String.valueOf(stats.wins()),
+                        stats.walkoverWins() > 0 ? Tr.t("+ {0} tehnice", stats.walkoverWins()) : null),
+                tile(Tr.t("Înfrângeri"), String.valueOf(stats.losses()),
+                        stats.walkoverLosses() > 0 ? Tr.t("+ {0} tehnice", stats.walkoverLosses()) : null),
+                tile(Tr.t("Victorii %"), stats.winPercent() == null ? "–" : stats.winPercent() + "%", null),
+                tile(Tr.t("Seturi"), stats.setsWon() + " / " + stats.setsLost(), Tr.t("câștigate / pierdute")),
+                tile(Tr.t("Turnee"), String.valueOf(stats.tournaments()), null));
+        Span note = secondary(Tr.t("Statistica include toate meciurile cu rezultat, și din turneele în desfășurare; ratingul se modifică doar la încheierea turneului."));
         note.getStyle().set("font-size", "var(--lumo-font-size-xs)");
         VerticalLayout section = new VerticalLayout(tiles, note);
         section.setPadding(false);
@@ -176,14 +176,14 @@ public class PlayerView extends VerticalLayout implements HasUrlParameter<Long>,
     }
 
     private static Component createEquipment(Player player) {
-        VerticalLayout section = new VerticalLayout(new H3("Echipament"));
+        VerticalLayout section = new VerticalLayout(new H3(Tr.t("Echipament")));
         section.setPadding(false);
         section.setSpacing(false);
         if (!player.hasEquipment()) {
-            section.add(secondary("Echipamentul nu este completat."));
+            section.add(secondary(Tr.t("Echipamentul nu este completat.")));
             return section;
         }
-        section.add(item("Lemn", player.getBlade()), item("Forehand", player.getForehandRubber()),
+        section.add(item(Tr.t("Lemn"), player.getBlade()), item("Forehand", player.getForehandRubber()),
                 item("Backhand", player.getBackhandRubber()));
         return section;
     }
@@ -191,7 +191,7 @@ public class PlayerView extends VerticalLayout implements HasUrlParameter<Long>,
     private static Component item(String label, String value) {
         Span valueSpan = new Span(value == null ? "—" : value);
         valueSpan.getStyle().set("font-weight", "500");
-        return new Span(secondary(label + ": "), valueSpan);
+        return new Span(secondary(Tr.t("{0}: ", label)), valueSpan);
     }
 
     private static Span secondary(String text) {
@@ -203,27 +203,26 @@ public class PlayerView extends VerticalLayout implements HasUrlParameter<Long>,
     private void openEditor(Player player) {
         new PlayerFormDialog(player, edited -> {
             playerService.save(edited);
-            Notifications.success("Modificări salvate");
+            Notifications.success(Tr.t("Modificări salvate"));
             refresh();
         }, () -> confirmDelete(player)).open();
     }
 
     private void confirmDelete(Player player) {
         ConfirmDialog dialog = new ConfirmDialog();
-        dialog.setHeader("Ștergeți jucătorul?");
-        dialog.setText(player.getDisplayName() + " va fi șters definitiv, împreună cu contul lui de "
-                + "utilizator, dacă are unul.");
+        dialog.setHeader(Tr.t("Ștergeți jucătorul?"));
+        dialog.setText(Tr.t("{0} va fi șters definitiv, împreună cu contul lui de utilizator, dacă are unul.", player.getDisplayName()));
         dialog.setCancelable(true);
-        dialog.setCancelText("Anulează");
-        dialog.setConfirmText("Șterge");
+        dialog.setCancelText(Tr.t("Anulează"));
+        dialog.setConfirmText(Tr.t("Șterge"));
         dialog.setConfirmButtonTheme("error primary");
         dialog.addConfirmListener(e -> {
             try {
                 playerService.delete(player.getId());
-                Notifications.success("Jucător șters");
+                Notifications.success(Tr.t("Jucător șters"));
                 getUI().ifPresent(ui -> ui.navigate(PlayersView.class));
             } catch (BusinessException ex) {
-                Notifications.error(ex.getMessage());
+                Notifications.error(ex.getLocalizedMessage());
             }
         });
         dialog.open();

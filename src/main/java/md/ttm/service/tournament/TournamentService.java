@@ -201,7 +201,7 @@ public class TournamentService {
             throw new BusinessException("Înscrierea la acest turneu este închisă");
         }
         if (participantRepository.existsByTournamentIdAndPlayerId(tournament.getId(), player.getId())) {
-            throw new BusinessException(player.getDisplayName() + " este deja înscris la acest turneu");
+            throw new BusinessException("{0} este deja înscris la acest turneu", player.getDisplayName());
         }
         return participantRepository.save(new TournamentParticipant(tournament, player));
     }
@@ -285,11 +285,11 @@ public class TournamentService {
         List<GroupView> groups = groupViews(tournament, matches);
         long unplayed = groups.stream().mapToLong(g -> g.matches().size() - g.playedMatches()).sum();
         if (unplayed > 0) {
-            throw new BusinessException("Etapa 1 nu s-a terminat: mai sunt " + unplayed + " meciuri fără rezultat");
+            throw new BusinessException("Etapa 1 nu s-a terminat: mai sunt {0} meciuri fără rezultat", unplayed);
         }
         int smallest = groups.stream().mapToInt(g -> g.members().size()).min().orElse(0);
         if (qualifiers < 1 || qualifiers >= smallest) {
-            throw new BusinessException("Din fiecare grupă se pot califica între 1 și " + (smallest - 1) + " jucători");
+            throw new BusinessException("Din fiecare grupă se pot califica între 1 și {0} jucători", smallest - 1);
         }
 
         // locul fiecărui jucător în grupa lui
@@ -356,8 +356,7 @@ public class TournamentService {
             throw new BusinessException("Doar un turneu în desfășurare poate fi încheiat");
         }
         if (requiresFinalsBeforeFinish(tournament)) {
-            throw new BusinessException("La un turneu comercial cu două etape premiile se acordă în finale: "
-                    + "începeți etapa 2 înainte de încheiere");
+            throw new BusinessException("La un turneu comercial cu două etape premiile se acordă în finale: începeți etapa 2 înainte de încheiere");
         }
         long unplayed = matchRepository.countByTournamentIdAndOutcomeIsNull(tournamentId);
         finish(tournament);
@@ -416,8 +415,7 @@ public class TournamentService {
             boolean valid = a != null && b != null && a >= 0 && b >= 0
                     && ((a == setsToWin && b < setsToWin) || (b == setsToWin && a < setsToWin));
             if (!valid) {
-                throw new BusinessException("Scor invalid: câștigătorul trebuie să aibă " + setsToWin
-                        + " seturi, iar adversarul mai puține");
+                throw new BusinessException("Scor invalid: câștigătorul trebuie să aibă {0} seturi, iar adversarul mai puține", setsToWin);
             }
             match.setSetsA(a);
             match.setSetsB(b);
@@ -720,8 +718,7 @@ public class TournamentService {
                 throw new BusinessException("Alegeți cel puțin 2 grupe");
             }
             if (participants < groupCount * 2) {
-                throw new BusinessException("Pentru " + groupCount + " grupe sunt necesari cel puțin "
-                        + groupCount * 2 + " participanți (minimum 2 în fiecare grupă)");
+                throw new BusinessException("Pentru {0} grupe sunt necesari cel puțin {1} participanți (minimum 2 în fiecare grupă)", groupCount, groupCount * 2);
             }
         }
         Integer winners = null;

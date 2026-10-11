@@ -1,5 +1,6 @@
 package md.ttm.ui.components;
 
+import md.ttm.i18n.Tr;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.dialog.Dialog;
@@ -15,7 +16,7 @@ public final class DialogButtons {
 
     /** Butonul „Șterge”, aliniat la stânga; închide dialogul și apoi cere confirmarea. */
     public static Button delete(Dialog dialog, Runnable onDelete) {
-        Button delete = new Button("Șterge", VaadinIcon.TRASH.create(), e -> {
+        Button delete = new Button(Tr.t("Șterge"), VaadinIcon.TRASH.create(), e -> {
             dialog.close();
             onDelete.run();
         });

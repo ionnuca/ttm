@@ -1,5 +1,9 @@
 package md.ttm.ui.account;
 
+import md.ttm.i18n.Tr;
+import md.ttm.i18n.Language;
+import md.ttm.ui.components.LanguageSwitcher;
+import com.vaadin.flow.component.select.Select;
 import md.ttm.common.BusinessException;
 import md.ttm.model.player.PlayStyle;
 import md.ttm.model.player.Player;
@@ -32,7 +36,7 @@ import com.vaadin.flow.component.radiobutton.RadioButtonGroup;
 import com.vaadin.flow.component.textfield.PasswordField;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.binder.BeanValidationBinder;
-import com.vaadin.flow.router.PageTitle;
+import com.vaadin.flow.router.HasDynamicTitle;
 import com.vaadin.flow.router.Route;
 import jakarta.annotation.security.PermitAll;
 
@@ -41,9 +45,14 @@ import jakarta.annotation.security.PermitAll;
  * Ratingul și statisticile sunt doar afișate; administratorul își poate stabili aici ratingul inițial.
  */
 @Route(value = "profil", layout = MainLayout.class)
-@PageTitle("Profilul meu | TTM")
 @PermitAll
-public class ProfileView extends VerticalLayout {
+public class ProfileView extends VerticalLayout implements HasDynamicTitle {
+
+    @Override
+    public String getPageTitle() {
+        return Tr.t("Profilul meu") + " | TTM";
+    }
+
 
     private final PlayerService playerService;
     private final UserService userService;
@@ -60,30 +69,48 @@ public class ProfileView extends VerticalLayout {
 
         AppUser user = userService.findCurrentUser().orElseThrow();
 
-        H2 title = new H2("Profilul meu");
+        H2 title = new H2(Tr.t("Profilul meu"));
         title.getStyle().set("margin-bottom", "0");
-        Span account = new Span("Cont: " + user.getUsername() + " · " + user.getRole().getLabel());
+        Span account = new Span(Tr.t("Cont: {0} · {1}", user.getUsername(), user.getRole().getLabel()));
         account.getStyle().set("color", "var(--lumo-secondary-text-color)");
         add(title, account);
 
         if (user.getPlayer() != null) {
             history = new RatingHistoryList(ratingService.findHistory(user.getPlayer().getId()),
                     user.getPlayer().getInitialRating());
-            RouterLink publicPage = new RouterLink("Pagina mea de jucător (statistici și meciuri) →",
+            RouterLink publicPage = new RouterLink(Tr.t("Pagina mea de jucător (statistici și meciuri) →"),
                     PlayerView.class, user.getPlayer().getId());
             add(publicPage, new PhotoEditor(user.getPlayer(), photoService, null),
                     createStats(user.getPlayer()), createPlayerForm(user.getPlayer()), history);
         } else {
-            add(new Paragraph("Acest cont nu are un profil de jucător."));
+            add(new Paragraph(Tr.t("Acest cont nu are un profil de jucător.")));
         }
-        add(createPasswordForm());
+        add(createLanguageForm(user), createPasswordForm());
+    }
+
+    /** Limba implicită a contului: se folosește la fiecare autentificare, pe orice dispozitiv. */
+    private Component createLanguageForm(AppUser user) {
+        Select<Language> language = new Select<>();
+        language.setLabel(Tr.t("Limba interfeței"));
+        language.setItems(Language.values());
+        language.setItemLabelGenerator(Language::nativeName);
+        language.setValue(user.getLanguage());
+        language.setHelperText(Tr.t("Se salvează în cont și se folosește la fiecare autentificare."));
+        language.addValueChangeListener(e -> {
+            if (e.isFromClient() && e.getValue() != null) {
+                LanguageSwitcher.apply(e.getValue(), userService);
+            }
+        });
+        VerticalLayout section = new VerticalLayout(new H3(Tr.t("Limba")), language);
+        section.setPadding(false);
+        return section;
     }
 
     private Component createStats(Player player) {
         HorizontalLayout stats = new HorizontalLayout(
-                stat("Rating", ratingValue, String.valueOf(player.getRating())),
-                stat("Victorii", new Span(), String.valueOf(player.getWins())),
-                stat("Înfrângeri", new Span(), String.valueOf(player.getLosses())));
+                stat(Tr.t("Rating"), ratingValue, String.valueOf(player.getRating())),
+                stat(Tr.t("Victorii"), new Span(), String.valueOf(player.getWins())),
+                stat(Tr.t("Înfrângeri"), new Span(), String.valueOf(player.getLosses())));
         stats.getStyle().set("flex-wrap", "wrap");
         return stats;
     }
@@ -110,33 +137,33 @@ public class ProfileView extends VerticalLayout {
     }
 
     private Component createPlayerForm(Player player) {
-        TextField lastName = new TextField("Nume");
-        TextField firstName = new TextField("Prenume");
-        RadioButtonGroup<PlayStyle> playStyle = new RadioButtonGroup<>("Stil de joc");
+        TextField lastName = new TextField(Tr.t("Nume"));
+        TextField firstName = new TextField(Tr.t("Prenume"));
+        RadioButtonGroup<PlayStyle> playStyle = new RadioButtonGroup<>(Tr.t("Stil de joc"));
         playStyle.setItems(PlayStyle.values());
         playStyle.setItemLabelGenerator(PlayStyle::getLabel);
-        TextField city = new TextField("Oraș");
-        TextField phone = new TextField("Telefon");
+        TextField city = new TextField(Tr.t("Oraș"));
+        TextField phone = new TextField(Tr.t("Telefon"));
         phone.setPlaceholder("+373 ...");
-        phone.setHelperText("Vizibil doar administratorului");
+        phone.setHelperText(Tr.t("Vizibil doar administratorului"));
 
         BeanValidationBinder<Player> binder = new BeanValidationBinder<>(Player.class);
-        binder.forField(lastName).asRequired("Introduceți numele").bind("lastName");
-        binder.forField(firstName).asRequired("Introduceți prenumele").bind("firstName");
-        binder.forField(playStyle).asRequired("Alegeți stilul de joc").bind("playStyle");
+        binder.forField(lastName).asRequired(Tr.t("Introduceți numele")).bind("lastName");
+        binder.forField(firstName).asRequired(Tr.t("Introduceți prenumele")).bind("firstName");
+        binder.forField(playStyle).asRequired(Tr.t("Alegeți stilul de joc")).bind("playStyle");
         binder.forField(city).bind("city");
         binder.forField(phone).bind("phone");
         PlayerDetailsFields details = new PlayerDetailsFields(binder);
         IntegerField initialRating = null;
         if (SecurityUtils.isAdmin()) {
             // Doar administratorul își poate stabili ratingul inițial; ratingul curent se recalculează
-            initialRating = new IntegerField("Rating inițial");
+            initialRating = new IntegerField(Tr.t("Rating inițial"));
             initialRating.setMin(0);
             initialRating.setMax(5000);
             initialRating.setStep(10);
             initialRating.setStepButtonsVisible(true);
-            initialRating.setHelperText("Punctul de plecare; ratingul curent se recalculează din el și din turneele încheiate");
-            binder.forField(initialRating).asRequired("Introduceți ratingul inițial").bind("initialRating");
+            initialRating.setHelperText(Tr.t("Punctul de plecare; ratingul curent se recalculează din el și din turneele încheiate"));
+            binder.forField(initialRating).asRequired(Tr.t("Introduceți ratingul inițial")).bind("initialRating");
         }
         binder.readBean(player);
 
@@ -151,13 +178,13 @@ public class ProfileView extends VerticalLayout {
                 new FormLayout.ResponsiveStep("0", 1),
                 new FormLayout.ResponsiveStep("28rem", 2));
 
-        Button save = new Button("Salvează profilul", e -> {
+        Button save = new Button(Tr.t("Salvează profilul"), e -> {
             if (binder.writeBeanIfValid(player)) {
                 try {
                     Player saved = playerService.updateOwnProfile(player);
                     binder.readBean(saved);
                     refreshRating(saved);
-                    Notifications.success("Profil salvat");
+                    Notifications.success(Tr.t("Profil salvat"));
                 } catch (RuntimeException ex) {
                     Notifications.error(Notifications.saveError(ex));
                 }
@@ -165,7 +192,7 @@ public class ProfileView extends VerticalLayout {
         });
         save.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
 
-        VerticalLayout section = new VerticalLayout(new H3("Date personale"), form, save);
+        VerticalLayout section = new VerticalLayout(new H3(Tr.t("Date personale")), form, save);
         section.setPadding(false);
         return section;
     }
@@ -180,10 +207,10 @@ public class ProfileView extends VerticalLayout {
     }
 
     private Component createPasswordForm() {
-        PasswordField current = new PasswordField("Parola actuală");
-        PasswordField newPassword = new PasswordField("Parola nouă");
-        newPassword.setHelperText("Cel puțin " + UserService.MIN_PASSWORD_LENGTH + " caractere");
-        PasswordField confirm = new PasswordField("Confirmați parola nouă");
+        PasswordField current = new PasswordField(Tr.t("Parola actuală"));
+        PasswordField newPassword = new PasswordField(Tr.t("Parola nouă"));
+        newPassword.setHelperText(Tr.t("Cel puțin {0} caractere", UserService.MIN_PASSWORD_LENGTH));
+        PasswordField confirm = new PasswordField(Tr.t("Confirmați parola nouă"));
 
         FormLayout form = new FormLayout(current, newPassword, confirm);
         form.setResponsiveSteps(
@@ -191,10 +218,10 @@ public class ProfileView extends VerticalLayout {
                 new FormLayout.ResponsiveStep("28rem", 2));
         form.setColspan(current, 2);
 
-        Button change = new Button("Schimbă parola", e -> {
+        Button change = new Button(Tr.t("Schimbă parola"), e -> {
             if (!newPassword.getValue().equals(confirm.getValue())) {
                 confirm.setInvalid(true);
-                confirm.setErrorMessage("Parolele nu coincid");
+                confirm.setErrorMessage(Tr.t("Parolele nu coincid"));
                 return;
             }
             confirm.setInvalid(false);
@@ -203,13 +230,13 @@ public class ProfileView extends VerticalLayout {
                 current.clear();
                 newPassword.clear();
                 confirm.clear();
-                Notifications.success("Parola a fost schimbată");
+                Notifications.success(Tr.t("Parola a fost schimbată"));
             } catch (BusinessException ex) {
-                Notifications.error(ex.getMessage());
+                Notifications.error(ex.getLocalizedMessage());
             }
         });
 
-        VerticalLayout section = new VerticalLayout(new H3("Schimbarea parolei"), form, change);
+        VerticalLayout section = new VerticalLayout(new H3(Tr.t("Schimbarea parolei")), form, change);
         section.setPadding(false);
         return section;
     }

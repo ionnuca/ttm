@@ -1,5 +1,6 @@
 package md.ttm.ui.player;
 
+import md.ttm.i18n.Tr;
 import com.vaadin.flow.component.avatar.Avatar;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -31,7 +32,7 @@ public class PhotoEditor extends HorizontalLayout {
     private final PlayerPhotoService photoService;
     private final Runnable onChange;
     private Avatar avatar;
-    private final Button delete = new Button("Șterge poza", VaadinIcon.TRASH.create());
+    private final Button delete = new Button(Tr.t("Șterge poza"), VaadinIcon.TRASH.create());
 
     public PhotoEditor(Player player, PlayerPhotoService photoService, Runnable onChange) {
         this(player, photoService, onChange, true);
@@ -54,26 +55,26 @@ public class PhotoEditor extends HorizontalLayout {
         upload.setMaxFiles(1);
         upload.setMaxFileSize(PlayerPhotoService.MAX_UPLOAD_BYTES);
         upload.setDropAllowed(false);
-        Button choose = new Button("Alege o poză", VaadinIcon.CAMERA.create());
+        Button choose = new Button(Tr.t("Alege o poză"), VaadinIcon.CAMERA.create());
         upload.setUploadButton(choose);
         upload.addSucceededListener(e -> {
             try (InputStream in = buffer.getInputStream()) {
                 photoService.save(player.getId(), in.readAllBytes());
-                Notifications.success("Poza a fost salvată");
+                Notifications.success(Tr.t("Poza a fost salvată"));
                 changed();
             } catch (BusinessException ex) {
-                Notifications.error(ex.getMessage());
+                Notifications.error(ex.getLocalizedMessage());
             } catch (IOException | RuntimeException ex) {
                 log.warn("Poza jucătorului {} nu a putut fi salvată", player.getId(), ex);
-                Notifications.error("Poza nu a putut fi salvată. Încercați o altă poză (JPEG sau PNG).");
+                Notifications.error(Tr.t("Poza nu a putut fi salvată. Încercați o altă poză (JPEG sau PNG)."));
             }
             upload.clearFileList();
         });
         upload.addFileRejectedListener(e -> Notifications.error(
-                "Alegeți o poză JPEG sau PNG de cel mult 20 MB"));
+                Tr.t("Alegeți o poză JPEG sau PNG de cel mult 20 MB")));
         upload.addFailedListener(e -> {
             log.warn("Încărcarea pozei a eșuat ({}, {} octeți)", e.getMIMEType(), e.getContentLength(), e.getReason());
-            Notifications.error("Încărcarea pozei a eșuat. Verificați conexiunea și încercați din nou.");
+            Notifications.error(Tr.t("Încărcarea pozei a eșuat. Verificați conexiunea și încercați din nou."));
             upload.clearFileList();
         });
 
@@ -81,14 +82,14 @@ public class PhotoEditor extends HorizontalLayout {
         delete.addClickListener(e -> {
             try {
                 photoService.delete(player.getId());
-                Notifications.success("Poza a fost ștearsă");
+                Notifications.success(Tr.t("Poza a fost ștearsă"));
                 changed();
             } catch (RuntimeException ex) {
                 Notifications.error(Notifications.saveError(ex));
             }
         });
 
-        Span hint = new Span("JPEG sau PNG; se decupează pătrat și se micșorează automat.");
+        Span hint = new Span(Tr.t("JPEG sau PNG; se decupează pătrat și se micșorează automat."));
         hint.getStyle().set("font-size", "var(--lumo-font-size-xs)").set("color", "var(--lumo-secondary-text-color)");
         VerticalLayout controls = new VerticalLayout(new HorizontalLayout(upload, delete), hint);
         controls.setPadding(false);

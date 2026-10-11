@@ -1,11 +1,12 @@
 package md.ttm.model.player;
 
+import md.ttm.i18n.Tr;
 /**
  * Stilul de joc al unui jucător.
  */
 public enum PlayStyle {
-    ATTACK("Atac"),
-    DEFENCE("Apărare");
+    ATTACK(Tr.key("Atac")),
+    DEFENCE(Tr.key("Apărare"));
 
     private final String label;
 
@@ -14,6 +15,6 @@ public enum PlayStyle {
     }
 
     public String getLabel() {
-        return label;
+        return Tr.t(label);
     }
 }

@@ -1,5 +1,6 @@
 package md.ttm.ui.player;
 
+import md.ttm.i18n.Tr;
 import md.ttm.model.player.PlayHand;
 import md.ttm.model.player.Player;
 import com.vaadin.flow.component.formlayout.FormLayout;
@@ -14,17 +15,17 @@ import com.vaadin.flow.data.binder.Binder;
  */
 public final class PlayerDetailsFields {
 
-    private final RadioButtonGroup<PlayHand> playHand = new RadioButtonGroup<>("Mâna de joc");
-    private final TextField blade = new TextField("Lemn");
-    private final TextField forehandRubber = new TextField("Față forehand");
-    private final TextField backhandRubber = new TextField("Față backhand");
+    private final RadioButtonGroup<PlayHand> playHand = new RadioButtonGroup<>(Tr.t("Mâna de joc"));
+    private final TextField blade = new TextField(Tr.t("Lemn"));
+    private final TextField forehandRubber = new TextField(Tr.t("Față forehand"));
+    private final TextField backhandRubber = new TextField(Tr.t("Față backhand"));
 
     public PlayerDetailsFields(Binder<Player> binder) {
         playHand.setItems(PlayHand.values());
         playHand.setItemLabelGenerator(PlayHand::getLabel);
-        blade.setPlaceholder("ex. Butterfly Viscaria");
-        forehandRubber.setPlaceholder("ex. Tenergy 05");
-        backhandRubber.setPlaceholder("ex. Dignics 09C");
+        blade.setPlaceholder(Tr.t("ex. Butterfly Viscaria"));
+        forehandRubber.setPlaceholder(Tr.t("ex. Tenergy 05"));
+        backhandRubber.setPlaceholder(Tr.t("ex. Dignics 09C"));
         for (TextField field : new TextField[]{blade, forehandRubber, backhandRubber}) {
             field.setMaxLength(100);
             field.setClearButtonVisible(true);
@@ -43,7 +44,7 @@ public final class PlayerDetailsFields {
 
     /** Adaugă secțiunea „Echipament” pe toată lățimea formularului. */
     public void addEquipmentTo(FormLayout form) {
-        H4 title = new H4("Echipament");
+        H4 title = new H4(Tr.t("Echipament"));
         title.getStyle().set("margin", "var(--lumo-space-m) 0 0");
         form.add(title, blade, forehandRubber, backhandRubber);
         form.setColspan(title, 2);

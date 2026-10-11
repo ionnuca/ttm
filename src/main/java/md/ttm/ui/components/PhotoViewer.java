@@ -1,5 +1,6 @@
 package md.ttm.ui.components;
 
+import md.ttm.i18n.Tr;
 import com.vaadin.flow.component.avatar.Avatar;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -24,10 +25,10 @@ public final class PhotoViewer {
         dialog.setHeaderTitle(player.getDisplayName());
         Button close = new Button(VaadinIcon.CLOSE.create(), e -> dialog.close());
         close.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_ICON);
-        close.setAriaLabel("Închide");
+        close.setAriaLabel(Tr.t("Închide"));
         dialog.getHeader().add(close);
 
-        Image image = new Image(url, "Poza lui " + player.getDisplayName());
+        Image image = new Image(url, Tr.t("Poza lui {0}", player.getDisplayName()));
         image.getStyle()
                 .set("display", "block")
                 .set("max-width", "min(90vw, 1000px)")
@@ -48,7 +49,7 @@ public final class PhotoViewer {
     public static Avatar clickable(Avatar avatar, Player player, Long photoVersion) {
         if (photoVersion != null) {
             avatar.getStyle().set("cursor", "zoom-in");
-            avatar.getElement().setAttribute("title", "Vezi poza mărită");
+            avatar.getElement().setAttribute("title", Tr.t("Vezi poza mărită"));
             avatar.getElement().setAttribute("role", "button");
             avatar.getElement().addEventListener("click", e -> open(player, photoVersion));
         }

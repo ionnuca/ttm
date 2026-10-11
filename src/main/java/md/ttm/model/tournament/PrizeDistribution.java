@@ -1,5 +1,6 @@
 package md.ttm.model.tournament;
 
+import md.ttm.i18n.Tr;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
@@ -41,7 +42,7 @@ public enum PrizeDistribution {
     /** De exemplu „2 câștigători (60% / 40%)”. */
     public String getLabel() {
         String split = Arrays.stream(percentages).mapToObj(p -> p + "%").collect(Collectors.joining(" / "));
-        return winners() == 1 ? "1 câștigător (" + split + ")" : winners() + " câștigători (" + split + ")";
+        return winners() == 1 ? Tr.t("1 câștigător ({0})", split) : Tr.t("{0} câștigători ({1})", winners(), split);
     }
 
     /** Premiile se rotunjesc la multipli de 50 de lei. */

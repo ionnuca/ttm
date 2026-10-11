@@ -113,8 +113,7 @@ public class UserService {
                 && (newRole != Role.ADMIN || !form.isEnabled());
         if (losesAdminRights) {
             if (isCurrentUser(user)) {
-                throw new BusinessException("Nu vă puteți retrage propriile drepturi de administrator "
-                        + "și nici bloca propriul cont");
+                throw new BusinessException("Nu vă puteți retrage propriile drepturi de administrator și nici bloca propriul cont");
             }
             requireAnotherActiveAdmin();
         }
@@ -133,8 +132,8 @@ public class UserService {
         }
         if (user.getPlayer() != null) {
             Player player = user.getPlayer();
-            player.setFirstName(requireName(form.getFirstName(), "prenumele"));
-            player.setLastName(requireName(form.getLastName(), "numele"));
+            player.setFirstName(requireName(form.getFirstName(), "Introduceți prenumele"));
+            player.setLastName(requireName(form.getLastName(), "Introduceți numele"));
             playerRepository.save(player);
         }
         return userRepository.save(user);
@@ -167,6 +166,18 @@ public class UserService {
     // Contul propriu
     // ------------------------------------------------------------------
 
+    /** Limba interfeței pentru contul utilizatorului autentificat. */
+    @PreAuthorize("isAuthenticated()")
+    @Transactional
+    public void updateOwnLanguage(md.ttm.i18n.Language language) {
+        String username = SecurityUtils.currentUsername()
+                .orElseThrow(() -> new BusinessException("Nu sunteți autentificat"));
+        AppUser user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new BusinessException("Contul nu mai există"));
+        user.setLanguage(language);
+        userRepository.save(user);
+    }
+
     @PreAuthorize("isAuthenticated()")
     @Transactional
     public void changeOwnPassword(String currentPassword, String newPassword) {
@@ -185,33 +196,32 @@ public class UserService {
     private String requireAvailableUsername(String rawUsername, Long ownId) {
         String username = normalizeUsername(rawUsername);
         if (username.length() < 3 || username.length() > 50 || !username.matches("[a-z0-9._-]+")) {
-            throw new BusinessException("Numele de utilizator trebuie să aibă 3-50 de caractere: "
-                    + "litere latine, cifre și . _ -");
+            throw new BusinessException("Numele de utilizator trebuie să aibă 3-50 de caractere: litere latine, cifre și . _ -");
         }
         userRepository.findByUsername(username)
                 .filter(existing -> !existing.getId().equals(ownId))
                 .ifPresent(existing -> {
-                    throw new BusinessException("Numele de utilizator „" + username + "” este deja folosit");
+                    throw new BusinessException("Numele de utilizator „{0}” este deja folosit", username);
                 });
         return username;
     }
 
     private static void requireValidPassword(String password) {
         if (password == null || password.length() < MIN_PASSWORD_LENGTH) {
-            throw new BusinessException("Parola trebuie să aibă cel puțin " + MIN_PASSWORD_LENGTH + " caractere");
+            throw new BusinessException("Parola trebuie să aibă cel puțin {0} caractere", MIN_PASSWORD_LENGTH);
         }
     }
 
-    private static String requireName(String value, String fieldName) {
+    private static String requireName(String value, String missingMessage) {
         String trimmed = Texts.trimToNull(value);
         if (trimmed == null) {
-            throw new BusinessException("Introduceți " + fieldName);
+            throw new BusinessException(missingMessage);
         }
         return trimmed;
     }
 
     private static Player newPlayer(String firstName, String lastName) {
-        return new Player(requireName(firstName, "prenumele"), requireName(lastName, "numele"));
+        return new Player(requireName(firstName, "Introduceți prenumele"), requireName(lastName, "Introduceți numele"));
     }
 
     private void requireAnotherActiveAdmin() {

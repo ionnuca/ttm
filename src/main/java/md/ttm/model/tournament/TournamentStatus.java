@@ -1,15 +1,16 @@
 package md.ttm.model.tournament;
 
+import md.ttm.i18n.Tr;
 /**
  * Etapele unui turneu.
  */
 public enum TournamentStatus {
     /** Turneul e creat; jucătorii se pot înscrie. */
-    REGISTRATION("Înscriere deschisă"),
+    REGISTRATION(Tr.key("Înscriere deschisă")),
     /** Turneul a început: grupa și meciurile sunt generate, se introduc rezultatele. */
-    IN_PROGRESS("În desfășurare"),
+    IN_PROGRESS(Tr.key("În desfășurare")),
     /** Toate meciurile au rezultat. */
-    FINISHED("Încheiat");
+    FINISHED(Tr.key("Încheiat"));
 
     private final String label;
 
@@ -18,6 +19,6 @@ public enum TournamentStatus {
     }
 
     public String getLabel() {
-        return label;
+        return Tr.t(label);
     }
 }

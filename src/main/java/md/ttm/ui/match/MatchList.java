@@ -1,5 +1,6 @@
 package md.ttm.ui.match;
 
+import md.ttm.i18n.Tr;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.Span;
@@ -9,6 +10,7 @@ import md.ttm.service.match.MatchSummary;
 import md.ttm.ui.components.Badges;
 import md.ttm.ui.components.PlayerAvatar;
 import md.ttm.ui.player.PlayerView;
+import md.ttm.ui.tournament.TournamentLabels;
 import md.ttm.ui.tournament.TournamentView;
 
 import java.time.format.DateTimeFormatter;
@@ -59,8 +61,8 @@ public class MatchList extends Div {
         head.getStyle().set("display", "flex").set("align-items", "center").set("gap", "var(--lumo-space-s)")
                 .set("justify-content", "space-between");
         if (match.walkover()) {
-            Span walkover = Badges.badge("tehnic", Badges.Tone.ERROR);
-            walkover.getElement().setAttribute("title", "Victorie tehnică: adversarul nu a jucat");
+            Span walkover = Badges.badge(Tr.t("tehnic"), Badges.Tone.ERROR);
+            walkover.getElement().setAttribute("title", Tr.t("Victorie tehnică: adversarul nu a jucat"));
             head.add(walkover);
         }
         Div card = new Div(head,
@@ -110,11 +112,11 @@ public class MatchList extends Div {
 
     private static Component perspectiveRow(MatchSummary match, Long playerId) {
         MatchSummary.Perspective p = match.from(playerId);
-        Span outcome = Badges.badge(p.won() ? "V" : "Î", p.won() ? Badges.Tone.SUCCESS : Badges.Tone.ERROR);
-        outcome.getElement().setAttribute("title", p.won() ? "Victorie" : "Înfrângere");
+        Span outcome = Badges.badge(p.won() ? Tr.t("V") : Tr.t("Î"), p.won() ? Badges.Tone.SUCCESS : Badges.Tone.ERROR);
+        outcome.getElement().setAttribute("title", p.won() ? Tr.t("Victorie") : Tr.t("Înfrângere"));
         outcome.getStyle().set("min-width", "1.6rem").set("justify-content", "center");
 
-        Span versus = new Span("vs ");
+        Span versus = new Span(Tr.t("vs") + " ");
         versus.getStyle().set("color", "var(--lumo-secondary-text-color)");
         RouterLink opponent = new RouterLink(p.opponent().getDisplayName(), PlayerView.class, p.opponent().getId());
         Span who = new Span(versus, opponent);
@@ -122,7 +124,7 @@ public class MatchList extends Div {
                 .set("text-overflow", "ellipsis").set("white-space", "nowrap");
 
         Span result = match.walkover()
-                ? Badges.badge(p.won() ? "victorie tehnică" : "înfrângere tehnică", Badges.Tone.CONTRAST)
+                ? Badges.badge(p.won() ? Tr.t("victorie tehnică") : Tr.t("înfrângere tehnică"), Badges.Tone.CONTRAST)
                 : new Span(p.ownSets() + " : " + p.opponentSets());
         result.getStyle().set("font-weight", "700");
 
@@ -139,7 +141,7 @@ public class MatchList extends Div {
         RouterLink tournament = new RouterLink(match.tournamentName(), TournamentView.class, match.tournamentId());
         Span meta = new Span(date, tournament);
         if (match.stage() != null) {
-            meta.add(new Span(" · " + match.stage()));
+            meta.add(new Span(" · " + TournamentLabels.groupName(match.stage())));
         }
         meta.getStyle()
                 .set("font-size", "var(--lumo-font-size-xs)")
