@@ -1,5 +1,6 @@
 package md.ttm.ui.user;
 
+import md.ttm.i18n.Tr;
 import md.ttm.model.user.AppUser;
 import md.ttm.model.user.Role;
 import md.ttm.service.user.UserForm;
@@ -25,12 +26,12 @@ import java.util.function.Consumer;
  */
 public class UserFormDialog extends Dialog {
 
-    private final TextField lastName = new TextField("Nume");
-    private final TextField firstName = new TextField("Prenume");
-    private final TextField username = new TextField("Nume de utilizator");
-    private final PasswordField password = new PasswordField("Parolă");
+    private final TextField lastName = new TextField(Tr.t("Nume"));
+    private final TextField firstName = new TextField(Tr.t("Prenume"));
+    private final TextField username = new TextField(Tr.t("Nume de utilizator"));
+    private final PasswordField password = new PasswordField(Tr.t("Parolă"));
     private final Select<Role> role = new Select<>();
-    private final Checkbox enabled = new Checkbox("Cont activ (se poate autentifica)");
+    private final Checkbox enabled = new Checkbox(Tr.t("Cont activ (se poate autentifica)"));
 
     private final BeanValidationBinder<UserForm> binder = new BeanValidationBinder<>(UserForm.class);
 
@@ -44,33 +45,33 @@ public class UserFormDialog extends Dialog {
         boolean hasPlayer = creating || user.getPlayer() != null;
         UserForm form = creating ? new UserForm() : UserForm.from(user);
 
-        setHeaderTitle(creating ? "Utilizator nou" : "Editare utilizator");
+        setHeaderTitle(creating ? Tr.t("Utilizator nou") : Tr.t("Editare utilizator"));
         setWidth("min(95vw, 36rem)");
 
-        role.setLabel("Rol");
+        role.setLabel(Tr.t("Rol"));
         role.setItems(Role.values());
         role.setItemLabelGenerator(Role::getLabel);
-        username.setHelperText("Litere latine, cifre și . _ -");
+        username.setHelperText(Tr.t("Litere latine, cifre și . _ -"));
         password.setHelperText(creating
-                ? "Cel puțin " + UserService.MIN_PASSWORD_LENGTH + " caractere"
-                : "Lăsați gol pentru a păstra parola actuală");
+                ? Tr.t("Cel puțin {0} caractere", UserService.MIN_PASSWORD_LENGTH)
+                : Tr.t("Lăsați gol pentru a păstra parola actuală"));
 
         if (hasPlayer) {
-            binder.forField(lastName).asRequired("Introduceți numele").bind("lastName");
-            binder.forField(firstName).asRequired("Introduceți prenumele").bind("firstName");
+            binder.forField(lastName).asRequired(Tr.t("Introduceți numele")).bind("lastName");
+            binder.forField(firstName).asRequired(Tr.t("Introduceți prenumele")).bind("firstName");
         }
-        binder.forField(username).asRequired("Introduceți numele de utilizator").bind("username");
+        binder.forField(username).asRequired(Tr.t("Introduceți numele de utilizator")).bind("username");
         binder.forField(password)
                 .withValidator((value, ctx) -> {
                     if (value == null || value.isEmpty()) {
-                        return creating ? ValidationResult.error("Introduceți parola") : ValidationResult.ok();
+                        return creating ? ValidationResult.error(Tr.t("Introduceți parola")) : ValidationResult.ok();
                     }
                     return value.length() >= UserService.MIN_PASSWORD_LENGTH
                             ? ValidationResult.ok()
-                            : ValidationResult.error("Cel puțin " + UserService.MIN_PASSWORD_LENGTH + " caractere");
+                            : ValidationResult.error(Tr.t("Cel puțin {0} caractere", UserService.MIN_PASSWORD_LENGTH));
                 })
                 .bind("password");
-        binder.forField(role).asRequired("Alegeți rolul").bind("role");
+        binder.forField(role).asRequired(Tr.t("Alegeți rolul")).bind("role");
         binder.forField(enabled).bind("enabled");
         binder.readBean(form);
 
@@ -85,7 +86,7 @@ public class UserFormDialog extends Dialog {
         layout.setColspan(enabled, 2);
         add(layout);
 
-        Button save = new Button("Salvează", e -> {
+        Button save = new Button(Tr.t("Salvează"), e -> {
             if (binder.writeBeanIfValid(form)) {
                 try {
                     onSave.accept(form);
@@ -96,7 +97,7 @@ public class UserFormDialog extends Dialog {
             }
         });
         save.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-        Button cancel = new Button("Anulează", e -> close());
+        Button cancel = new Button(Tr.t("Anulează"), e -> close());
         if (onDelete != null) {
             getFooter().add(DialogButtons.delete(this, onDelete));
         }

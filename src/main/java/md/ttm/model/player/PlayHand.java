@@ -1,11 +1,12 @@
 package md.ttm.model.player;
 
+import md.ttm.i18n.Tr;
 /**
  * Mâna cu care joacă jucătorul.
  */
 public enum PlayHand {
-    RIGHT("Dreapta"),
-    LEFT("Stânga");
+    RIGHT(Tr.key("Dreapta")),
+    LEFT(Tr.key("Stânga"));
 
     private final String label;
 
@@ -14,6 +15,6 @@ public enum PlayHand {
     }
 
     public String getLabel() {
-        return label;
+        return Tr.t(label);
     }
 }

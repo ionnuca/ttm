@@ -1,5 +1,6 @@
 package md.ttm.ui.tournament;
 
+import md.ttm.i18n.Tr;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.dialog.Dialog;
@@ -30,19 +31,18 @@ class StartFinalsDialog extends Dialog {
 
     StartFinalsDialog(List<GroupView> groups, Consumer<Integer> onStart) {
         this.groups = groups;
-        setHeaderTitle("Începe etapa 2");
+        setHeaderTitle(Tr.t("Începe etapa 2"));
         setWidth("min(95vw, 36rem)");
 
         int smallest = groups.stream().mapToInt(g -> g.members().size()).min().orElse(2);
-        qualifiers.setLabel("Calificați din fiecare grupă în Finala 1");
+        qualifiers.setLabel(Tr.t("Calificați din fiecare grupă în Finala 1"));
         qualifiers.setItems(IntStream.range(1, smallest).boxed().toList());
-        qualifiers.setItemLabelGenerator(n -> n == 1 ? "Primul din fiecare grupă" : "Primii " + n + " din fiecare grupă");
+        qualifiers.setItemLabelGenerator(n -> n == 1 ? Tr.t("Primul din fiecare grupă") : Tr.t("Primii {0} din fiecare grupă", n));
         qualifiers.setValue(Math.min(2, smallest - 1));
         qualifiers.setWidthFull();
         qualifiers.addValueChangeListener(e -> updatePreview());
 
-        Paragraph note = new Paragraph("Ambele finale se joacă Round Robin. Jucătorii care s-au întâlnit deja în "
-                + "aceeași grupă nu mai joacă între ei: rezultatul din etapa 1 se preia în tabelul finalei.");
+        Paragraph note = new Paragraph(Tr.t("Ambele finale se joacă Round Robin. Jucătorii care s-au întâlnit deja în aceeași grupă nu mai joacă între ei: rezultatul din etapa 1 se preia în tabelul finalei."));
         note.getStyle()
                 .set("font-size", "var(--lumo-font-size-s)")
                 .set("color", "var(--lumo-secondary-text-color)");
@@ -50,7 +50,7 @@ class StartFinalsDialog extends Dialog {
         add(qualifiers, preview, note);
         updatePreview();
 
-        Button start = new Button("Începe etapa 2", VaadinIcon.PLAY.create(), e -> {
+        Button start = new Button(Tr.t("Începe etapa 2"), VaadinIcon.PLAY.create(), e -> {
             try {
                 onStart.accept(qualifiers.getValue());
                 close();
@@ -59,7 +59,7 @@ class StartFinalsDialog extends Dialog {
             }
         });
         start.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_SUCCESS);
-        getFooter().add(new Button("Anulează", e -> close()), start);
+        getFooter().add(new Button(Tr.t("Anulează"), e -> close()), start);
     }
 
     private void updatePreview() {
@@ -77,8 +77,8 @@ class StartFinalsDialog extends Dialog {
                 (group.standings().get(i).place() <= q ? final1 : final2).add(name);
             }
         }
-        preview.add(line("Finala 1 (" + final1.size() + " jucători): ", final1),
-                line("Finala 2 (" + final2.size() + " jucători): ", final2));
+        preview.add(line(Tr.t("Finala {0} ({1} jucători): ", 1, final1.size()), final1),
+                line(Tr.t("Finala {0} ({1} jucători): ", 2, final2.size()), final2));
     }
 
     private static Div line(String title, List<String> names) {
