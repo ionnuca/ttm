@@ -10,9 +10,10 @@ Aplicație web (instalabilă și pe telefon, ca PWA) pentru gestionarea jucător
 
 | Funcționalitate | Guest (nelogat) | Utilizator logat | Manager de turnee | Administrator |
 |---|:---:|:---:|:---:|:---:|
-| Clasamentul jucătorilor (ordonat după rating, căutare, sortare) | ✅ | ✅ | ✅ | ✅ |
+| Clasamentul jucătorilor (`/jucatori`; ordonat după rating, căutare, sortare) | ✅ | ✅ | ✅ | ✅ |
 | Pagina jucătorului (click în clasament sau în meciuri): date, echipament, statistici (meciuri, victorii, procent, seturi, turnee, cel mai bun rating), evoluția ratingului, toate meciurile lui | ✅ | ✅ | ✅ | ✅ |
-| „Meciuri”: ultimele 200 de meciuri cu rezultat, din toate turneele, cu căutare după jucător sau turneu | ✅ | ✅ | ✅ | ✅ |
+| Pagina principală – „Meciuri”: ultimele 200 de meciuri cu rezultat, în carduri de scor, cu căutare după jucător sau turneu (pictograma și titlul aplicației duc aici) | ✅ | ✅ | ✅ | ✅ |
+| „Ghid de utilizare” (`/ajutor`): roluri, organizarea unui turneu, formate, punctele și departajarea în grupă, premii, formula ratingului | ✅ | ✅ | ✅ | ✅ |
 | Poza de profil (din „Profilul meu”; decupată pătrat și micșorată automat) | – | ✅ propria | ✅ propria | ✅ oricui |
 | Coloana „Telefon” în clasament | – | – | – | ✅ |
 | Adăugare / editare / ștergere jucători | – | – | – | ✅ |
