@@ -1,5 +1,6 @@
 package md.ttm.ui.player;
 
+import md.ttm.i18n.Tr;
 import md.ttm.common.BusinessException;
 import md.ttm.model.player.PlayStyle;
 import md.ttm.model.player.Player;
@@ -28,7 +29,7 @@ import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.value.ValueChangeMode;
-import com.vaadin.flow.router.PageTitle;
+import com.vaadin.flow.router.HasDynamicTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
 
@@ -45,16 +46,21 @@ import java.util.Map;
  * </ul>
  */
 @Route(value = "jucatori", layout = MainLayout.class)
-@PageTitle("Jucători | TTM")
 @AnonymousAllowed
-public class PlayersView extends VerticalLayout {
+public class PlayersView extends VerticalLayout implements HasDynamicTitle {
+
+    @Override
+    public String getPageTitle() {
+        return Tr.t("Jucători") + " | TTM";
+    }
+
 
     private final PlayerService playerService;
     private final boolean admin;
     private final Grid<RankedPlayer> grid = new Grid<>();
     private final TextField search = new TextField();
     private final Span counter = new Span();
-    private final Span tapHint = new Span("Apăsați pe un jucător pentru detalii, statistici și meciuri.");
+    private final Span tapHint = new Span(Tr.t("Apăsați pe un jucător pentru detalii, statistici și meciuri."));
     private final PlayerPhotoService photoService;
     private Map<Long, Long> photoVersions = Map.of();
     private List<RankedPlayer> players = List.of();
@@ -76,7 +82,7 @@ public class PlayersView extends VerticalLayout {
     }
 
     private Component createHeader() {
-        H2 title = new H2("Clasament jucători");
+        H2 title = new H2(Tr.t("Clasament jucători"));
         title.getStyle().set("margin", "0");
         counter.getStyle()
                 .set("color", "var(--lumo-secondary-text-color)")
@@ -87,7 +93,7 @@ public class PlayersView extends VerticalLayout {
     }
 
     private Component createToolbar() {
-        search.setPlaceholder("Caută după nume sau oraș");
+        search.setPlaceholder(Tr.t("Caută după nume sau oraș"));
         search.setPrefixComponent(VaadinIcon.SEARCH.create());
         search.setClearButtonVisible(true);
         search.setValueChangeMode(ValueChangeMode.LAZY);
@@ -100,7 +106,7 @@ public class PlayersView extends VerticalLayout {
         toolbar.getStyle().set("flex-wrap", "wrap");
 
         if (admin) {
-            Button add = new Button("Adaugă jucător", VaadinIcon.PLUS.create(), e -> openEditor(new Player()));
+            Button add = new Button(Tr.t("Adaugă jucător"), VaadinIcon.PLUS.create(), e -> openEditor(new Player()));
             add.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
             toolbar.add(add);
         }
@@ -112,7 +118,7 @@ public class PlayersView extends VerticalLayout {
         grid.addThemeVariants(GridVariant.LUMO_ROW_STRIPES, GridVariant.LUMO_COMPACT);
 
         Grid.Column<RankedPlayer> rank = grid.addColumn(RankedPlayer::rank)
-                .setHeader("Loc")
+                .setHeader(Tr.t("Loc"))
                 .setWidth("4.5rem").setFlexGrow(0)
                 .setTextAlign(ColumnTextAlign.END)
                 .setSortable(true)
@@ -122,7 +128,7 @@ public class PlayersView extends VerticalLayout {
                 (RankedPlayer rp) -> rp.player().getDisplayName(), String.CASE_INSENSITIVE_ORDER);
 
         Grid.Column<RankedPlayer> name = grid.addComponentColumn(this::nameCell)
-                .setHeader("Nume Prenume")
+                .setHeader(Tr.t("Nume Prenume"))
                 .setAutoWidth(true)
                 .setFlexGrow(3)
                 .setSortable(true)
@@ -130,40 +136,40 @@ public class PlayersView extends VerticalLayout {
 
         // Pe telefon: o singură coloană cu numele și, dedesubt, stilul, orașul (și telefonul pentru admin)
         Grid.Column<RankedPlayer> compact = grid.addComponentColumn(this::compactPlayerCell)
-                .setHeader("Jucător")
+                .setHeader(Tr.t("Jucător"))
                 .setFlexGrow(1)
                 .setSortable(true)
                 .setComparator(byName);
         compact.setVisible(false);
 
         Grid.Column<RankedPlayer> style = grid.addComponentColumn(rp -> playStyleBadge(rp.player().getPlayStyle()))
-                .setHeader("Stil de joc")
+                .setHeader(Tr.t("Stil de joc"))
                 .setAutoWidth(true).setFlexGrow(0)
                 .setSortable(true)
                 .setComparator(Comparator.comparing((RankedPlayer rp) -> rp.player().getPlayStyle()));
 
         Grid.Column<RankedPlayer> hand = grid.addColumn(rp -> handLabel(rp.player()))
-                .setHeader("Mâna")
+                .setHeader(Tr.t("Mâna"))
                 .setAutoWidth(true).setFlexGrow(0)
                 .setSortable(true)
                 .setComparator(Comparator.comparing((RankedPlayer rp) -> handLabel(rp.player())));
 
         Grid.Column<RankedPlayer> city = grid.addColumn(rp -> valueOrDash(rp.player().getCity()))
-                .setHeader("Oraș")
+                .setHeader(Tr.t("Oraș"))
                 .setFlexGrow(2)
                 .setSortable(true)
                 .setComparator(Comparator.comparing(
                         (RankedPlayer rp) -> valueOrDash(rp.player().getCity()), String.CASE_INSENSITIVE_ORDER));
 
         grid.addColumn(rp -> rp.player().getRating())
-                .setHeader("Rating")
+                .setHeader(Tr.t("Rating"))
                 .setAutoWidth(true).setFlexGrow(0)
                 .setTextAlign(ColumnTextAlign.END)
                 .setSortable(true)
                 .setComparator(Comparator.comparingInt((RankedPlayer rp) -> rp.player().getRating()));
 
         Grid.Column<RankedPlayer> winLoss = grid.addColumn(rp -> rp.player().getWins() + " / " + rp.player().getLosses())
-                .setHeader("Victorii / Înfrângeri")
+                .setHeader(Tr.t("Victorii / Înfrângeri"))
                 .setAutoWidth(true).setFlexGrow(0)
                 .setTextAlign(ColumnTextAlign.CENTER)
                 .setSortable(true)
@@ -173,11 +179,11 @@ public class PlayersView extends VerticalLayout {
         Grid.Column<RankedPlayer> actions = null;
         if (admin) {
             phone = grid.addColumn(rp -> valueOrDash(rp.player().getPhone()))
-                    .setHeader("Telefon")
+                    .setHeader(Tr.t("Telefon"))
                     .setAutoWidth(true).setFlexGrow(0);
 
             actions = grid.addComponentColumn(this::createActions)
-                    .setHeader("Acțiuni")
+                    .setHeader(Tr.t("Acțiuni"))
                     .setAutoWidth(true).setFlexGrow(0)
                     .setFrozenToEnd(true);
         }
@@ -193,7 +199,7 @@ public class PlayersView extends VerticalLayout {
         Responsive.onNarrowChange(this, narrow -> {
             narrowScreen = narrow;
             rank.setWidth(narrow ? "3rem" : "4.5rem");
-            rank.setHeader(narrow ? "#" : "Loc");
+            rank.setHeader(narrow ? "#" : Tr.t("Loc"));
             if (actionsColumn != null) {
                 actionsColumn.setVisible(!narrow);
             }
@@ -205,7 +211,7 @@ public class PlayersView extends VerticalLayout {
                 phoneColumn.setVisible(!narrow);
             }
             compact.setVisible(narrow);
-            winLoss.setHeader(narrow ? "V / Î" : "Victorii / Înfrângeri");
+            winLoss.setHeader(narrow ? Tr.t("V / Î") : Tr.t("Victorii / Înfrângeri"));
             grid.recalculateColumnWidths();
         });
     }
@@ -262,13 +268,13 @@ public class PlayersView extends VerticalLayout {
 
         Button edit = new Button(VaadinIcon.EDIT.create(), e -> openEditor(player));
         edit.addThemeVariants(ButtonVariant.LUMO_ICON, ButtonVariant.LUMO_TERTIARY);
-        edit.setAriaLabel("Editează " + player.getDisplayName());
-        edit.setTooltipText("Editează");
+        edit.setAriaLabel(Tr.t("Editează {0}", player.getDisplayName()));
+        edit.setTooltipText(Tr.t("Editează"));
 
         Button delete = new Button(VaadinIcon.TRASH.create(), e -> confirmDelete(player));
         delete.addThemeVariants(ButtonVariant.LUMO_ICON, ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_ERROR);
-        delete.setAriaLabel("Șterge " + player.getDisplayName());
-        delete.setTooltipText("Șterge");
+        delete.setAriaLabel(Tr.t("Șterge {0}", player.getDisplayName()));
+        delete.setTooltipText(Tr.t("Șterge"));
 
         HorizontalLayout actions = new HorizontalLayout(edit, delete);
         actions.setSpacing(false);
@@ -279,26 +285,25 @@ public class PlayersView extends VerticalLayout {
         Runnable onDelete = player.getId() == null ? null : () -> confirmDelete(player);
         new PlayerFormDialog(player, edited -> {
             playerService.save(edited);
-            Notifications.success(player.getId() == null ? "Jucător adăugat" : "Modificări salvate");
+            Notifications.success(player.getId() == null ? Tr.t("Jucător adăugat") : Tr.t("Modificări salvate"));
             refresh();
         }, onDelete).open();
     }
 
     private void confirmDelete(Player player) {
         ConfirmDialog dialog = new ConfirmDialog();
-        dialog.setHeader("Ștergeți jucătorul?");
-        dialog.setText(player.getDisplayName() + " va fi șters definitiv, împreună cu contul lui de "
-                + "utilizator, dacă are unul.");
+        dialog.setHeader(Tr.t("Ștergeți jucătorul?"));
+        dialog.setText(Tr.t("{0} va fi șters definitiv, împreună cu contul lui de utilizator, dacă are unul.", player.getDisplayName()));
         dialog.setCancelable(true);
-        dialog.setCancelText("Anulează");
-        dialog.setConfirmText("Șterge");
+        dialog.setCancelText(Tr.t("Anulează"));
+        dialog.setConfirmText(Tr.t("Șterge"));
         dialog.setConfirmButtonTheme("error primary");
         dialog.addConfirmListener(e -> {
             try {
                 playerService.delete(player.getId());
-                Notifications.success("Jucător șters");
+                Notifications.success(Tr.t("Jucător șters"));
             } catch (BusinessException ex) {
-                Notifications.error(ex.getMessage());
+                Notifications.error(ex.getLocalizedMessage());
             }
             refresh();
         });
@@ -318,8 +323,8 @@ public class PlayersView extends VerticalLayout {
                 : players.stream().filter(rp -> matches(rp.player(), term)).toList();
         grid.setItems(filtered);
         counter.setText(filtered.size() == players.size()
-                ? players.size() + " jucători"
-                : filtered.size() + " din " + players.size() + " jucători");
+                ? Tr.t("{0} jucători", players.size())
+                : Tr.t("{0} din {1} jucători", filtered.size(), players.size()));
     }
 
     private static boolean matches(Player player, String term) {

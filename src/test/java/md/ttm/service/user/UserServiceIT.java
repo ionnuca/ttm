@@ -2,6 +2,7 @@ package md.ttm.service.user;
 
 import md.ttm.IntegrationTest;
 import md.ttm.common.BusinessException;
+import md.ttm.i18n.Language;
 import md.ttm.model.user.AppUser;
 import md.ttm.model.user.Role;
 import md.ttm.repository.AppUserRepository;
@@ -58,6 +59,25 @@ class UserServiceIT {
         assertThatThrownBy(() -> userService.register(new RegistrationForm("Ana", "Alta", "ANA", "parola-sigura")))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("deja folosit");
+    }
+
+    @Test
+    @WithMockUser(username = "ana", roles = "USER")
+    void utilizatorulIsiAlegeLimba() {
+        userService.register(new RegistrationForm("Ana", "Ciobanu", "ana", "parola-sigura"));
+        assertThat(userRepository.findByUsername("ana").orElseThrow().getLanguage()).isEqualTo(Language.RO);
+
+        userService.updateOwnLanguage(Language.RU);
+
+        assertThat(userRepository.findByUsername("ana").orElseThrow().getLanguage()).isEqualTo(Language.RU);
+    }
+
+    @Test
+    void mesajeleDeEroareSeTraduc() {
+        BusinessException ex = new BusinessException("Numele de utilizator „{0}” este deja folosit", "ana");
+        assertThat(ex.getMessage()).isEqualTo("Numele de utilizator „ana” este deja folosit");
+        assertThat(md.ttm.i18n.Tr.t(Language.EN, "Numele de utilizator „{0}” este deja folosit", "ana"))
+                .isEqualTo("The username “ana” is already taken");
     }
 
     @Test

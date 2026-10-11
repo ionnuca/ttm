@@ -47,6 +47,10 @@ public class AppUser {
     @Column(name = "enabled", nullable = false)
     private boolean enabled = true;
 
+    /** Limba interfeței (ro / ru / en). */
+    @Column(name = "language", nullable = false, length = 2)
+    private String language = "ro";
+
     @OneToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "player_id", unique = true)
     private Player player;
@@ -100,6 +104,14 @@ public class AppUser {
 
     public void setPasswordHash(String passwordHash) {
         this.passwordHash = passwordHash;
+    }
+
+    public md.ttm.i18n.Language getLanguage() {
+        return md.ttm.i18n.Language.fromCode(language);
+    }
+
+    public void setLanguage(md.ttm.i18n.Language language) {
+        this.language = (language == null ? md.ttm.i18n.Language.RO : language).code();
     }
 
     public Role getRole() {

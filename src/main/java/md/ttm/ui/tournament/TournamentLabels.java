@@ -10,42 +10,66 @@ import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.Locale;
+import md.ttm.i18n.Tr;
 
 /**
  * Textele afișate pentru turnee: date, sume, configurare, stare.
  */
-final class TournamentLabels {
-
-    static final Locale RO = Locale.forLanguageTag("ro");
-    private static final DateTimeFormatter LONG_DATE = DateTimeFormatter.ofPattern("d MMMM yyyy", RO);
-    private static final DateTimeFormatter SHORT_DATE = DateTimeFormatter.ofPattern("dd.MM.yyyy", RO);
+public final class TournamentLabels {
 
     private TournamentLabels() {
     }
 
-    static String longDate(LocalDate date) {
-        return date == null ? "" : LONG_DATE.format(date);
+    /** Data lungă în limba interfeței, de ex. „10 octombrie 2026” / „10 октября 2026” / „10 October 2026”. */
+    public static String longDate(LocalDate date) {
+        return date == null ? "" : DateTimeFormatter.ofPattern("d MMMM yyyy", Tr.locale()).format(date);
     }
 
-    static String shortDate(LocalDate date) {
-        return date == null ? "" : SHORT_DATE.format(date);
+    public static String shortDate(LocalDate date) {
+        return date == null ? "" : DateTimeFormatter.ofPattern("dd.MM.yyyy").format(date);
+    }
+
+    /** Titlul unui premiu, construit în română de serviciu („Locul 2”, „Finala 1 · locul 1”), în limba interfeței. */
+    public static String prizeTitle(String stored) {
+        java.util.regex.Matcher finalPlace = java.util.regex.Pattern.compile("Finala (\\d+) · locul (\\d+)").matcher(stored);
+        if (finalPlace.matches()) {
+            return Tr.t("Finala {0} · locul {1}", finalPlace.group(1), finalPlace.group(2));
+        }
+        java.util.regex.Matcher place = java.util.regex.Pattern.compile("Locul (\\d+)").matcher(stored);
+        if (place.matches()) {
+            return Tr.t("Locul {0}", place.group(1));
+        }
+        return stored;
+    }
+
+    /** Numele unei grupe sau finale, salvat în română („Grupa A”, „Finala 1”), în limba interfeței. */
+    public static String groupName(String stored) {
+        if (stored == null) {
+            return null;
+        }
+        if (stored.startsWith("Grupa ")) {
+            return Tr.t("Grupa {0}", stored.substring("Grupa ".length()));
+        }
+        if (stored.startsWith("Finala ")) {
+            return Tr.t("Finala {0}", stored.substring("Finala ".length()));
+        }
+        return stored;
     }
 
     /** De exemplu „1.250,50 lei” sau „800 lei”. */
-    static String money(BigDecimal amount) {
+    public static String money(BigDecimal amount) {
         if (amount == null) {
             return "—";
         }
-        DecimalFormat format = new DecimalFormat("#,##0.##", DecimalFormatSymbols.getInstance(RO));
-        return format.format(amount) + " lei";
+        DecimalFormat format = new DecimalFormat("#,##0.##", DecimalFormatSymbols.getInstance(Tr.locale()));
+        return Tr.t("{0} lei", format.format(amount));
     }
 
     /** De exemplu „Round robin · best of 5”. */
     static String configuration(Tournament tournament) {
         String format = tournament.getFormat().getLabel();
         if (tournament.isGroupsFormat() && tournament.getGroupCount() != null) {
-            format += " (" + tournament.getGroupCount() + " grupe)";
+            format += " " + Tr.t("({0} grupe)", tournament.getGroupCount());
         }
         return format + " · best of " + tournament.getBestOf();
     }

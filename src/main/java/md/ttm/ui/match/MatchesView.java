@@ -1,5 +1,6 @@
 package md.ttm.ui.match;
 
+import md.ttm.i18n.Tr;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.html.Span;
@@ -9,7 +10,7 @@ import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.value.ValueChangeMode;
-import com.vaadin.flow.router.PageTitle;
+import com.vaadin.flow.router.HasDynamicTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouteAlias;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
@@ -25,9 +26,14 @@ import java.util.Locale;
 /** Ultimele meciuri cu rezultat, din toate turneele, cu căutare după jucător sau turneu. */
 @Route(value = "", layout = MainLayout.class)
 @RouteAlias(value = "meciuri", layout = MainLayout.class)
-@PageTitle("Meciuri | TTM")
 @AnonymousAllowed
-public class MatchesView extends VerticalLayout {
+public class MatchesView extends VerticalLayout implements HasDynamicTitle {
+
+    @Override
+    public String getPageTitle() {
+        return Tr.t("Meciuri") + " | TTM";
+    }
+
 
     static final int LIMIT = 200;
 
@@ -43,13 +49,13 @@ public class MatchesView extends VerticalLayout {
         matches = matchService.findRecent(LIMIT);
         photoVersions = photoService.versions();
 
-        H2 title = new H2("Meciuri");
+        H2 title = new H2(Tr.t("Meciuri"));
         title.getStyle().set("margin", "0");
         counter.getStyle().set("color", "var(--lumo-secondary-text-color)");
         HorizontalLayout header = new HorizontalLayout(title, counter);
         header.setAlignItems(FlexComponent.Alignment.BASELINE);
 
-        search.setPlaceholder("Caută după jucător sau turneu");
+        search.setPlaceholder(Tr.t("Caută după jucător sau turneu"));
         search.setPrefixComponent(VaadinIcon.SEARCH.create());
         search.setClearButtonVisible(true);
         search.setValueChangeMode(ValueChangeMode.LAZY);
@@ -72,13 +78,13 @@ public class MatchesView extends VerticalLayout {
                         || contains(m.tournamentName(), term))
                 .toList();
         counter.setText(matches.isEmpty() ? "" : term.isEmpty()
-                ? "ultimele " + matches.size()
-                : shown.size() + " din ultimele " + matches.size());
+                ? Tr.t("ultimele {0}", matches.size())
+                : Tr.t("{0} din ultimele {1}", shown.size(), matches.size()));
         results.removeAll();
         if (shown.isEmpty()) {
             results.add(new Paragraph(matches.isEmpty()
-                    ? "Încă nu s-a jucat niciun meci."
-                    : "Niciun meci nu corespunde căutării."));
+                    ? Tr.t("Încă nu s-a jucat niciun meci.")
+                    : Tr.t("Niciun meci nu corespunde căutării.")));
         } else {
             results.add(new MatchList(shown, null, photoVersions));
         }

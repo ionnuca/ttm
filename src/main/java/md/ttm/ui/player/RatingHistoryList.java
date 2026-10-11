@@ -1,5 +1,6 @@
 package md.ttm.ui.player;
 
+import md.ttm.i18n.Tr;
 import com.vaadin.flow.component.grid.ColumnTextAlign;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.grid.GridVariant;
@@ -23,11 +24,10 @@ public class RatingHistoryList extends VerticalLayout {
 
     public RatingHistoryList(List<RatingHistory> history, int initialRating) {
         setPadding(false);
-        add(new H3("Evoluția ratingului"));
+        add(new H3(Tr.t("Evoluția ratingului")));
 
         if (history.isEmpty()) {
-            add(new Paragraph("Ratingul se modifică după fiecare turneu încheiat. Ratingul inițial: "
-                    + initialRating + "."));
+            add(new Paragraph(Tr.t("Ratingul se modifică după fiecare turneu încheiat. Ratingul inițial: {0}.", initialRating)));
             return;
         }
 
@@ -35,20 +35,19 @@ public class RatingHistoryList extends VerticalLayout {
         grid.addThemeVariants(GridVariant.LUMO_ROW_STRIPES, GridVariant.LUMO_COMPACT);
         grid.setAllRowsVisible(true);
         grid.addColumn(h -> DATE.format(h.getTournament().getTournamentDate()))
-                .setHeader("Data").setAutoWidth(true).setFlexGrow(0);
+                .setHeader(Tr.t("Data")).setAutoWidth(true).setFlexGrow(0);
         grid.addComponentColumn(h -> new RouterLink(h.getTournament().getName(), TournamentView.class,
                         h.getTournament().getId()))
-                .setHeader("Turneu").setFlexGrow(2);
+                .setHeader(Tr.t("Turneu")).setFlexGrow(2);
         grid.addColumn(RatingHistory::getRatingBefore)
-                .setHeader("Înainte").setAutoWidth(true).setFlexGrow(0).setTextAlign(ColumnTextAlign.END);
+                .setHeader(Tr.t("Înainte")).setAutoWidth(true).setFlexGrow(0).setTextAlign(ColumnTextAlign.END);
         grid.addColumn(RatingHistory::getRatingAfter)
-                .setHeader("După").setAutoWidth(true).setFlexGrow(0).setTextAlign(ColumnTextAlign.END);
+                .setHeader(Tr.t("După")).setAutoWidth(true).setFlexGrow(0).setTextAlign(ColumnTextAlign.END);
         grid.addComponentColumn(h -> change(h.getChange()))
-                .setHeader("Schimbare").setAutoWidth(true).setFlexGrow(0).setTextAlign(ColumnTextAlign.END);
+                .setHeader(Tr.t("Schimbare")).setAutoWidth(true).setFlexGrow(0).setTextAlign(ColumnTextAlign.END);
         grid.setItems(history);
 
-        Span note = new Span("Ratingul inițial: " + initialRating + ". Calcul Elo: K = 40 în primele 30 de meciuri, "
-                + "apoi 20; victoriile tehnice nu modifică ratingul.");
+        Span note = new Span(Tr.t("Ratingul inițial: {0}. Calcul Elo: K = 40 în primele 30 de meciuri, apoi 20; victoriile tehnice nu modifică ratingul.", initialRating));
         note.getStyle()
                 .set("font-size", "var(--lumo-font-size-s)")
                 .set("color", "var(--lumo-secondary-text-color)");

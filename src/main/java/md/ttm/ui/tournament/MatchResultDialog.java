@@ -1,5 +1,6 @@
 package md.ttm.ui.tournament;
 
+import md.ttm.i18n.Tr;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import com.vaadin.flow.component.dialog.Dialog;
@@ -28,10 +29,10 @@ import java.util.stream.IntStream;
  */
 class MatchResultDialog extends Dialog {
 
-    private final RadioButtonGroup<MatchOutcome> outcome = new RadioButtonGroup<>("Rezultat");
+    private final RadioButtonGroup<MatchOutcome> outcome = new RadioButtonGroup<>(Tr.t("Rezultat"));
     private final Select<Integer> setsA = new Select<>();
     private final Select<Integer> setsB = new Select<>();
-    private final RadioButtonGroup<TournamentParticipant> walkoverWinner = new RadioButtonGroup<>("Câștigă tehnic");
+    private final RadioButtonGroup<TournamentParticipant> walkoverWinner = new RadioButtonGroup<>(Tr.t("Câștigă tehnic"));
     private final Span error = new Span();
     private final int setsToWin;
 
@@ -42,17 +43,17 @@ class MatchResultDialog extends Dialog {
         this.setsToWin = setsToWin;
         TournamentParticipant a = match.getParticipantA();
         TournamentParticipant b = match.getParticipantB();
-        setHeaderTitle("Rezultatul meciului");
+        setHeaderTitle(Tr.t("Rezultatul meciului"));
         setWidth("min(95vw, 32rem)");
 
-        Span subtitle = new Span("Turul " + match.getRoundNo() + " · best of " + (setsToWin * 2 - 1)
-                + " (câștigă primul la " + setsToWin + " seturi)");
+        Span subtitle = new Span(Tr.t("Turul {0} · best of {1} (câștigă primul la {2} seturi)",
+                match.getRoundNo(), setsToWin * 2 - 1, setsToWin));
         subtitle.getStyle()
                 .set("color", "var(--lumo-secondary-text-color)")
                 .set("font-size", "var(--lumo-font-size-s)");
 
         outcome.setItems(MatchOutcome.values());
-        outcome.setItemLabelGenerator(o -> o == MatchOutcome.NORMAL ? "Pe seturi" : "Victorie tehnică (W)");
+        outcome.setItemLabelGenerator(o -> o == MatchOutcome.NORMAL ? Tr.t("Pe seturi") : Tr.t("Victorie tehnică (W)"));
 
         // --- scor pe seturi ---
         List<Integer> options = IntStream.rangeClosed(0, setsToWin).boxed().toList();
@@ -60,8 +61,8 @@ class MatchResultDialog extends Dialog {
         setsB.setItems(options);
         setsA.setWidth("5rem");
         setsB.setWidth("5rem");
-        setsA.setAriaLabel("Seturi " + a.getPlayer().getDisplayName());
-        setsB.setAriaLabel("Seturi " + b.getPlayer().getDisplayName());
+        setsA.setAriaLabel(Tr.t("Seturi {0}", a.getPlayer().getDisplayName()));
+        setsB.setAriaLabel(Tr.t("Seturi {0}", b.getPlayer().getDisplayName()));
         HorizontalLayout score = new HorizontalLayout(playerName(a, true), setsA, new Span(":"), setsB, playerName(b, false));
         score.setAlignItems(FlexComponent.Alignment.CENTER);
         score.setWidthFull();
@@ -85,8 +86,7 @@ class MatchResultDialog extends Dialog {
         // --- victorie tehnică ---
         walkoverWinner.setItems(a, b);
         walkoverWinner.setItemLabelGenerator(p -> p.getPlayer().getDisplayName());
-        Paragraph walkoverNote = new Paragraph("Adversarul a refuzat jocul. Câștigătorul primește 2 puncte, "
-                + "celălalt 0; la seturi se socotește " + setsToWin + ":0.");
+        Paragraph walkoverNote = new Paragraph(Tr.t("Adversarul a refuzat jocul. Câștigătorul primește 2 puncte, celălalt 0; la seturi se socotește {0}:0.", setsToWin));
         walkoverNote.getStyle()
                 .set("color", "var(--lumo-secondary-text-color)")
                 .set("font-size", "var(--lumo-font-size-s)")
@@ -119,7 +119,7 @@ class MatchResultDialog extends Dialog {
         content.setPadding(false);
         add(content);
 
-        Button save = new Button("Salvează", e -> {
+        Button save = new Button(Tr.t("Salvează"), e -> {
             MatchResultForm result = buildResult();
             if (result == null) {
                 return;
@@ -133,7 +133,7 @@ class MatchResultDialog extends Dialog {
         });
         save.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         if (onClear != null && match.isPlayed()) {
-            Button clear = new Button("Șterge rezultatul", e -> {
+            Button clear = new Button(Tr.t("Șterge rezultatul"), e -> {
                 try {
                     onClear.run();
                     close();
@@ -145,13 +145,13 @@ class MatchResultDialog extends Dialog {
             clear.getStyle().set("margin-inline-end", "auto");
             getFooter().add(clear);
         }
-        getFooter().add(new Button("Anulează", e -> close()), save);
+        getFooter().add(new Button(Tr.t("Anulează"), e -> close()), save);
     }
 
     private MatchResultForm buildResult() {
         if (outcome.getValue() == MatchOutcome.WALKOVER) {
             if (walkoverWinner.getValue() == null) {
-                error.setText("Alegeți jucătorul care câștigă tehnic.");
+                error.setText(Tr.t("Alegeți jucătorul care câștigă tehnic."));
                 return null;
             }
             return MatchResultForm.walkover(walkoverWinner.getValue().getId());
@@ -161,7 +161,7 @@ class MatchResultDialog extends Dialog {
         boolean valid = a != null && b != null
                 && ((a == setsToWin && b < setsToWin) || (b == setsToWin && a < setsToWin));
         if (!valid) {
-            error.setText("Câștigătorul trebuie să aibă " + setsToWin + " seturi, iar adversarul mai puține.");
+            error.setText(Tr.t("Câștigătorul trebuie să aibă {0} seturi, iar adversarul mai puține.", setsToWin));
             return null;
         }
         return MatchResultForm.sets(a, b);

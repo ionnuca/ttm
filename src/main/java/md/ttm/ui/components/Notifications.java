@@ -1,5 +1,6 @@
 package md.ttm.ui.components;
 
+import md.ttm.i18n.Tr;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.notification.NotificationVariant;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
@@ -25,8 +26,8 @@ public final class Notifications {
     /** Mesajul afișat când salvarea eșuează; tratează separat editarea simultană. */
     public static String saveError(RuntimeException ex) {
         if (ex instanceof ObjectOptimisticLockingFailureException) {
-            return "Datele au fost modificate între timp de altcineva. Reîncărcați pagina și încercați din nou.";
+            return Tr.t("Datele au fost modificate între timp de altcineva. Reîncărcați pagina și încercați din nou.");
         }
-        return ex.getMessage();
+        return ex.getLocalizedMessage();
     }
 }

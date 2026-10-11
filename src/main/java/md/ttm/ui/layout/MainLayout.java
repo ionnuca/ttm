@@ -1,9 +1,11 @@
 package md.ttm.ui.layout;
 
+import md.ttm.i18n.Tr;
 import com.vaadin.flow.component.html.Image;
 import com.vaadin.flow.router.RouterLink;
 import md.ttm.ui.help.HelpView;
 import md.ttm.model.user.AppUser;
+import md.ttm.ui.components.LanguageSwitcher;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.info.BuildProperties;
 import md.ttm.model.user.Role;
@@ -58,7 +60,7 @@ public class MainLayout extends AppLayout {
 
     /** Titlul din bara de sus; duce la pagina principală (meciurile). */
     private static Component createTitle() {
-        RouterLink title = new RouterLink("Tenis de masă", MatchesView.class);
+        RouterLink title = new RouterLink(Tr.t("Tenis de masă"), MatchesView.class);
         title.getStyle()
                 .set("font-size", "var(--lumo-font-size-l)")
                 .set("font-weight", "600")
@@ -80,20 +82,20 @@ public class MainLayout extends AppLayout {
                 .set("color", "var(--lumo-primary-text-color)");
         RouterLink logo = new RouterLink(MatchesView.class);
         logo.add(icon, name);
-        logo.getElement().setAttribute("aria-label", "TTM – pagina principală");
+        logo.getElement().setAttribute("aria-label", Tr.t("TTM – pagina principală"));
         logo.getStyle()
                 .set("display", "inline-flex")
                 .set("align-items", "center")
                 .set("gap", "var(--lumo-space-s)")
                 .set("text-decoration", "none")
                 .set("align-self", "flex-start");
-        Span subtitle = new Span("Clasament și turnee");
+        Span subtitle = new Span(Tr.t("Clasament și turnee"));
         subtitle.getStyle()
                 .set("font-size", "var(--lumo-font-size-s)")
                 .set("color", "var(--lumo-secondary-text-color)");
         Div header = new Div(logo, subtitle);
         if (version != null) {
-            Span versionLabel = new Span("Versiunea " + version);
+            Span versionLabel = new Span(Tr.t("Versiunea {0}", version));
             versionLabel.getStyle()
                     .set("font-size", "var(--lumo-font-size-xs)")
                     .set("color", "var(--lumo-tertiary-text-color)");
@@ -108,17 +110,17 @@ public class MainLayout extends AppLayout {
 
     private static SideNav createNavigation() {
         SideNav nav = new SideNav();
-        nav.addItem(new SideNavItem("Meciuri", MatchesView.class, VaadinIcon.LIST_UL.create()));
-        nav.addItem(new SideNavItem("Jucători", PlayersView.class, VaadinIcon.TROPHY.create()));
-        nav.addItem(new SideNavItem("Turnee", TournamentsView.class, VaadinIcon.FLAG_CHECKERED.create()));
+        nav.addItem(new SideNavItem(Tr.t("Meciuri"), MatchesView.class, VaadinIcon.LIST_UL.create()));
+        nav.addItem(new SideNavItem(Tr.t("Jucători"), PlayersView.class, VaadinIcon.TROPHY.create()));
+        nav.addItem(new SideNavItem(Tr.t("Turnee"), TournamentsView.class, VaadinIcon.FLAG_CHECKERED.create()));
         if (SecurityUtils.isAuthenticated()) {
-            nav.addItem(new SideNavItem("Profilul meu", ProfileView.class, VaadinIcon.USER.create()));
+            nav.addItem(new SideNavItem(Tr.t("Profilul meu"), ProfileView.class, VaadinIcon.USER.create()));
         }
         if (SecurityUtils.isAdmin()) {
-            nav.addItem(new SideNavItem("Utilizatori", UsersView.class, VaadinIcon.USERS.create()));
-            nav.addItem(new SideNavItem("Setări", SettingsView.class, VaadinIcon.COG.create()));
+            nav.addItem(new SideNavItem(Tr.t("Utilizatori"), UsersView.class, VaadinIcon.USERS.create()));
+            nav.addItem(new SideNavItem(Tr.t("Setări"), SettingsView.class, VaadinIcon.COG.create()));
         }
-        nav.addItem(new SideNavItem("Ghid de utilizare", HelpView.class, VaadinIcon.QUESTION_CIRCLE_O.create()));
+        nav.addItem(new SideNavItem(Tr.t("Ghid de utilizare"), HelpView.class, VaadinIcon.QUESTION_CIRCLE_O.create()));
         return nav;
     }
 
@@ -144,16 +146,16 @@ public class MainLayout extends AppLayout {
                 user.setText(name + " · " + Role.TOURNAMENT_MANAGER.getLabel());
             }
             hiddenWhenNarrow.add(user);
-            Button logout = new Button("Ieșire", VaadinIcon.SIGN_OUT.create(), e -> authenticationContext.logout());
+            Button logout = new Button(Tr.t("Ieșire"), VaadinIcon.SIGN_OUT.create(), e -> authenticationContext.logout());
             logout.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL);
-            area.add(user, logout);
+            area.add(new LanguageSwitcher(userService), user, logout);
         } else {
-            Button login = new Button("Autentificare", VaadinIcon.SIGN_IN.create(),
+            Button login = new Button(Tr.t("Autentificare"), VaadinIcon.SIGN_IN.create(),
                     e -> e.getSource().getUI().ifPresent(ui -> ui.navigate(LoginView.class)));
             login.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_SMALL);
-            area.add(login);
+            area.add(new LanguageSwitcher(userService), login);
             if (userService.isRegistrationEnabled()) {
-                Button register = new Button("Cont nou",
+                Button register = new Button(Tr.t("Cont nou"),
                         e -> e.getSource().getUI().ifPresent(ui -> ui.navigate(RegisterView.class)));
                 register.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL);
                 hiddenWhenNarrow.add(register);

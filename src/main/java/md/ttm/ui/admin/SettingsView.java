@@ -1,5 +1,6 @@
 package md.ttm.ui.admin;
 
+import md.ttm.i18n.Tr;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -11,7 +12,7 @@ import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
-import com.vaadin.flow.router.PageTitle;
+import com.vaadin.flow.router.HasDynamicTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.streams.DownloadHandler;
 import jakarta.annotation.security.RolesAllowed;
@@ -28,16 +29,21 @@ import java.time.ZonedDateTime;
 
 /** Setări și acțiuni ale administratorului. Deocamdată: backup-ul bazei de date. */
 @Route(value = "setari", layout = MainLayout.class)
-@PageTitle("Setări | TTM")
 @RolesAllowed("ADMIN")
-public class SettingsView extends VerticalLayout {
+public class SettingsView extends VerticalLayout implements HasDynamicTitle {
+
+    @Override
+    public String getPageTitle() {
+        return Tr.t("Setări") + " | TTM";
+    }
+
 
     public SettingsView(BackupService backupService, ObjectProvider<BuildProperties> buildProperties) {
         setMaxWidth("44rem");
-        H2 title = new H2("Setări");
+        H2 title = new H2(Tr.t("Setări"));
         title.getStyle().set("margin-bottom", "0");
         BuildProperties build = buildProperties.getIfAvailable();
-        Span version = new Span("Versiunea aplicației: " + (build != null ? build.getVersion() : "necunoscută"));
+        Span version = new Span(Tr.t("Versiunea aplicației: {0}", build != null ? build.getVersion() : Tr.t("necunoscută")));
         version.getStyle().set("color", "var(--lumo-secondary-text-color)");
         add(title, version, createBackupCard(backupService));
     }
@@ -53,26 +59,23 @@ public class SettingsView extends VerticalLayout {
                 throw new UncheckedIOException(e);
             }
         };
-        Button button = new Button("Descarcă backup-ul", VaadinIcon.DOWNLOAD.create());
+        Button button = new Button(Tr.t("Descarcă backup-ul"), VaadinIcon.DOWNLOAD.create());
         button.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
         Anchor download = new Anchor(handler, "");
         download.getElement().setAttribute("download", true);
         download.add(button);
 
-        Paragraph text = new Paragraph("Descarcă toate datele aplicației, așa cum sunt acum: jucătorii, conturile, "
-                + "turneele, rezultatele, istoricul ratingului și pozele. Fișierul SQL se poate restaura pe server "
-                + "cu psql și înlocuiește atunci toate datele existente.");
-        Span restore = new Span("Restaurare pe server: docker compose exec -T db psql -U ttm -d ttm < <fișier>.sql");
+        Paragraph text = new Paragraph(Tr.t("Descarcă toate datele aplicației, așa cum sunt acum: jucătorii, conturile, turneele, rezultatele, istoricul ratingului și pozele. Fișierul SQL se poate restaura pe server cu psql și înlocuiește atunci toate datele existente."));
+        Span restore = new Span(Tr.t("Restaurare pe server:") + " docker compose exec -T db psql -U ttm -d ttm < " + Tr.t("<fișier>") + ".sql");
         restore.getStyle()
                 .set("font-family", "var(--lumo-font-family-monospace, monospace)")
                 .set("font-size", "var(--lumo-font-size-xs)")
                 .set("color", "var(--lumo-secondary-text-color)")
                 .set("overflow-wrap", "anywhere");
-        Span note = new Span("Serverul face oricum un backup automat în fiecare noapte (03:30), păstrat 14 zile. "
-                + "Fișierul descărcat conține parolele criptate ale utilizatorilor: păstrați-l în siguranță.");
+        Span note = new Span(Tr.t("Serverul face oricum un backup automat în fiecare noapte (03:30), păstrat 14 zile. Fișierul descărcat conține parolele criptate ale utilizatorilor: păstrați-l în siguranță."));
         note.getStyle().set("font-size", "var(--lumo-font-size-s)").set("color", "var(--lumo-secondary-text-color)");
 
-        Div card = new Div(new H3("Backup bază de date"), text, download, restore, note);
+        Div card = new Div(new H3(Tr.t("Backup bază de date")), text, download, restore, note);
         card.getStyle()
                 .set("display", "flex")
                 .set("flex-direction", "column")

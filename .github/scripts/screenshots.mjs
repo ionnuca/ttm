@@ -47,9 +47,9 @@ async function check(description, fn) {
 async function login(page, username, password) {
   await page.goto(`${BASE}/login`);
   await settle(page);
-  await page.getByLabel('Nume de utilizator').fill(username);
-  await page.getByLabel('Parolă', { exact: true }).fill(password);
-  await page.getByLabel('Parolă', { exact: true }).press('Enter');
+  await page.getByLabel(/^(Nume de utilizator|Username|Логин)$/).fill(username);
+  await page.getByLabel(/^(Parolă|Password|Пароль)$/).fill(password);
+  await page.getByLabel(/^(Parolă|Password|Пароль)$/).press('Enter');
   await page.waitForURL(`${BASE}/`, { timeout: 15000 });
   await settle(page);
 }
@@ -491,6 +491,67 @@ await check('telefon: admin utilizatori', async () => {
   await page.goto(`${BASE}/utilizatori`);
   await expectText(page, 'jucator');
   await shot(page, '14-telefon-admin-utilizatori');
+});
+await ctx.close();
+
+// ---------- Limba interfeței ----------
+async function chooseLanguage(page, code) {
+  await page.locator('[slot^="navbar"] vaadin-select').first().click();
+  await Promise.all([
+    page.waitForEvent('load', { timeout: 15000 }),
+    page.locator('vaadin-select-item', { hasText: code }).first().click(),
+  ]);
+  await settle(page);
+}
+ctx = await browser.newContext(desktop);
+page = await ctx.newPage();
+await check('limba: vizitatorul trece pe rusă', async () => {
+  await page.goto(`${BASE}/`);
+  await expectText(page, 'ultimele');
+  await chooseLanguage(page, 'RU');
+  await expectText(page, 'последние');
+  await expectText(page, 'Настольный теннис');
+  await shot(page, '40-limba-ru-meciuri');
+  await page.goto(`${BASE}/jucatori`);
+  await expectText(page, 'Рейтинг игроков');
+  await shot(page, '41-limba-ru-jucatori');
+  await page.goto(`${BASE}/ajutor`);
+  await expectText(page, 'Рейтинг (Эло)');
+  await shot(page, '42-limba-ru-ghid');
+});
+await check('limba: vizitatorul trece pe engleză', async () => {
+  await chooseLanguage(page, 'EN');
+  await expectText(page, 'Rating (Elo)');
+  await page.goto(`${BASE}/turnee`);
+  await expectText(page, 'Tournaments');
+  await page.getByText('Liga de iarnă').first().click();
+  await expectText(page, 'Final 1');
+  await shot(page, '43-limba-en-turneu');
+});
+await check('limba: utilizatorul o salvează în cont', async () => {
+  await login(page, 'jucator', 'jucator123');
+  await page.goto(`${BASE}/profil`);
+  // limba contului (română) are prioritate față de cookie
+  await expectText(page, 'Limba interfeței');
+  await page.locator('vaadin-select').filter({ hasText: 'Limba interfeței' }).click();
+  await Promise.all([
+    page.waitForEvent('load', { timeout: 15000 }),
+    page.locator('vaadin-select-item', { hasText: 'English' }).first().click(),
+  ]);
+  await settle(page);
+  await expectText(page, 'My profile');
+  await shot(page, '44-limba-en-profil');
+  await ctx.close();
+  // alt browser, fără cookie: după autentificare limba vine din cont
+  ctx = await browser.newContext(desktop);
+  page = await ctx.newPage();
+  await page.goto(`${BASE}/`);
+  await expectText(page, 'ultimele');
+  await login(page, 'jucator', 'jucator123');
+  await page.goto(`${BASE}/`);
+  await expectText(page, 'latest');
+  await chooseLanguage(page, 'RO');
+  await expectText(page, 'ultimele');
 });
 await ctx.close();
 

@@ -24,7 +24,7 @@ public class RegistrationForm {
 
     @NotBlank(message = "Introduceți parola")
     @Size(min = UserService.MIN_PASSWORD_LENGTH, max = 100,
-            message = "Parola trebuie să aibă cel puțin " + UserService.MIN_PASSWORD_LENGTH + " caractere")
+            message = "Parola trebuie să aibă cel puțin {min} caractere")
     private String password = "";
 
     public RegistrationForm() {

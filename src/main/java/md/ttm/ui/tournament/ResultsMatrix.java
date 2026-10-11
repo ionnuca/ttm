@@ -1,5 +1,6 @@
 package md.ttm.ui.tournament;
 
+import md.ttm.i18n.Tr;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.dom.Element;
 import md.ttm.model.rating.RatingHistory;
@@ -40,11 +41,11 @@ class ResultsMatrix extends Div {
                 .set("font-size", "var(--lumo-font-size-s)");
 
         Element head = new Element("tr");
-        head.appendChild(headerCell("Jucător").setAttribute("style", headerStyle() + STICKY + "text-align:left;"));
+        head.appendChild(headerCell(Tr.t("Jucător")).setAttribute("style", headerStyle() + STICKY + "text-align:left;"));
         for (int i = 1; i <= participants.size(); i++) {
             head.appendChild(headerCell(String.valueOf(i)));
         }
-        head.appendChild(headerCell("Seturi"), headerCell("Puncte"), headerCell("Loc"));
+        head.appendChild(headerCell(Tr.t("Seturi")), headerCell(Tr.t("Puncte")), headerCell(Tr.t("Loc")));
         table.appendChild(new Element("thead").appendChild(head));
 
         Element body = new Element("tbody");
@@ -96,10 +97,10 @@ class ResultsMatrix extends Div {
                 .set("font-size", "var(--lumo-font-size-xs)")
                 .set("color", "var(--lumo-secondary-text-color)");
         if (change == null) {
-            rating.setText("rating " + participant.getSeedRating());
+            rating.setText(Tr.t("rating {0}", participant.getSeedRating()));
         } else {
             Element values = new Element("span");
-            values.setText("rating " + change.getRatingBefore() + " → " + change.getRatingAfter() + " ");
+            values.setText(Tr.t("rating {0}", change.getRatingBefore() + " → " + change.getRatingAfter()) + " ");
             Element delta = new Element("span");
             int d = change.getChange();
             delta.setText(d > 0 ? "+" + d : String.valueOf(d));

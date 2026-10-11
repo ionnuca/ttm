@@ -1,0 +1,104 @@
+<h2>User guide</h2>
+<p>TTM keeps track of table tennis players, tournaments, matches and each player's rating.
+The home page shows the latest matches; the overall rankings are under <b>Players</b>.</p>
+
+<h3>1. Accounts and roles</h3>
+<table>
+  <tr><th>Role</th><th>What it can do</th></tr>
+  <tr><td>Visitor (no account)</td><td>Sees the matches, rankings, player pages and tournaments.</td></tr>
+  <tr><td>User</td><td>Creates an account with “Sign up” (every account is also a player, with an initial rating of 1000).
+      Signs up for tournaments, enters the results of their own matches, completes their profile and photo.</td></tr>
+  <tr><td>Tournament manager</td><td>Creates and runs tournaments: registration, start, stage 2, finishing, correcting any result.</td></tr>
+  <tr><td>Administrator</td><td>Everything the manager does, plus users and roles, players (including the initial rating) and data backups.</td></tr>
+</table>
+
+<h3>2. How to run a tournament</h3>
+<ol>
+  <li><b>Creating.</b> The manager (or administrator) presses “New tournament” under <b>Tournaments</b> and gives only the name and date. Registration opens immediately.</li>
+  <li><b>Registration.</b> Players with an account press “Sign up for it” on the tournament page; the organiser can add or remove anyone.</li>
+  <li><b>Starting.</b> “Start tournament” closes registration. At that point you choose:
+    <ul>
+      <li>the type: <b>Round robin</b> or <b>Groups + finals</b> (with the number of groups);</li>
+      <li>the number of sets: best of 3, 5 or 7 (first to win 2, 3 or 4 sets);</li>
+      <li>optionally, a <b>commercial tournament</b>: the entry fee and the number of winners.</li>
+    </ul>
+    The app forms the groups and generates all the matches, round by round.</li>
+  <li><b>Results.</b> Each match gets a set score (e.g. 3:1) or <b>W – walkover</b>, when the opponent does not play.
+      Results are entered by the two players or by the organiser.</li>
+  <li><b>Finishing.</b> After the last result the tournament becomes “Finished” and the ratings are recalculated.
+      The organiser can also finish it manually: matches without a result stay “unplayed” and count neither for the standings nor for the rating.
+      Results can be corrected after the end as well; the rating is then recalculated automatically.</li>
+</ol>
+
+<h3>3. Tournament formats</h3>
+<p><b>Round robin</b> – everybody plays everybody, in a single group ordered by rating.</p>
+<p><b>Groups + finals</b> – in two stages:</p>
+<ol>
+  <li><b>Stage 1 – groups.</b> Players are distributed by rating in a “snake” (A, B, C, C, B, A, …), so the groups are balanced. Each group plays round robin.</li>
+  <li><b>Stage 2 – finals.</b> After the groups, the organiser chooses how many players from each group go to <b>Final 1</b>; the others play <b>Final 2</b>.
+      Both finals are played round robin, but players who already met in the group do not play again: the stage 1 result is carried over.
+      Once stage 2 has started, the group results can no longer be changed.</li>
+</ol>
+
+<h3>4. Points and group standings</h3>
+<table>
+  <tr><th>Result</th><th>Points</th></tr>
+  <tr><td>Win</td><td>2</td></tr>
+  <tr><td>Loss (match played)</td><td>1</td></tr>
+  <tr><td>Walkover loss (no-show)</td><td>0</td></tr>
+</table>
+<p>A walkover counts in sets as a clean-sheet win (3:0 in best of 5).
+In the group table each match is shown as a fraction: points on top, the set score below.</p>
+<p>Places are decided by points. When points are equal, the following decide, in order:</p>
+<ol>
+  <li>points in the head-to-head matches between the tied players;</li>
+  <li>the ratio of sets won / lost in those head-to-head matches;</li>
+  <li>the ratio of sets won / lost in all group matches;</li>
+  <li>the position in the group (the rating at the start of the tournament).</li>
+</ol>
+
+<h3>5. Commercial tournaments and prizes</h3>
+<p>The prize pool is the entry fee × the number of participants. It is split as follows:</p>
+<table>
+  <tr><th>Winners</th><th>Split</th></tr>
+  <tr><td>1</td><td>100%</td></tr>
+  <tr><td>2</td><td>60% / 40%</td></tr>
+  <tr><td>3</td><td>50% / 30% / 20%</td></tr>
+</table>
+<p>Each prize is rounded to the nearest multiple of 50 lei (for example 420 → 400, 280 → 300, 225 → 250),
+so the prize total may differ slightly from the pool.</p>
+<p>In <b>Groups + finals</b>, the winner of Final 2 receives the entry fee, and the rest of the pool is shared
+among the Final 1 winners according to the table above. Such a tournament can be finished manually only after stage 2 has started.</p>
+
+<h3>6. Rating (Elo)</h3>
+<p>Every player has a rating, which starts from the initial rating (1000 by default) and changes after each finished tournament.
+For each match played, the win probability is computed first, then the change:</p>
+<div class="formula">E<sub>A</sub> = 1 / (1 + 10<sup>(R<sub>B</sub> − R<sub>A</sub>) / 400</sup>)
+ΔR<sub>A</sub> = K × (S<sub>A</sub> − E<sub>A</sub>)</div>
+<ul>
+  <li><b>R<sub>A</sub>, R<sub>B</sub></b> – the two players' ratings at the <b>start of the tournament</b> (all matches of a tournament use the same ratings, so the order of the matches does not matter);</li>
+  <li><b>S<sub>A</sub></b> – 1 for a win, 0 for a loss (the set score does not matter);</li>
+  <li><b>K</b> – 40 while the player has fewer than 30 rated matches, then 20 (set at the start of each tournament);</li>
+  <li>a rating difference greater than 400 points counts as 400;</li>
+  <li>the changes from all matches of the tournament are added up and the total is rounded to a whole number;</li>
+  <li>walkovers do not change the rating (but they count for the group standings);</li>
+  <li>the rating cannot drop below 0.</li>
+</ul>
+<p><b>Example.</b> Ana (1500) beats Elena (1400), both with K = 40:</p>
+<div class="formula">E<sub>Ana</sub> = 1 / (1 + 10<sup>−100/400</sup>) = 0.64     ΔR<sub>Ana</sub> = 40 × (1 − 0.64) = +14
+E<sub>Elena</sub> = 0.36                              ΔR<sub>Elena</sub> = 40 × (0 − 0.36) = −14</div>
+<p>Had Elena won, the change would have been ±26: an unexpected win brings more points.</p>
+<p class="note">The rating is recalculated in chronological order, from the initial rating, over all finished tournaments.
+That is why a correction in an older tournament is also reflected in the tournaments after it.</p>
+
+<h3>7. Matches, players and profile</h3>
+<ul>
+  <li><b>Matches</b> (home page): the latest matches with a result, searchable by player or tournament. Next to the name is the rating change, once the tournament has finished.</li>
+  <li><b>Player page</b> (press a name): the ranking position, statistics (matches, wins, percentage, sets, tournaments, best rating), equipment, rating history and all their matches.</li>
+  <li><b>My profile</b>: personal details, playing hand, equipment, password, photo and language. The photo is cropped square for lists and can be viewed larger by pressing it.</li>
+  <li><b>Language</b>: Romanian, Russian or English, from the <b>RO / RU / EN</b> switcher in the top bar. For users with an account the chosen language is saved and used every time they sign in.</li>
+</ul>
+
+<h3>8. The app on your phone</h3>
+<p>TTM can be used like a regular app. On iPhone: in Safari, the <b>Share</b> button → <b>Add to Home Screen</b>.
+On Android: in Chrome, the <b>⋮</b> menu → <b>Add to Home screen</b>.</p>

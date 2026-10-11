@@ -1,5 +1,6 @@
 package md.ttm.ui.user;
 
+import md.ttm.i18n.Tr;
 import md.ttm.common.BusinessException;
 import md.ttm.model.user.AppUser;
 import md.ttm.service.user.UserService;
@@ -21,7 +22,7 @@ import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.value.ValueChangeMode;
-import com.vaadin.flow.router.PageTitle;
+import com.vaadin.flow.router.HasDynamicTitle;
 import com.vaadin.flow.router.Route;
 import jakarta.annotation.security.RolesAllowed;
 
@@ -35,9 +36,14 @@ import java.util.Locale;
  * Administrarea utilizatorilor (jucătorilor cu cont): listă completă, adăugare, editare, ștergere.
  */
 @Route(value = "utilizatori", layout = MainLayout.class)
-@PageTitle("Utilizatori | TTM")
 @RolesAllowed("ADMIN")
-public class UsersView extends VerticalLayout {
+public class UsersView extends VerticalLayout implements HasDynamicTitle {
+
+    @Override
+    public String getPageTitle() {
+        return Tr.t("Utilizatori") + " | TTM";
+    }
+
 
     private static final ZoneId ZONE = ZoneId.of("Europe/Chisinau");
     private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
@@ -46,7 +52,7 @@ public class UsersView extends VerticalLayout {
     private final Grid<AppUser> grid = new Grid<>();
     private final TextField search = new TextField();
     private final Span counter = new Span();
-    private final Span tapHint = new Span("Atingeți un cont pentru a-l edita sau șterge.");
+    private final Span tapHint = new Span(Tr.t("Atingeți un cont pentru a-l edita sau șterge."));
     private List<AppUser> users = List.of();
     private boolean narrowScreen;
 
@@ -63,7 +69,7 @@ public class UsersView extends VerticalLayout {
     }
 
     private Component createHeader() {
-        H2 title = new H2("Utilizatori");
+        H2 title = new H2(Tr.t("Utilizatori"));
         title.getStyle().set("margin", "0");
         counter.getStyle()
                 .set("color", "var(--lumo-secondary-text-color)")
@@ -74,14 +80,14 @@ public class UsersView extends VerticalLayout {
     }
 
     private Component createToolbar() {
-        search.setPlaceholder("Caută după utilizator sau nume");
+        search.setPlaceholder(Tr.t("Caută după utilizator sau nume"));
         search.setPrefixComponent(VaadinIcon.SEARCH.create());
         search.setClearButtonVisible(true);
         search.setValueChangeMode(ValueChangeMode.LAZY);
         search.addValueChangeListener(e -> applyFilter());
         search.setWidth("min(100%, 22rem)");
 
-        Button add = new Button("Adaugă utilizator", VaadinIcon.PLUS.create(), e -> openEditor(null));
+        Button add = new Button(Tr.t("Adaugă utilizator"), VaadinIcon.PLUS.create(), e -> openEditor(null));
         add.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
 
         HorizontalLayout toolbar = new HorizontalLayout(search, add);
@@ -96,40 +102,40 @@ public class UsersView extends VerticalLayout {
         grid.addThemeVariants(GridVariant.LUMO_ROW_STRIPES, GridVariant.LUMO_COMPACT);
 
         Grid.Column<AppUser> usernameColumn = grid.addColumn(AppUser::getUsername)
-                .setHeader("Utilizator")
+                .setHeader(Tr.t("Utilizator"))
                 .setAutoWidth(true)
                 .setSortable(true)
                 .setComparator(Comparator.comparing(AppUser::getUsername));
         Grid.Column<AppUser> nameColumn = grid.addColumn(
-                        u -> u.getPlayer() != null ? u.getPlayer().getDisplayName() : "— (fără profil de jucător)")
-                .setHeader("Nume Prenume")
+                        u -> u.getPlayer() != null ? u.getPlayer().getDisplayName() : Tr.t("— (fără profil de jucător)"))
+                .setHeader(Tr.t("Nume Prenume"))
                 .setFlexGrow(2)
                 .setSortable(true)
                 .setComparator(Comparator.comparing(AppUser::getDisplayName, String.CASE_INSENSITIVE_ORDER));
         // Pe telefon: o singură coloană cu utilizatorul, numele și rolul
         Grid.Column<AppUser> compactColumn = grid.addComponentColumn(UsersView::compactUserCell)
-                .setHeader("Cont")
+                .setHeader(Tr.t("Cont"))
                 .setFlexGrow(1)
                 .setSortable(true)
                 .setComparator(Comparator.comparing(AppUser::getUsername));
         compactColumn.setVisible(false);
         Grid.Column<AppUser> roleColumn = grid.addColumn(u -> u.getRole().getLabel())
-                .setHeader("Rol")
+                .setHeader(Tr.t("Rol"))
                 .setAutoWidth(true)
                 .setSortable(true)
                 .setComparator(Comparator.comparing(AppUser::getRole));
         grid.addComponentColumn(UsersView::statusBadge)
-                .setHeader("Stare")
+                .setHeader(Tr.t("Stare"))
                 .setAutoWidth(true).setFlexGrow(0);
         Grid.Column<AppUser> createdColumn = grid.addColumn(
                         u -> u.getCreatedAt() == null ? "" : DATE_TIME.format(u.getCreatedAt().atZone(ZONE)))
-                .setHeader("Creat la")
+                .setHeader(Tr.t("Creat la"))
                 .setAutoWidth(true).setFlexGrow(0)
                 .setSortable(true)
                 .setComparator(Comparator.comparing(AppUser::getCreatedAt,
                         Comparator.nullsLast(Comparator.naturalOrder())));
         Grid.Column<AppUser> actionsColumn = grid.addComponentColumn(this::createActions)
-                .setHeader("Acțiuni")
+                .setHeader(Tr.t("Acțiuni"))
                 .setAutoWidth(true).setFlexGrow(0)
                 .setFrozenToEnd(true);
 
@@ -156,13 +162,13 @@ public class UsersView extends VerticalLayout {
     private Component createActions(AppUser user) {
         Button edit = new Button(VaadinIcon.EDIT.create(), e -> openEditor(user));
         edit.addThemeVariants(ButtonVariant.LUMO_ICON, ButtonVariant.LUMO_TERTIARY);
-        edit.setAriaLabel("Editează " + user.getUsername());
-        edit.setTooltipText("Editează");
+        edit.setAriaLabel(Tr.t("Editează {0}", user.getUsername()));
+        edit.setTooltipText(Tr.t("Editează"));
 
         Button delete = new Button(VaadinIcon.TRASH.create(), e -> confirmDelete(user));
         delete.addThemeVariants(ButtonVariant.LUMO_ICON, ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_ERROR);
-        delete.setAriaLabel("Șterge " + user.getUsername());
-        delete.setTooltipText("Șterge");
+        delete.setAriaLabel(Tr.t("Șterge {0}", user.getUsername()));
+        delete.setTooltipText(Tr.t("Șterge"));
 
         HorizontalLayout actions = new HorizontalLayout(edit, delete);
         actions.setSpacing(false);
@@ -173,10 +179,10 @@ public class UsersView extends VerticalLayout {
         new UserFormDialog(user, form -> {
             if (user == null) {
                 userService.create(form);
-                Notifications.success("Utilizator creat");
+                Notifications.success(Tr.t("Utilizator creat"));
             } else {
                 userService.update(user.getId(), form);
-                Notifications.success("Modificări salvate");
+                Notifications.success(Tr.t("Modificări salvate"));
             }
             refresh();
         }, user == null ? null : () -> confirmDelete(user)).open();
@@ -184,19 +190,20 @@ public class UsersView extends VerticalLayout {
 
     private void confirmDelete(AppUser user) {
         ConfirmDialog dialog = new ConfirmDialog();
-        dialog.setHeader("Ștergeți utilizatorul?");
-        dialog.setText("Contul „" + user.getUsername() + "” va fi șters definitiv"
-                + (user.getPlayer() != null ? ", împreună cu profilul de jucător." : "."));
+        dialog.setHeader(Tr.t("Ștergeți utilizatorul?"));
+        dialog.setText(user.getPlayer() != null
+                ? Tr.t("Contul „{0}” va fi șters definitiv, împreună cu profilul de jucător.", user.getUsername())
+                : Tr.t("Contul „{0}” va fi șters definitiv.", user.getUsername()));
         dialog.setCancelable(true);
-        dialog.setCancelText("Anulează");
-        dialog.setConfirmText("Șterge");
+        dialog.setCancelText(Tr.t("Anulează"));
+        dialog.setConfirmText(Tr.t("Șterge"));
         dialog.setConfirmButtonTheme("error primary");
         dialog.addConfirmListener(e -> {
             try {
                 userService.delete(user.getId());
-                Notifications.success("Utilizator șters");
+                Notifications.success(Tr.t("Utilizator șters"));
             } catch (BusinessException ex) {
-                Notifications.error(ex.getMessage());
+                Notifications.error(ex.getLocalizedMessage());
             }
             refresh();
         });
@@ -218,14 +225,14 @@ public class UsersView extends VerticalLayout {
                     .toList();
         grid.setItems(filtered);
         counter.setText(filtered.size() == users.size()
-                ? users.size() + " conturi"
-                : filtered.size() + " din " + users.size() + " conturi");
+                ? Tr.t("{0} conturi", users.size())
+                : Tr.t("{0} din {1} conturi", filtered.size(), users.size()));
     }
 
     private static Component compactUserCell(AppUser user) {
         Span username = new Span(user.getUsername());
         username.getStyle().set("font-weight", "500");
-        Span details = new Span((user.getPlayer() != null ? user.getPlayer().getDisplayName() : "fără profil de jucător")
+        Span details = new Span((user.getPlayer() != null ? user.getPlayer().getDisplayName() : Tr.t("fără profil de jucător"))
                 + " · " + user.getRole().getLabel());
         details.getStyle()
                 .set("font-size", "var(--lumo-font-size-s)")
@@ -239,7 +246,7 @@ public class UsersView extends VerticalLayout {
 
     private static Component statusBadge(AppUser user) {
         return user.isEnabled()
-                ? Badges.badge("Activ", Badges.Tone.SUCCESS)
-                : Badges.badge("Blocat", Badges.Tone.ERROR);
+                ? Badges.badge(Tr.t("Activ"), Badges.Tone.SUCCESS)
+                : Badges.badge(Tr.t("Blocat"), Badges.Tone.ERROR);
     }
 }
