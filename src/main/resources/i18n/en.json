@@ -134,7 +134,7 @@
   "Jucător nou": "New player",
   "Jucător șters": "Player deleted",
   "Jucători": "Players",
-  "Jucători pe grupă: {0} (în șerpuială după rating)": "Players per group: {0} (snake seeding by rating)",
+  "Jucători pe grupă: {0} (pe urne după rating, tragere la sorți)": "Players per group: {0} (rating pots, random draw)",
   "Jucătorul a participat la turnee începute și nu poate fi șters": "The player has taken part in started tournaments and cannot be deleted",
   "Jucătorul nu există": "The player does not exist",
   "Jucătorul nu mai există": "The player no longer exists",

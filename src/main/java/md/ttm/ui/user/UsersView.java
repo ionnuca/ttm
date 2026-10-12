@@ -8,6 +8,8 @@ import md.ttm.ui.components.Badges;
 import md.ttm.ui.components.Notifications;
 import md.ttm.ui.components.Responsive;
 import md.ttm.ui.layout.MainLayout;
+import md.ttm.ui.player.PlayerView;
+import com.vaadin.flow.router.RouterLink;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -106,8 +108,7 @@ public class UsersView extends VerticalLayout implements HasDynamicTitle {
                 .setAutoWidth(true)
                 .setSortable(true)
                 .setComparator(Comparator.comparing(AppUser::getUsername));
-        Grid.Column<AppUser> nameColumn = grid.addColumn(
-                        u -> u.getPlayer() != null ? u.getPlayer().getDisplayName() : Tr.t("— (fără profil de jucător)"))
+        Grid.Column<AppUser> nameColumn = grid.addComponentColumn(UsersView::playerLink)
                 .setHeader(Tr.t("Nume Prenume"))
                 .setFlexGrow(2)
                 .setSortable(true)
@@ -232,8 +233,12 @@ public class UsersView extends VerticalLayout implements HasDynamicTitle {
     private static Component compactUserCell(AppUser user) {
         Span username = new Span(user.getUsername());
         username.getStyle().set("font-weight", "500");
-        Span details = new Span((user.getPlayer() != null ? user.getPlayer().getDisplayName() : Tr.t("fără profil de jucător"))
-                + " · " + user.getRole().getLabel());
+        Span details = new Span();
+        if (user.getPlayer() != null) {
+            details.add(playerLink(user), new Span(" · " + user.getRole().getLabel()));
+        } else {
+            details.setText(Tr.t("fără profil de jucător") + " · " + user.getRole().getLabel());
+        }
         details.getStyle()
                 .set("font-size", "var(--lumo-font-size-s)")
                 .set("color", "var(--lumo-secondary-text-color)");
@@ -242,6 +247,19 @@ public class UsersView extends VerticalLayout implements HasDynamicTitle {
         cell.setSpacing(false);
         cell.getStyle().set("line-height", "1.3").set("white-space", "normal");
         return cell;
+    }
+
+    /**
+     * Numele jucătorului, ca legătură spre pagina lui. Apăsarea legăturii nu deschide și editarea contului
+     * (pe telefon rândul întreg deschide editarea).
+     */
+    private static Component playerLink(AppUser user) {
+        if (user.getPlayer() == null) {
+            return new Span(Tr.t("— (fără profil de jucător)"));
+        }
+        RouterLink link = new RouterLink(user.getPlayer().getDisplayName(), PlayerView.class, user.getPlayer().getId());
+        link.getElement().addEventListener("click", e -> { }).addEventData("event.stopPropagation()");
+        return link;
     }
 
     private static Component statusBadge(AppUser user) {

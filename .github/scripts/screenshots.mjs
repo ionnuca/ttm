@@ -213,6 +213,24 @@ await check('admin: utilizatori', async () => {
   await expectText(page, 'jucator');
   await shot(page, '08-admin-utilizatori');
 });
+await check('admin: din utilizatori, numele duce la pagina jucătorului', async () => {
+  await page.goto(`${BASE}/utilizatori`);
+  await page.getByRole('link', { name: 'Popescu Ion' }).first().click();
+  await page.waitForURL(/\/jucator\/\d+/, { timeout: 10000 });
+  await expectText(page, 'Meciuri jucate');
+  await page.goto(`${BASE}/utilizatori`);
+  await expectText(page, 'jucator');
+});
+await check('telefon: din utilizatori, numele duce la pagina jucătorului', async () => {
+  const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'ro-RO', isMobile: true, hasTouch: true });
+  const p = await phone.newPage();
+  await login(p, 'admin', 'admin12345');
+  await p.goto(`${BASE}/utilizatori`);
+  await p.getByRole('link', { name: 'Popescu Ion' }).first().click();
+  await p.waitForURL(/\/jucator\/\d+/, { timeout: 10000 });
+  if (await p.getByText('Editare utilizator').isVisible()) throw new Error('s-a deschis și editarea contului');
+  await phone.close();
+});
 await check('admin: dialog utilizator nou', async () => {
   await page.getByText('Adaugă utilizator').click();
   await expectText(page, 'Utilizator nou');
