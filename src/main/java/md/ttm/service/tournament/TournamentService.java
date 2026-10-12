@@ -278,6 +278,42 @@ public class TournamentService {
     }
 
     /**
+     * Reîmparte grupele etapei 1 printr-o nouă tragere la sorți (doar administratorul), cât timp
+     * nu s-a înregistrat niciun rezultat. Meciurile grupelor se generează din nou.
+     */
+    @PreAuthorize("hasRole('ADMIN')")
+    @Transactional
+    public void redrawGroups(Long tournamentId) {
+        Tournament tournament = requireTournament(tournamentId);
+        if (!canRedrawGroups(tournament)) {
+            throw new BusinessException("Grupele se pot reîmpărți doar în etapa grupelor");
+        }
+        List<TournamentMatch> matches = matchRepository.findByTournamentIdWithParticipants(tournamentId);
+        if (matches.stream().anyMatch(TournamentMatch::isPlayed)) {
+            throw new BusinessException("Grupele nu se mai pot reîmpărți: există deja rezultate înregistrate");
+        }
+        matchRepository.deleteAll(matches);
+        matchRepository.flush();
+        List<TournamentGroup> groups = groupRepository.findByTournamentIdOrderByStageAscPositionAsc(tournamentId);
+        memberRepository.deleteAll(memberRepository.findByTournamentIdWithParticipants(tournamentId));
+        memberRepository.flush();
+        groupRepository.deleteAll(groups);
+        groupRepository.flush();
+
+        // ordinea după rating, stabilită la începerea turneului
+        List<TournamentParticipant> bySeed = new ArrayList<>(participantRepository.findByTournamentIdWithPlayer(tournamentId));
+        bySeed.sort(Comparator.comparing(TournamentParticipant::getSeed));
+        createGroupStage(tournament, bySeed);
+        tournamentRepository.save(tournament);
+    }
+
+    /** Grupele se pot reîmpărți: turneu „Grupe + finale” în etapa 1 (verificarea rezultatelor se face separat). */
+    static boolean canRedrawGroups(Tournament tournament) {
+        return tournament.isGroupsFormat() && tournament.getStatus() == TournamentStatus.IN_PROGRESS
+                && tournament.getStage() == TournamentStage.GROUPS;
+    }
+
+    /**
      * Etapa 2 la „Grupe + finale”: primii {@code qualifiers} din fiecare grupă trec în Finala 1,
      * ceilalți în Finala 2. Ambele finale se joacă Round Robin; perechile care s-au întâlnit deja
      * în aceeași grupă nu mai joacă, iar rezultatul lor se preia în tabelul finalei.
