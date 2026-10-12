@@ -34,7 +34,16 @@ Pagina principală arată ultimele meciuri; clasamentul general e la <b>Jucător
 <p><b>Round robin</b> – toți joacă împotriva tuturor, într-o singură grupă ordonată după rating.</p>
 <p><b>Grupe + finale</b> – în două etape:</p>
 <ol>
-  <li><b>Etapa 1 – grupe.</b> Jucătorii sunt repartizați „în șerpuială” după rating (A, B, C, C, B, A, …), ca grupele să fie echilibrate. Fiecare grupă joacă round robin.</li>
+  <li><b>Etapa 1 – grupe.</b> Grupele se formează prin tragere la sorți pe urne, ca să fie echilibrate:
+    <ul>
+      <li>jucătorii se ordonează după rating, de la cel mai mare (la rating egal, alfabetic);</li>
+      <li>primii jucători, atâția câte grupe sunt, formează prima urnă și se împart la întâmplare, câte unul în fiecare grupă;</li>
+      <li>procedura se repetă cu următorii jucători, urnă după urnă, până se termină lista;</li>
+      <li>dacă ultima urnă e incompletă, jucătorii din ea ajung, tot la întâmplare, în grupe diferite (acele grupe au cu un jucător mai mult).</li>
+    </ul>
+    Exemplu: 12 jucători în 3 grupe. Urnele sunt locurile 1–3, 4–6, 7–9 și 10–12 din clasament. Fiecare grupă primește câte un jucător din fiecare urnă,
+    deci cei mai buni trei jucători sunt sigur în grupe diferite, dar cine cu cine joacă se decide la sorți.
+    În tabelul grupei jucătorii apar în ordinea ratingului. Fiecare grupă joacă round robin.</li>
   <li><b>Etapa 2 – finale.</b> După grupe, organizatorul alege câți jucători din fiecare grupă trec în <b>Finala 1</b>; ceilalți joacă <b>Finala 2</b>.
       Ambele finale se joacă round robin, dar jucătorii care s-au întâlnit deja în grupă nu mai joacă: rezultatul din etapa 1 se preia.
       După începerea etapei 2, rezultatele din grupe nu se mai pot schimba.</li>

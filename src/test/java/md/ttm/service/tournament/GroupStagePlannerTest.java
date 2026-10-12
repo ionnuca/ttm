@@ -2,27 +2,47 @@ package md.ttm.service.tournament;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Random;
+import java.util.Set;
+import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class GroupStagePlannerTest {
 
     @Test
-    void serpuialaEchilibreazaGrupele() {
-        // 8 jucători, 2 grupe: A = 1,4,5,8; B = 2,3,6,7 (numerotare de la 1)
-        List<List<Integer>> groups = GroupStagePlanner.snake(8, 2);
-        assertThat(groups.get(0)).containsExactly(0, 3, 4, 7);
-        assertThat(groups.get(1)).containsExactly(1, 2, 5, 6);
+    void fiecareGrupaPrimesteCateUnJucatorDinFiecareUrna() {
+        for (long seed = 0; seed < 50; seed++) {
+            List<List<Integer>> groups = GroupStagePlanner.draw(12, 3, new Random(seed));
+            assertThat(groups).allSatisfy(g -> {
+                assertThat(g).hasSize(4).isSorted();
+                // urnele: 0-2, 3-5, 6-8, 9-11 — câte un jucător din fiecare
+                assertThat(g.stream().map(i -> i / 3).toList()).containsExactly(0, 1, 2, 3);
+            });
+            assertThat(groups.stream().flatMap(List::stream).sorted().toList())
+                    .isEqualTo(IntStream.range(0, 12).boxed().toList());
+        }
     }
 
     @Test
-    void serpuialaCuTreiGrupeSiNumarImpar() {
-        List<List<Integer>> groups = GroupStagePlanner.snake(11, 3);
-        assertThat(groups.get(0)).containsExactly(0, 5, 6);
-        assertThat(groups.get(1)).containsExactly(1, 4, 7, 10);
-        assertThat(groups.get(2)).containsExactly(2, 3, 8, 9);
-        assertThat(GroupStagePlanner.groupSizes(11, 3)).containsExactly(3, 4, 4);
+    void ultimaUrnaIncompletaAjungeInGrupeDiferite() {
+        for (long seed = 0; seed < 50; seed++) {
+            List<List<Integer>> groups = GroupStagePlanner.draw(11, 3, new Random(seed));
+            assertThat(groups.stream().map(List::size).sorted().toList()).containsExactly(3, 4, 4);
+            assertThat(groups).allSatisfy(g -> assertThat(g.stream().map(i -> i / 3).distinct().count()).isEqualTo(g.size()));
+        }
+        assertThat(GroupStagePlanner.groupSizes(11, 3)).containsExactly(4, 4, 3);
+    }
+
+    @Test
+    void tragereaLaSortiDiferaDeLaOTragereLaAlta() {
+        Set<List<List<Integer>>> draws = new HashSet<>();
+        for (long seed = 0; seed < 50; seed++) {
+            draws.add(GroupStagePlanner.draw(8, 2, new Random(seed)));
+        }
+        assertThat(draws).hasSizeGreaterThan(1);
     }
 
     @Test

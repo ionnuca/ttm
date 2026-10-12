@@ -162,7 +162,7 @@ class StartTournamentDialog extends Dialog {
             if (validGroups()) {
                 List<Integer> sizes = GroupStagePlanner.groupSizes(participants, groupCount.getValue());
                 int matches = sizes.stream().mapToInt(n -> n * (n - 1) / 2).sum();
-                groupCount.setHelperText(Tr.t("Jucători pe grupă: {0} (în șerpuială după rating)",
+                groupCount.setHelperText(Tr.t("Jucători pe grupă: {0} (pe urne după rating, tragere la sorți)",
                         sizes.stream().map(String::valueOf).collect(Collectors.joining(", "))));
                 summary.setText(Tr.t("„{0}”: înscrierea se închide. Se formează {1} grupe din {2} jucători și se generează {3} meciuri pentru etapa 1. După grupe, primii din fiecare grupă joacă în Finala 1, ceilalți în Finala 2.",
                         tournamentName, sizes.size(), participants, matches));
