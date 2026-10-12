@@ -89,13 +89,14 @@ class TiebreakIT {
         players.forEach(p -> tournamentService.addParticipant(tournament.getId(), p.getId()));
         tournamentService.start(tournament.getId(), settings);
         List<TournamentMatch> matches = tournamentService.findDetails(tournament.getId()).orElseThrow().matches();
-        // fiecare jucător câștigă exact un meci: în fiecare meci câștigă cel care nu a câștigat încă
-        java.util.Set<Long> winners = new java.util.HashSet<>();
+        // cerc: primul îl bate pe al doilea, al doilea pe al treilea, al treilea pe primul
+        List<Long> ids = matches.stream()
+                .flatMap(m -> java.util.stream.Stream.of(m.getParticipantA().getId(), m.getParticipantB().getId()))
+                .distinct().sorted().toList();
         for (TournamentMatch m : matches) {
-            long a = m.getParticipantA().getId();
-            long b = m.getParticipantB().getId();
-            boolean aWins = !winners.contains(a) && (winners.contains(b) || a < b);
-            winners.add(aWins ? a : b);
+            int ia = ids.indexOf(m.getParticipantA().getId());
+            int ib = ids.indexOf(m.getParticipantB().getId());
+            boolean aWins = (ia + 1) % 3 == ib;
             tournamentService.recordResult(m.getId(), aWins ? MatchResultForm.sets(3, 0) : MatchResultForm.sets(0, 3));
         }
         return tournament.getId();

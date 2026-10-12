@@ -175,13 +175,15 @@ public class DemoDataInitializer implements ApplicationRunner {
             byLastName(players, "Moraru", "Țurcanu", "Bîrcă")
                     .forEach(p -> tournamentService.addParticipant(tieId, p.getId()));
             tournamentService.start(tieId, TournamentSettings.commercial(5, 1, new BigDecimal("50")));
-            java.util.Set<Long> winners = new java.util.HashSet<>();
-            for (TournamentMatch match : tournamentService.findDetails(tieId).orElseThrow().matches()) {
-                long a = match.getParticipantA().getId();
-                long b = match.getParticipantB().getId();
-                boolean aWins = !winners.contains(a) && (winners.contains(b) || a < b);
-                winners.add(aWins ? a : b);
-                tournamentService.recordResult(match.getId(), aWins ? MatchResultForm.sets(3, 0) : MatchResultForm.sets(0, 3));
+            // cerc: primul îl bate pe al doilea, al doilea pe al treilea, al treilea pe primul
+            List<Long> ids = tournamentService.findDetails(tieId).orElseThrow().matches().stream()
+                    .flatMap(m -> java.util.stream.Stream.of(m.getParticipantA().getId(), m.getParticipantB().getId()))
+                    .distinct().sorted().toList();
+            for (TournamentMatch m : tournamentService.findDetails(tieId).orElseThrow().matches()) {
+                int ia = ids.indexOf(m.getParticipantA().getId());
+                int ib = ids.indexOf(m.getParticipantB().getId());
+                boolean aWins = (ia + 1) % 3 == ib;
+                tournamentService.recordResult(m.getId(), aWins ? MatchResultForm.sets(3, 0) : MatchResultForm.sets(0, 3));
             }
 
             Long sundayId = tournamentService.create(
