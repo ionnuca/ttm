@@ -30,6 +30,8 @@ import md.ttm.model.player.Player;
 import md.ttm.model.tournament.Tournament;
 import md.ttm.model.tournament.TournamentMatch;
 import md.ttm.model.tournament.TournamentParticipant;
+import md.ttm.model.tournament.TournamentTiebreak;
+import md.ttm.service.tournament.StandingsCalculator;
 import md.ttm.model.tournament.TournamentStage;
 import md.ttm.model.tournament.TournamentStatus;
 import md.ttm.security.SecurityUtils;
@@ -186,12 +188,16 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
             amount.getStyle().set("font-weight", "600");
             Span item = new Span(place, amount);
             if (prize.winnerName() != null) {
-                Span winner = new Span(" — " + prize.winnerName());
+                Span winner = new Span(" — " + prize.winnerName()
+                        + (prize.shared() ? " " + Tr.t("(loc împărțit)") : ""));
                 item.add(winner);
             }
             places.add(item);
         }
         card.add(title, new Div(summary), places);
+        if (details.prizes().stream().anyMatch(PrizePlace::shared)) {
+            card.add(new Div(hint(Tr.t("La un loc împărțit, premiile locurilor ocupate împreună se adună și se împart egal între jucători."))));
+        }
         return card;
     }
 
@@ -312,7 +318,13 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         heading.getStyle().set("flex-wrap", "wrap");
 
         section.add(heading, new ResultsMatrix(details.participants(), details.standings(), ownId(details),
-                details.ratingChanges()), legend(details));
+                details.ratingChanges()));
+        Component tiebreaks = tiebreakSection(details, null, details.participants(), details.tiebreaks(),
+                details.pendingTiebreaks(), details.canRecordResults());
+        if (tiebreaks != null) {
+            section.add(tiebreaks);
+        }
+        section.add(legend(details));
         return section;
     }
 
@@ -321,7 +333,11 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
     }
 
     private static Span legend(TournamentDetails details) {
+        String ties = details.tournament().isCommercial()
+                ? Tr.t("La egalitate de puncte decid meciurile directe; dacă egalitatea rămâne, jucătorii joacă între ei câte un set de departajare.")
+                : Tr.t("La egalitate de puncte decid meciurile directe; dacă egalitatea rămâne, jucătorii împart locul (=).");
         Span legend = new Span(Tr.t("În fiecare celulă: sus — punctele (2 victorie, 1 înfrângere, 0 înfrângere tehnică), jos — scorul la seturi. W — victorie tehnică, L — înfrângere tehnică.")
+                + " " + ties
                 + (details.tournament().getStatus() == TournamentStatus.FINISHED
                 ? " " + Tr.t("Sub nume: ratingul înainte → după turneu (Elo).") : ""));
         legend.getStyle()
@@ -416,6 +432,11 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         H4 name = new H4(TournamentLabels.groupName(group.group().getName()));
         name.getStyle().set("margin", "var(--lumo-space-s) 0 0");
         section.add(name, new ResultsMatrix(group.members(), group.standings(), ownId(details), details.ratingChanges()));
+        Component tiebreaks = tiebreakSection(details, group.group().getId(), group.members(), group.tiebreaks(),
+                group.pendingTiebreaks(), editable);
+        if (tiebreaks != null) {
+            section.add(tiebreaks);
+        }
         if (!group.carried().isEmpty()) {
             section.add(hint(group.carried().size() == 1
                     ? Tr.t("1 meci e preluat din etapa 1 (jucătorii s-au întâlnit deja în grupă) și nu se mai joacă.")
@@ -425,6 +446,81 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
             section.add(rounds(details, group.matches(), editable));
         }
         return section;
+    }
+
+    // ------------------------------------------------------------------
+    // Seturi de departajare
+    // ------------------------------------------------------------------
+
+    /**
+     * Seturile de departajare ale unui tabel: cele jucate și cele care trebuie jucate.
+     * {@code null} dacă tabelul nu are egalități de departajat prin seturi.
+     */
+    private Component tiebreakSection(TournamentDetails details, Long groupId, List<TournamentParticipant> members,
+                                      List<TournamentTiebreak> played, List<StandingsCalculator.Pairing> pending,
+                                      boolean editable) {
+        if (played.isEmpty() && pending.isEmpty()) {
+            return null;
+        }
+        Map<Long, TournamentParticipant> byId = new HashMap<>();
+        members.forEach(p -> byId.put(p.getId(), p));
+
+        Div card = card();
+        if (!pending.isEmpty()) {
+            card.getStyle()
+                    .set("border-color", "var(--lumo-warning-color-50pct, var(--lumo-primary-color-50pct))")
+                    .set("background", "var(--lumo-warning-color-10pct, var(--lumo-primary-color-10pct))");
+        }
+        H4 title = new H4(Tr.t("Seturi de departajare"));
+        title.getStyle().set("margin", "0 0 var(--lumo-space-xs)");
+        card.add(title, hint(Tr.t("Jucătorii rămași la egalitate după meciurile directe joacă între ei câte un set, la 11 puncte. Decid setele câștigate, apoi raportul punctelor; dacă egalitatea rămâne, se joacă o nouă rundă.")));
+
+        for (TournamentTiebreak t : played) {
+            card.add(tiebreakRow(details, groupId, t.getRoundNo(), t.getParticipantA(), t.getParticipantB(),
+                    t.getPointsA(), t.getPointsB(), editable));
+        }
+        for (StandingsCalculator.Pairing p : pending) {
+            card.add(tiebreakRow(details, groupId, p.round(), byId.get(p.a()), byId.get(p.b()), null, null, editable));
+        }
+        return card;
+    }
+
+    private Component tiebreakRow(TournamentDetails details, Long groupId, int round, TournamentParticipant a,
+                                  TournamentParticipant b, Integer pointsA, Integer pointsB, boolean editable) {
+        boolean played = pointsA != null;
+        Span roundLabel = new Span(Tr.t("Runda {0}", round));
+        roundLabel.getStyle()
+                .set("font-size", "var(--lumo-font-size-xs)")
+                .set("color", "var(--lumo-secondary-text-color)")
+                .set("min-width", "4rem");
+        Span nameA = matchName(a, played && pointsA > pointsB, true, null);
+        Span nameB = matchName(b, played && pointsB > pointsA, false, null);
+        Span score = new Span(played ? pointsA + " : " + pointsB : "–:–");
+        score.getStyle().set("min-width", "3.5rem").set("text-align", "center")
+                .set("font-weight", played ? "700" : "400");
+        if (!played) {
+            score.getStyle().set("color", "var(--lumo-tertiary-text-color)");
+        }
+        HorizontalLayout row = new HorizontalLayout(roundLabel, nameA, score, nameB);
+        row.setWidthFull();
+        row.setAlignItems(FlexComponent.Alignment.CENTER);
+        row.getStyle()
+                .set("padding", "var(--lumo-space-xs) 0")
+                .set("border-top", "1px solid var(--lumo-contrast-10pct)");
+        if (editable) {
+            Button enter = new Button(played ? VaadinIcon.EDIT.create() : VaadinIcon.PLUS.create(),
+                    e -> new TiebreakDialog(a.getPlayer().getDisplayName(), b.getPlayer().getDisplayName(), round,
+                            pointsA, pointsB, (pa, pb) -> {
+                        tournamentService.recordTiebreak(tournamentId, groupId, round, a.getId(), b.getId(), pa, pb);
+                        Notifications.success(Tr.t("Rezultat salvat"));
+                        refresh();
+                    }).open());
+            enter.addThemeVariants(ButtonVariant.LUMO_ICON, ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL);
+            enter.setAriaLabel(Tr.t("Set de departajare {0} – {1}", a.getPlayer().getDisplayName(), b.getPlayer().getDisplayName()));
+            enter.setTooltipText(played ? Tr.t("Modifică rezultatul") : Tr.t("Introdu rezultatul"));
+            row.add(enter);
+        }
+        return row;
     }
 
     private Component createStartFinalsCard(TournamentDetails details) {

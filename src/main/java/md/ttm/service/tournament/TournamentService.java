@@ -13,6 +13,8 @@ import md.ttm.model.tournament.TournamentGroupMember;
 import md.ttm.model.tournament.TournamentParticipant;
 import md.ttm.model.tournament.TournamentStage;
 import md.ttm.model.tournament.TournamentStatus;
+import md.ttm.model.tournament.TournamentTiebreak;
+import md.ttm.repository.TournamentTiebreakRepository;
 import md.ttm.model.user.AppUser;
 import md.ttm.model.rating.RatingHistory;
 import md.ttm.repository.AppUserRepository;
@@ -68,6 +70,7 @@ public class TournamentService {
     private final RatingService ratingService;
     private final TournamentGroupRepository groupRepository;
     private final TournamentGroupMemberRepository memberRepository;
+    private final TournamentTiebreakRepository tiebreakRepository;
 
     public TournamentService(TournamentRepository tournamentRepository,
                              TournamentParticipantRepository participantRepository,
@@ -77,7 +80,9 @@ public class TournamentService {
                              RatingHistoryRepository historyRepository,
                              RatingService ratingService,
                              TournamentGroupRepository groupRepository,
-                             TournamentGroupMemberRepository memberRepository) {
+                             TournamentGroupMemberRepository memberRepository,
+                             TournamentTiebreakRepository tiebreakRepository) {
+        this.tiebreakRepository = tiebreakRepository;
         this.groupRepository = groupRepository;
         this.memberRepository = memberRepository;
         this.historyRepository = historyRepository;
@@ -287,10 +292,14 @@ public class TournamentService {
         }
         List<TournamentParticipant> participants = new ArrayList<>(participantRepository.findByTournamentIdWithPlayer(tournamentId));
         List<TournamentMatch> matches = matchRepository.findByTournamentIdWithParticipants(tournamentId);
-        List<GroupView> groups = groupViews(tournament, matches);
+        List<GroupView> groups = groupViews(tournament, matches, tiebreakRepository.findByTournamentIdWithParticipants(tournamentId));
         long unplayed = groups.stream().mapToLong(g -> g.matches().size() - g.playedMatches()).sum();
         if (unplayed > 0) {
             throw new BusinessException("Etapa 1 nu s-a terminat: mai sunt {0} meciuri fără rezultat", unplayed);
+        }
+        long tiebreaks = groups.stream().mapToLong(g -> g.pendingTiebreaks().size()).sum();
+        if (tiebreaks > 0) {
+            throw new BusinessException("Etapa 1 nu s-a terminat: mai sunt {0} seturi de departajare de jucat", tiebreaks);
         }
         int smallest = groups.stream().mapToInt(g -> g.members().size()).min().orElse(0);
         if (qualifiers < 1 || qualifiers >= smallest) {
@@ -443,17 +452,115 @@ public class TournamentService {
         match.setRecordedBy(SecurityUtils.currentUsername().orElse(null));
         match.setRecordedAt(Instant.now());
         matchRepository.saveAndFlush(match);
+        // un rezultat nou schimbă egalitățile: seturile de departajare ale tabelului nu mai sunt valabile
+        deleteTiebreaks(tournament.getId(), match.getGroup());
 
-        boolean lastStage = !tournament.isGroupsFormat() || tournament.getStage() == TournamentStage.FINALS;
-        if (tournament.getStatus() == TournamentStatus.IN_PROGRESS && lastStage
-                && matchRepository.countByTournamentIdAndOutcomeIsNull(tournament.getId()) == 0) {
-            finish(tournament);
-        }
+        finishIfComplete(tournament);
         // turneu încheiat acum sau rezultat corectat într-un turneu încheiat: ratingul se recalculează
         if (tournament.getStatus() == TournamentStatus.FINISHED) {
             ratingService.recalculateAll();
         }
         return match;
+    }
+
+    /**
+     * Înregistrează (sau corectează) scorul unui set de departajare. Setul trebuie să fie unul cerut de tabel
+     * (o pereche de jucători rămași la egalitate) sau unul deja jucat. La corectare, rundele de după el se șterg.
+     */
+    @PreAuthorize("isAuthenticated()")
+    @Transactional
+    public TournamentTiebreak recordTiebreak(Long tournamentId, Long groupId, int round, long participantA,
+                                             long participantB, int pointsA, int pointsB) {
+        Tournament tournament = requireTournament(tournamentId);
+        requireCanRecord(tournament);
+        validateSetScore(pointsA, pointsB);
+        TournamentGroup group = null;
+        if (groupId != null) {
+            group = groupRepository.findById(groupId)
+                    .filter(g -> g.getTournament().getId().equals(tournamentId))
+                    .orElseThrow(() -> new BusinessException("Grupa nu mai există"));
+            if (!group.isFinal() && tournament.getStage() == TournamentStage.FINALS) {
+                throw new BusinessException("Rezultatele etapei 1 nu mai pot fi modificate după începerea etapei 2");
+            }
+        }
+        List<TournamentTiebreak> all = tiebreakRepository.findByTournamentIdWithParticipants(tournamentId);
+        TournamentTiebreak tiebreak = all.stream()
+                .filter(t -> java.util.Objects.equals(t.groupId(), groupId) && t.getRoundNo() == round
+                        && t.between(participantA, participantB))
+                .findFirst()
+                .orElse(null);
+        if (tiebreak == null) {
+            boolean required = pendingTiebreaks(tournament, all).stream().anyMatch(p ->
+                    java.util.Objects.equals(p.groupId(), groupId) && p.pairing().round() == round
+                            && ((p.pairing().a() == participantA && p.pairing().b() == participantB)
+                            || (p.pairing().a() == participantB && p.pairing().b() == participantA)));
+            if (!required) {
+                throw new BusinessException("Acest set de departajare nu mai este necesar");
+            }
+            tiebreak = new TournamentTiebreak(tournament, group, round,
+                    participantRepository.getReferenceById(participantA), participantRepository.getReferenceById(participantB));
+            tiebreak.setPoints(pointsA, pointsB);
+        } else {
+            boolean sameOrder = tiebreak.getParticipantA().getId() == participantA;
+            tiebreak.setPoints(sameOrder ? pointsA : pointsB, sameOrder ? pointsB : pointsA);
+            // rundele următoare au fost jucate după vechiul scor
+            Long table = groupId;
+            tiebreakRepository.deleteAll(all.stream()
+                    .filter(t -> java.util.Objects.equals(t.groupId(), table) && t.getRoundNo() > round)
+                    .toList());
+        }
+        tiebreak.setRecordedBy(SecurityUtils.currentUsername().orElse(null));
+        tiebreak.setRecordedAt(Instant.now());
+        tiebreakRepository.saveAndFlush(tiebreak);
+        finishIfComplete(tournament);
+        return tiebreak;
+    }
+
+    /** Un set: câștigă primul la 11 puncte, cu cel puțin 2 puncte diferență (după 10:10, la diferență de 2). */
+    static void validateSetScore(int a, int b) {
+        int high = Math.max(a, b);
+        int low = Math.min(a, b);
+        boolean valid = low >= 0 && (high == 11 && low <= 9 || high > 11 && high - low == 2);
+        if (!valid) {
+            throw new BusinessException("Scor invalid pentru un set: câștigă primul la 11 puncte, cu 2 puncte diferență (ex. 11:7 sau 12:10)");
+        }
+    }
+
+    /** Ultima etapă e completă (meciuri și seturi de departajare): turneul se încheie automat. */
+    private void finishIfComplete(Tournament tournament) {
+        boolean lastStage = !tournament.isGroupsFormat() || tournament.getStage() == TournamentStage.FINALS;
+        if (tournament.getStatus() == TournamentStatus.IN_PROGRESS && lastStage
+                && matchRepository.countByTournamentIdAndOutcomeIsNull(tournament.getId()) == 0
+                && pendingTiebreaks(tournament, tiebreakRepository.findByTournamentIdWithParticipants(tournament.getId())).isEmpty()) {
+            finish(tournament);
+        }
+    }
+
+    /** Un set de departajare de jucat, cu grupa lui ({@code null} la Round Robin). */
+    record PendingTiebreak(Long groupId, StandingsCalculator.Pairing pairing) {
+    }
+
+    private List<PendingTiebreak> pendingTiebreaks(Tournament tournament, List<TournamentTiebreak> tiebreaks) {
+        List<TournamentMatch> matches = matchRepository.findByTournamentIdWithParticipants(tournament.getId());
+        List<PendingTiebreak> pending = new ArrayList<>();
+        if (tournament.isGroupsFormat()) {
+            for (GroupView g : groupViews(tournament, matches, tiebreaks)) {
+                g.pendingTiebreaks().forEach(p -> pending.add(new PendingTiebreak(g.group().getId(), p)));
+            }
+        } else {
+            List<TournamentParticipant> participants = new ArrayList<>(participantRepository.findByTournamentIdWithPlayer(tournament.getId()));
+            standings(tournament, participants, matches, tiebreaks).tiebreaks()
+                    .forEach(p -> pending.add(new PendingTiebreak(null, p)));
+        }
+        return pending;
+    }
+
+    private void deleteTiebreaks(Long tournamentId, TournamentGroup group) {
+        Long groupId = group != null ? group.getId() : null;
+        tiebreakRepository.deleteAll(tiebreakRepository.findByTournamentIdWithParticipants(tournamentId).stream()
+                .filter(t -> java.util.Objects.equals(t.groupId(), groupId))
+                .toList());
+        tiebreakRepository.flush();
     }
 
     /** Șterge rezultatul unui meci (administrator sau manager de turnee). Un turneu încheiat redevine „în desfășurare”. */
@@ -465,6 +572,7 @@ public class TournamentService {
         requireEditableStage(match);
         match.clearResult();
         matchRepository.save(match);
+        deleteTiebreaks(match.getTournament().getId(), match.getGroup());
         Tournament tournament = match.getTournament();
         if (tournament.getStatus() == TournamentStatus.FINISHED) {
             tournament.setStatus(TournamentStatus.IN_PROGRESS);
@@ -505,12 +613,16 @@ public class TournamentService {
             participants.sort(BY_RATING);
         }
 
+        List<TournamentTiebreak> tiebreaks = tournament.isStarted()
+                ? tiebreakRepository.findByTournamentIdWithParticipants(tournament.getId())
+                : List.of();
         List<GroupView> groups = tournament.isStarted() && tournament.isGroupsFormat()
-                ? groupViews(tournament, matches)
+                ? groupViews(tournament, matches, tiebreaks)
                 : List.of();
-        List<StandingsCalculator.Row> standings = tournament.isStarted() && !tournament.isGroupsFormat()
-                ? standings(tournament, participants, matches)
-                : List.of();
+        StandingsCalculator.Table table = tournament.isStarted() && !tournament.isGroupsFormat()
+                ? standings(tournament, participants, matches, tiebreaks)
+                : new StandingsCalculator.Table(List.of(), List.of());
+        List<StandingsCalculator.Row> standings = table.rows();
 
         BigDecimal pool = null;
         List<PrizePlace> prizes = List.of();
@@ -540,12 +652,14 @@ public class TournamentService {
         }
 
         return new TournamentDetails(tournament, participants, matches, standings, pool, prizes, own,
-                manager, canSelfRegister, canRecord, ratingChanges, groups);
+                manager, canSelfRegister, canRecord, ratingChanges, groups,
+                tournament.isGroupsFormat() ? List.of() : tiebreaks, table.tiebreaks());
     }
 
-    private static List<StandingsCalculator.Row> standings(Tournament tournament,
-                                                           List<TournamentParticipant> participants,
-                                                           List<TournamentMatch> matches) {
+    private static StandingsCalculator.Table standings(Tournament tournament,
+                                                       List<TournamentParticipant> participants,
+                                                       List<TournamentMatch> matches,
+                                                       List<TournamentTiebreak> tiebreaks) {
         List<StandingsCalculator.Competitor> competitors = participants.stream()
                 .map(p -> new StandingsCalculator.Competitor(p.getId(), p.getSeed()))
                 .toList();
@@ -556,30 +670,57 @@ public class TournamentService {
                         m.getSetsA() != null ? m.getSetsA() : 0, m.getSetsB() != null ? m.getSetsB() : 0,
                         m.getWinner().getId(), m.isWalkover()))
                 .toList();
-        return StandingsCalculator.compute(competitors, results, tournament.getSetsToWin());
+        boolean allPlayed = matches.stream().allMatch(TournamentMatch::isPlayed);
+        return StandingsCalculator.table(competitors, results, tournament.getSetsToWin(),
+                tournament.isCommercial() && allPlayed, tiebreakResults(tiebreaks, null));
+    }
+
+    private static List<StandingsCalculator.Tiebreak> tiebreakResults(List<TournamentTiebreak> tiebreaks, Long groupId) {
+        return tiebreaks.stream()
+                .filter(t -> java.util.Objects.equals(t.groupId(), groupId))
+                .map(t -> new StandingsCalculator.Tiebreak(t.getRoundNo(), t.getParticipantA().getId(),
+                        t.getParticipantB().getId(), t.getPointsA(), t.getPointsB()))
+                .toList();
     }
 
     private static List<PrizePlace> prizes(Tournament tournament, PrizeDistribution distribution, BigDecimal pool,
                                            List<TournamentParticipant> participants,
                                            List<StandingsCalculator.Row> standings) {
-        Map<Integer, String> namesByPlace = new HashMap<>();
-        if (tournament.getStatus() == TournamentStatus.FINISHED) {
-            Map<Long, String> names = new HashMap<>();
-            participants.forEach(p -> names.put(p.getId(), p.getPlayer().getDisplayName()));
-            standings.forEach(row -> namesByPlace.put(row.place(), names.get(row.id())));
-        }
+        boolean finished = tournament.getStatus() == TournamentStatus.FINISHED;
+        Map<Long, String> names = new HashMap<>();
+        participants.forEach(p -> names.put(p.getId(), p.getPlayer().getDisplayName()));
         List<BigDecimal> amounts = distribution.split(pool);
         List<Integer> percentages = distribution.percentages();
         List<PrizePlace> prizes = new ArrayList<>();
         for (int i = 0; i < amounts.size(); i++) {
+            List<String> winners = finished ? namesCovering(standings, names, i + 1) : List.of();
             prizes.add(new PrizePlace(i + 1, "Locul " + (i + 1), percentages.get(i), amounts.get(i),
-                    namesByPlace.get(i + 1)));
+                    winners.isEmpty() ? null : String.join(", ", winners), winners.size() > 1));
         }
         return prizes;
     }
 
+    /**
+     * Jucătorii care ocupă locul dat. La o egalitate nedepartajată, jucătorii împart locurile ocupate
+     * împreună: trei jucători pe locul 1 ocupă locurile 1, 2 și 3.
+     */
+    static List<String> namesCovering(List<StandingsCalculator.Row> rows, Map<Long, String> names, int place) {
+        Map<Integer, List<StandingsCalculator.Row>> byPlace = new HashMap<>();
+        rows.stream().filter(r -> r.place() > 0)
+                .forEach(r -> byPlace.computeIfAbsent(r.place(), k -> new ArrayList<>()).add(r));
+        for (Map.Entry<Integer, List<StandingsCalculator.Row>> e : byPlace.entrySet()) {
+            int first = e.getKey();
+            int last = first + e.getValue().size() - 1;
+            if (place >= first && place <= last) {
+                return e.getValue().stream().map(r -> names.get(r.id())).toList();
+            }
+        }
+        return List.of();
+    }
+
     /** Grupele (etapa 1) și finalele (etapa 2), cu tabelele lor. */
-    private List<GroupView> groupViews(Tournament tournament, List<TournamentMatch> matches) {
+    private List<GroupView> groupViews(Tournament tournament, List<TournamentMatch> matches,
+                                       List<TournamentTiebreak> tiebreaks) {
         List<TournamentGroup> groups = new ArrayList<>(groupRepository.findByTournamentIdOrderByStageAscPositionAsc(tournament.getId()));
         groups.sort(Comparator.comparing((TournamentGroup g) -> g.getStage().ordinal())
                 .thenComparingInt(TournamentGroup::getPosition));
@@ -613,8 +754,13 @@ public class TournamentService {
             }
             List<TournamentMatch> counted = new ArrayList<>(own);
             counted.addAll(carried);
-            views.add(new GroupView(group, members, own, carried,
-                    StandingsCalculator.compute(competitors, results(counted), tournament.getSetsToWin())));
+            boolean allPlayed = own.stream().allMatch(TournamentMatch::isPlayed);
+            StandingsCalculator.Table table = StandingsCalculator.table(competitors, results(counted),
+                    tournament.getSetsToWin(), tournament.isCommercial() && allPlayed,
+                    tiebreakResults(tiebreaks, group.getId()));
+            views.add(new GroupView(group, members, own, carried, table.rows(),
+                    tiebreaks.stream().filter(t -> group.getId().equals(t.groupId())).toList(),
+                    table.tiebreaks()));
         }
         return views;
     }
@@ -647,32 +793,33 @@ public class TournamentService {
         List<BigDecimal> amounts = distribution.split(rest);
         List<Integer> percentages = distribution.percentages();
         for (int i = 0; i < amounts.size(); i++) {
+            List<String> winners = finished ? namesAtPlace(final1, i + 1) : List.of();
             prizes.add(new PrizePlace(i + 1, "Finala 1 · locul " + (i + 1), percentages.get(i), amounts.get(i),
-                    finished ? nameAtPlace(final1, i + 1) : null));
+                    winners.isEmpty() ? null : String.join(", ", winners), winners.size() > 1));
         }
+        List<String> final2Winners = finished ? namesAtPlace(final2, 1) : List.of();
         prizes.add(new PrizePlace(1, "Finala 2 · locul 1", null, fee.setScale(2, RoundingMode.HALF_UP),
-                finished ? nameAtPlace(final2, 1) : null));
+                final2Winners.isEmpty() ? null : String.join(", ", final2Winners), final2Winners.size() > 1));
         return prizes;
     }
 
     /**
-     * Jucătorul de pe locul dat al unei finale. Dacă finala s-a încheiat (manual) fără niciun meci jucat,
+     * Jucătorii de pe locul dat al unei finale. Dacă finala s-a încheiat (manual) fără niciun meci jucat,
      * contează ordinea de calificare din grupe (locul în grupă, apoi ratingul), deci premiile au mereu câștigător.
      */
-    private static String nameAtPlace(GroupView group, int place) {
+    private static List<String> namesAtPlace(GroupView group, int place) {
         if (group == null) {
-            return null;
+            return List.of();
         }
         boolean noStandings = group.standings().stream().allMatch(r -> r.place() == 0);
         if (noStandings) {
-            return place <= group.members().size() ? group.members().get(place - 1).getPlayer().getDisplayName() : null;
+            return place <= group.members().size()
+                    ? List.of(group.members().get(place - 1).getPlayer().getDisplayName())
+                    : List.of();
         }
-        for (int i = 0; i < group.standings().size(); i++) {
-            if (group.standings().get(i).place() == place) {
-                return group.members().get(i).getPlayer().getDisplayName();
-            }
-        }
-        return null;
+        Map<Long, String> names = new HashMap<>();
+        group.members().forEach(p -> names.put(p.getId(), p.getPlayer().getDisplayName()));
+        return namesCovering(group.standings(), names, place);
     }
 
     private void requireCanRecord(Tournament tournament) {
@@ -765,9 +912,9 @@ public class TournamentService {
                 .map(AppUser::getPlayer);
     }
 
-    /** Ordinea din grupă: rating descrescător, apoi alfabetic. */
     private static final RandomGenerator RANDOM = new SecureRandom();
 
+    /** Ordinea inițială: rating descrescător, apoi alfabetic. */
     private static final Comparator<TournamentParticipant> BY_RATING = Comparator
             .comparingInt((TournamentParticipant p) -> -p.getPlayer().getRating())
             .thenComparing(p -> p.getPlayer().getLastName(), String.CASE_INSENSITIVE_ORDER)

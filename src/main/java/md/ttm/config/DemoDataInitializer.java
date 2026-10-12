@@ -167,12 +167,29 @@ public class DemoDataInitializer implements ApplicationRunner {
                 w++;
             }
 
+            playTiebreaks(winterId);
+
             Long sundayId = tournamentService.create(
                     new TournamentForm("Turneul de duminică", LocalDate.now().plusDays(3))).getId();
             byLastName(players, "Rusu", "Ciobanu", "Lungu", "Moraru")
                     .forEach(p -> tournamentService.addParticipant(sundayId, p.getId()));
         } finally {
             SecurityContextHolder.getContext().setAuthentication(previous);
+        }
+    }
+
+    /** Dacă grupele au egalități nedepartajate, joacă seturile de departajare (câștigă primul jucător, 11:7). */
+    private void playTiebreaks(Long tournamentId) {
+        for (int guard = 0; guard < 20; guard++) {
+            var details = tournamentService.findDetails(tournamentId).orElseThrow();
+            var pending = details.groups().stream()
+                    .flatMap(g -> g.pendingTiebreaks().stream().map(p -> java.util.Map.entry(g.group().getId(), p)))
+                    .toList();
+            if (pending.isEmpty()) {
+                return;
+            }
+            pending.forEach(e -> tournamentService.recordTiebreak(tournamentId, e.getKey(), e.getValue().round(),
+                    e.getValue().a(), e.getValue().b(), 11, 7));
         }
     }
 
