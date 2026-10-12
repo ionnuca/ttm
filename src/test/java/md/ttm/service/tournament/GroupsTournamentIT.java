@@ -33,15 +33,22 @@ class GroupsTournamentIT {
     EntityManager entityManager;
 
     @Test
-    void grupeleSeFormeazaInSerpuialaDupaRating() {
+    void grupeleSeFormeazaPeUrneDupaRating() {
         Long id = tournamentWith(8);
         tournamentService.start(id, TournamentSettings.groups(5, 2));
 
         TournamentDetails details = details(id);
         assertThat(details.tournament().getStage()).isEqualTo(TournamentStage.GROUPS);
         assertThat(details.groupStage()).hasSize(2);
-        assertThat(names(details.groupStage().get(0).members())).containsExactly("P1", "P4", "P5", "P8");
-        assertThat(names(details.groupStage().get(1).members())).containsExactly("P2", "P3", "P6", "P7");
+        // urnele {P1,P2}, {P3,P4}, {P5,P6}, {P7,P8}: câte un jucător din fiecare în fiecare grupă, în ordinea ratingului
+        for (GroupView group : details.groupStage()) {
+            List<String> members = names(group.members());
+            assertThat(members).hasSize(4);
+            assertThat(members.get(0)).isIn("P1", "P2");
+            assertThat(members.get(1)).isIn("P3", "P4");
+            assertThat(members.get(2)).isIn("P5", "P6");
+            assertThat(members.get(3)).isIn("P7", "P8");
+        }
         assertThat(details.matches()).hasSize(12); // 6 meciuri în fiecare grupă de 4
         assertThat(details.groupStage().get(0).group().getName()).isEqualTo("Grupa A");
     }

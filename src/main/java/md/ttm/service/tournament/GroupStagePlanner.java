@@ -3,6 +3,7 @@ package md.ttm.service.tournament;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiPredicate;
+import java.util.random.RandomGenerator;
 
 /**
  * Calculele pentru turneul „Grupe + finale”, fără dependențe de baza de date.
@@ -13,28 +14,51 @@ public final class GroupStagePlanner {
     }
 
     /**
-     * Repartizarea în șerpuială: jucătorii ordonați după rating (index 0 = cel mai bun)
-     * se împart pe rânduri: 1→A, 2→B, 3→C, apoi 4→C, 5→B, 6→A, 7→A …
+     * Repartizarea pe urne cu tragere la sorți. Jucătorii sunt ordonați după rating (index 0 = cel mai bun);
+     * primii {@code groups} formează prima urnă și se împart aleatoriu câte unul în fiecare grupă,
+     * următorii {@code groups} la fel, și tot așa. Din ultima urnă, incompletă, jucătorii ajung în grupe
+     * alese tot aleatoriu (câte unul în grupă).
+     * <p>
+     * Astfel fiecare grupă are câte un jucător din fiecare nivel de rating, iar cei mai buni
+     * ({@code groups} la număr) sunt în grupe diferite.
      *
-     * @return pentru fiecare grupă, indicii jucătorilor, în ordinea din grupă
+     * @return pentru fiecare grupă, indicii jucătorilor, în ordinea ratingului
      */
-    public static List<List<Integer>> snake(int players, int groups) {
+    public static List<List<Integer>> draw(int players, int groups, RandomGenerator random) {
         List<List<Integer>> result = new ArrayList<>();
         for (int g = 0; g < groups; g++) {
             result.add(new ArrayList<>());
         }
-        for (int i = 0; i < players; i++) {
-            int row = i / groups;
-            int column = i % groups;
-            int group = row % 2 == 0 ? column : groups - 1 - column;
-            result.get(group).add(i);
+        List<Integer> order = new ArrayList<>();
+        for (int g = 0; g < groups; g++) {
+            order.add(g);
+        }
+        for (int potStart = 0; potStart < players; potStart += groups) {
+            shuffle(order, random);
+            int potSize = Math.min(groups, players - potStart);
+            for (int k = 0; k < potSize; k++) {
+                result.get(order.get(k)).add(potStart + k);
+            }
         }
         return result;
     }
 
-    /** Mărimile grupelor, de exemplu [4, 4, 3] pentru 11 jucători în 3 grupe. */
+    /** Mărimile grupelor, de la cea mai mare, de exemplu [4, 4, 3] pentru 11 jucători în 3 grupe. */
     public static List<Integer> groupSizes(int players, int groups) {
-        return snake(players, groups).stream().map(List::size).toList();
+        List<Integer> sizes = new ArrayList<>();
+        for (int g = 0; g < groups; g++) {
+            sizes.add(players / groups + (g < players % groups ? 1 : 0));
+        }
+        return sizes;
+    }
+
+    private static void shuffle(List<Integer> list, RandomGenerator random) {
+        for (int i = list.size() - 1; i > 0; i--) {
+            int j = random.nextInt(i + 1);
+            Integer tmp = list.get(i);
+            list.set(i, list.get(j));
+            list.set(j, tmp);
+        }
     }
 
     /**

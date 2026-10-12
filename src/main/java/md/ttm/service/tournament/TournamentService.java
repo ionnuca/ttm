@@ -34,6 +34,8 @@ import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.random.RandomGenerator;
+import java.security.SecureRandom;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -247,9 +249,12 @@ public class TournamentService {
         tournamentRepository.save(tournament);
     }
 
-    /** Etapa 1: grupele, cu jucătorii repartizați în șerpuială după rating, și meciurile lor. */
+    /**
+     * Etapa 1: grupele, cu jucătorii repartizați pe urne după rating și trași la sorți în fiecare urnă
+     * ({@link GroupStagePlanner#draw}), și meciurile lor. În grupă jucătorii rămân ordonați după rating.
+     */
     private void createGroupStage(Tournament tournament, List<TournamentParticipant> byRating) {
-        List<List<Integer>> plan = GroupStagePlanner.snake(byRating.size(), tournament.getGroupCount());
+        List<List<Integer>> plan = GroupStagePlanner.draw(byRating.size(), tournament.getGroupCount(), RANDOM);
         List<TournamentMatch> matches = new ArrayList<>();
         for (int g = 0; g < plan.size(); g++) {
             TournamentGroup group = groupRepository.save(new TournamentGroup(tournament, TournamentStage.GROUPS,
@@ -761,6 +766,8 @@ public class TournamentService {
     }
 
     /** Ordinea din grupă: rating descrescător, apoi alfabetic. */
+    private static final RandomGenerator RANDOM = new SecureRandom();
+
     private static final Comparator<TournamentParticipant> BY_RATING = Comparator
             .comparingInt((TournamentParticipant p) -> -p.getPlayer().getRating())
             .thenComparing(p -> p.getPlayer().getLastName(), String.CASE_INSENSITIVE_ORDER)
