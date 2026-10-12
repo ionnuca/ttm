@@ -141,8 +141,10 @@ class GroupsTournamentIT {
                 .containsExactly("Finala 1 · locul 1", "Finala 2 · locul 1");
         assertThat(done.prizes()).extracting(PrizePlace::amount)
                 .containsExactly(new BigDecimal("350.00"), new BigDecimal("50.00"));
-        // Finala 2: primul calificat (cel mai bun loc din grupe, apoi ratingul)
-        assertThat(done.prizes().get(1).winnerName()).isEqualTo("Test P5");
+        // Finala 2 nu s-a jucat: P5 și P6 au câte o victorie preluată din grupe și nu s-au întâlnit,
+        // deci împart locul 1 (premiul se împarte egal)
+        assertThat(done.prizes().get(1).winnerName()).isEqualTo("Test P5, Test P6");
+        assertThat(done.prizes().get(1).shared()).isTrue();
         assertThat(done.prizes().get(0).winnerName()).isNotNull();
     }
 
