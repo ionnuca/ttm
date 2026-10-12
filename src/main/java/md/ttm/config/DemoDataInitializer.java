@@ -91,7 +91,7 @@ public class DemoDataInitializer implements ApplicationRunner {
         userRepository.save(demoUser);
         userRepository.save(new AppUser("manager", passwordEncoder.encode("manager123"), Role.TOURNAMENT_MANAGER, lungu));
         createDemoTournaments();
-        log.info("Date demonstrative încărcate: 10 jucători, 4 turnee, utilizatorii 'jucator' (parola 'jucator123') și 'manager' (parola 'manager123')");
+        log.info("Date demonstrative încărcate: 10 jucători, 5 turnee, utilizatorii 'jucator' (parola 'jucator123') și 'manager' (parola 'manager123')");
     }
 
     /**
@@ -168,6 +168,21 @@ public class DemoDataInitializer implements ApplicationRunner {
             }
 
             playTiebreaks(winterId);
+
+            // Turneu comercial cu egalitate totală (cerc 3:0): așteaptă seturile de departajare
+            Long tieId = tournamentService.create(
+                    new TournamentForm("Cupa egalității", LocalDate.now().minusDays(2))).getId();
+            byLastName(players, "Moraru", "Țurcanu", "Bîrcă")
+                    .forEach(p -> tournamentService.addParticipant(tieId, p.getId()));
+            tournamentService.start(tieId, TournamentSettings.commercial(5, 1, new BigDecimal("50")));
+            java.util.Set<Long> winners = new java.util.HashSet<>();
+            for (TournamentMatch match : tournamentService.findDetails(tieId).orElseThrow().matches()) {
+                long a = match.getParticipantA().getId();
+                long b = match.getParticipantB().getId();
+                boolean aWins = !winners.contains(a) && (winners.contains(b) || a < b);
+                winners.add(aWins ? a : b);
+                tournamentService.recordResult(match.getId(), aWins ? MatchResultForm.sets(3, 0) : MatchResultForm.sets(0, 3));
+            }
 
             Long sundayId = tournamentService.create(
                     new TournamentForm("Turneul de duminică", LocalDate.now().plusDays(3))).getId();

@@ -231,6 +231,33 @@ await check('telefon: din utilizatori, numele duce la pagina jucătorului', asyn
   if (await p.getByText('Editare utilizator').isVisible()) throw new Error('s-a deschis și editarea contului');
   await phone.close();
 });
+await check('admin: seturi de departajare la turneul comercial', async () => {
+  await page.goto(`${BASE}/turnee`);
+  await page.getByText('Cupa egalității').first().click();
+  await expectText(page, 'Seturi de departajare');
+  await expectText(page, '1=');
+  await shot(page, '45-admin-departajare');
+  const first = page.getByRole('button', { name: /^Set de departajare/ }).first();
+  await first.click();
+  const dialog = page.getByRole('dialog');
+  await dialog.locator('input').nth(0).fill('11');
+  await dialog.locator('input').nth(1).fill('10');
+  await dialog.getByRole('button', { name: 'Salvează' }).click();
+  await expectText(page, 'Scor invalid pentru un set');
+  await dialog.locator('input').nth(1).fill('7');
+  await dialog.getByRole('button', { name: 'Salvează' }).click();
+  await expectText(page, 'Rezultat salvat');
+  for (let i = 0; i < 2; i++) {
+    await page.getByRole('button', { name: /^Set de departajare/ }).nth(1 + i).click();
+    await page.getByRole('dialog').locator('input').nth(0).fill('11');
+    await page.getByRole('dialog').locator('input').nth(1).fill('6');
+    await page.getByRole('dialog').getByRole('button', { name: 'Salvează' }).click();
+    await page.getByRole('dialog').waitFor({ state: 'detached', timeout: 10000 });
+    await settle(page);
+  }
+  await expectText(page, 'Încheiat');
+  await shot(page, '46-admin-departajare-incheiat');
+});
 await check('admin: dialog utilizator nou', async () => {
   await page.getByText('Adaugă utilizator').click();
   await expectText(page, 'Utilizator nou');
