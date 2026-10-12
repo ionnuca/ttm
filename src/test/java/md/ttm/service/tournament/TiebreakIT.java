@@ -65,6 +65,7 @@ class TiebreakIT {
         assertThat(done.standings()).extracting(StandingsCalculator.Row::place).containsExactly(1, 2, 3);
         assertThat(done.prizes().get(0).winnerName()).isEqualTo("Test Ana");
         assertThat(done.prizes().get(0).shared()).isFalse();
+        assertThat(done.ratingChanges()).hasSize(3); // la încheiere ratingul s-a recalculat
 
         // corectarea unui meci anulează seturile de departajare (egalitățile se pot schimba)
         TournamentMatch match = done.matches().get(0);

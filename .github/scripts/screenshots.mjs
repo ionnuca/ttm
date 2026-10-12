@@ -256,7 +256,10 @@ await check('admin: seturi de departajare la turneul comercial', async () => {
     await settle(page);
   }
   await expectText(page, 'Încheiat');
+  await expectText(page, '→'); // ratingul s-a recalculat la încheiere
   await shot(page, '46-admin-departajare-incheiat');
+  await page.goto(`${BASE}/utilizatori`);
+  await expectText(page, 'jucator');
 });
 await check('admin: dialog utilizator nou', async () => {
   await page.getByText('Adaugă utilizator').click();
