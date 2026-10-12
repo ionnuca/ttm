@@ -386,6 +386,12 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
             }
         }
         add(stageTitle(TournamentStage.GROUPS, details.groupStage()));
+        if (details.canRedrawGroups()) {
+            Button redraw = new Button(Tr.t("Reîmparte grupele"), VaadinIcon.REFRESH.create(), e -> confirmRedraw());
+            redraw.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
+            redraw.setTooltipText(Tr.t("O nouă tragere la sorți, cât timp nu există rezultate"));
+            add(redraw);
+        }
         if (t.getStage() == TournamentStage.FINALS) {
             add(hint(Tr.t("Rezultatele din grupe au stabilit calificarea și nu mai pot fi modificate.")));
         }
@@ -598,6 +604,17 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
             }
             refresh();
         });
+        dialog.open();
+    }
+
+    private void confirmRedraw() {
+        ConfirmDialog dialog = new ConfirmDialog();
+        dialog.setHeader(Tr.t("Reîmpărțiți grupele?"));
+        dialog.setText(Tr.t("Jucătorii se împart din nou în grupe, prin tragere la sorți pe urne după rating, iar meciurile grupelor se generează din nou. Se poate doar cât timp nu s-a înregistrat niciun rezultat."));
+        dialog.setCancelable(true);
+        dialog.setCancelText(Tr.t("Anulează"));
+        dialog.setConfirmText(Tr.t("Reîmparte grupele"));
+        dialog.addConfirmListener(e -> run(() -> tournamentService.redrawGroups(tournamentId), Tr.t("Grupele au fost reîmpărțite")));
         dialog.open();
     }
 

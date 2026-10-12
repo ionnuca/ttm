@@ -60,6 +60,12 @@ public record TournamentDetails(
                 && !groupStage().isEmpty() && groupStage().stream().allMatch(GroupView::complete);
     }
 
+    /** Administratorul poate reîmpărți grupele: etapa 1, fără niciun rezultat înregistrat. */
+    public boolean canRedrawGroups() {
+        return md.ttm.security.SecurityUtils.isAdmin() && TournamentService.canRedrawGroups(tournament)
+                && playedMatches() == 0;
+    }
+
     public long playedMatches() {
         return matches.stream().filter(TournamentMatch::isPlayed).count();
     }

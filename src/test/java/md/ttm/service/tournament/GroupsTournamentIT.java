@@ -54,6 +54,29 @@ class GroupsTournamentIT {
     }
 
     @Test
+    void administratorulReimparteGrupeleCatTimpNuSuntRezultate() {
+        Long id = tournamentWith(8);
+        tournamentService.start(id, TournamentSettings.groups(5, 2));
+        assertThat(details(id).canRedrawGroups()).isTrue();
+
+        tournamentService.redrawGroups(id);
+        TournamentDetails redrawn = details(id);
+        assertThat(redrawn.groupStage()).hasSize(2);
+        assertThat(redrawn.matches()).hasSize(12);
+        assertThat(redrawn.groupStage()).allSatisfy(g -> {
+            List<String> members = names(g.members());
+            assertThat(members.get(0)).isIn("P1", "P2");
+            assertThat(members.get(3)).isIn("P7", "P8");
+        });
+
+        tournamentService.recordResult(redrawn.matches().get(0).getId(), MatchResultForm.sets(3, 0));
+        assertThat(details(id).canRedrawGroups()).isFalse();
+        assertThatThrownBy(() -> tournamentService.redrawGroups(id))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("există deja rezultate");
+    }
+
+    @Test
     void validareaNumaruluiDeGrupe() {
         Long id = tournamentWith(5);
         assertThatThrownBy(() -> tournamentService.start(id, TournamentSettings.groups(5, 3)))
