@@ -512,7 +512,12 @@ public class TournamentService {
         tiebreak.setRecordedBy(SecurityUtils.currentUsername().orElse(null));
         tiebreak.setRecordedAt(Instant.now());
         tiebreakRepository.saveAndFlush(tiebreak);
+        boolean wasFinished = tournament.getStatus() == TournamentStatus.FINISHED;
         finishIfComplete(tournament);
+        if (!wasFinished && tournament.getStatus() == TournamentStatus.FINISHED) {
+            // turneul s-a încheiat acum: meciurile lui intră în rating
+            ratingService.recalculateAll();
+        }
         return tiebreak;
     }
 
