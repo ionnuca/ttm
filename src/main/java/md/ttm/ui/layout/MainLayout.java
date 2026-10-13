@@ -15,6 +15,8 @@ import md.ttm.ui.account.LoginView;
 import md.ttm.ui.account.ProfileView;
 import md.ttm.ui.account.RegisterView;
 import md.ttm.ui.components.Responsive;
+import md.ttm.ui.components.Badges;
+import org.springframework.beans.factory.annotation.Value;
 import md.ttm.ui.player.PlayersView;
 import md.ttm.ui.tournament.TournamentsView;
 import md.ttm.ui.user.UsersView;
@@ -48,11 +50,19 @@ public class MainLayout extends AppLayout {
     private final List<Component> hiddenWhenNarrow = new ArrayList<>();
 
     public MainLayout(AuthenticationContext authenticationContext, UserService userService,
-                      ObjectProvider<BuildProperties> buildProperties) {
+                      ObjectProvider<BuildProperties> buildProperties,
+                      @Value("${app.environment-label:}") String environmentLabel) {
         setPrimarySection(Section.DRAWER);
         Component title = createTitle();
         hiddenWhenNarrow.add(title);
-        addToNavbar(new DrawerToggle(), title, createUserArea(authenticationContext, userService));
+        addToNavbar(new DrawerToggle(), title);
+        if (environmentLabel != null && !environmentLabel.isBlank()) {
+            // aplicația de test: eticheta vizibilă mereu, ca să nu fie confundată cu producția
+            Span label = Badges.badge(environmentLabel, Badges.Tone.ERROR);
+            label.getStyle().set("margin-left", "var(--lumo-space-s)").set("font-weight", "700");
+            addToNavbar(label);
+        }
+        addToNavbar(createUserArea(authenticationContext, userService));
         BuildProperties build = buildProperties.getIfAvailable();
         addToDrawer(createDrawerHeader(build == null ? null : build.getVersion()), new Scroller(createNavigation()));
         Responsive.onNarrowChange(this, narrow -> hiddenWhenNarrow.forEach(c -> c.setVisible(!narrow)));
