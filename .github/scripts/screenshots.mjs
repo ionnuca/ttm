@@ -603,6 +603,34 @@ await check('limba: utilizatorul o salvează în cont', async () => {
 });
 await ctx.close();
 
+// ---------- iPhone, aplicația de pe ecranul principal: tras în jos = reîncărcare ----------
+await check('iPhone (aplicație): tras în jos reîncarcă pagina', async () => {
+  const ios = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'ro-RO', isMobile: true, hasTouch: true });
+  await ios.addInitScript(() => Object.defineProperty(window.navigator, 'standalone', { get: () => true }));
+  const p = await ios.newPage();
+  await p.goto(`${BASE}/turnee`);
+  await settle(p);
+  await p.evaluate(() => { window.__ttmMarker = 1; });
+  const pull = async (from, to) => p.evaluate(([y0, y1]) => {
+    const target = document.elementFromPoint(200, y0);
+    const touch = y => new Touch({ identifier: 1, target, clientX: 200, clientY: y });
+    target.dispatchEvent(new TouchEvent('touchstart', { touches: [touch(y0)], bubbles: true, composed: true }));
+    for (let y = y0; y <= y1; y += 20) {
+      target.dispatchEvent(new TouchEvent('touchmove', { touches: [touch(y)], bubbles: true, composed: true }));
+    }
+    target.dispatchEvent(new TouchEvent('touchend', { touches: [], bubbles: true, composed: true }));
+  }, [from, to]);
+  // tras puțin: nu se reîncarcă
+  await pull(200, 260);
+  await p.waitForTimeout(1000);
+  if (await p.evaluate(() => window.__ttmMarker) !== 1) throw new Error('s-a reîncărcat la o tragere scurtă');
+  // tras suficient: se reîncarcă
+  await Promise.all([p.waitForEvent('load', { timeout: 15000 }), pull(200, 400)]);
+  await settle(p);
+  if (await p.evaluate(() => window.__ttmMarker) === 1) throw new Error('pagina nu s-a reîncărcat');
+  await ios.close();
+});
+
 await browser.close();
 
 if (failures.length) {
