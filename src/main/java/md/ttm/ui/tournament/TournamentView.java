@@ -86,9 +86,12 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
 
     /** Rândurile meciurilor, ca după salvarea unui rezultat pagina să rămână la meciul respectiv. */
     private final Map<Long, Component> matchRows = new HashMap<>();
+    /** Casetele cu seturile de departajare, după grupă (0 = tabelul turneului Round Robin). */
+    private final Map<Long, Component> tiebreakCards = new HashMap<>();
 
     private void refresh() {
         matchRows.clear();
+        tiebreakCards.clear();
         removeAll();
         RouterLink back = new RouterLink(Tr.t("← Toate turneele"), TournamentsView.class);
         back.getStyle().set("font-size", "var(--lumo-font-size-s)");
@@ -472,6 +475,7 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         members.forEach(p -> byId.put(p.getId(), p));
 
         Div card = card();
+        tiebreakCards.put(groupId != null ? groupId : 0L, card);
         if (!pending.isEmpty()) {
             card.getStyle()
                     .set("border-color", "var(--lumo-warning-color-50pct, var(--lumo-primary-color-50pct))")
@@ -520,6 +524,7 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
                         tournamentService.recordTiebreak(tournamentId, groupId, round, a.getId(), b.getId(), pa, pb);
                         Notifications.success(Tr.t("Rezultat salvat"));
                         refresh();
+                        scrollTo(tiebreakCards.get(groupId != null ? groupId : 0L));
                     }).open());
             enter.addThemeVariants(ButtonVariant.LUMO_ICON, ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL);
             enter.setAriaLabel(Tr.t("Set de departajare {0} – {1}", a.getPlayer().getDisplayName(), b.getPlayer().getDisplayName()));
@@ -653,7 +658,11 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
      * pagina sare la începutul turneului).
      */
     private void keepInView(Long matchId) {
-        Component row = matchRows.get(matchId);
+        scrollTo(matchRows.get(matchId));
+    }
+
+    /** Derulează la componenta dată, după reîncărcarea paginii (altfel, pe telefon, pagina sare la început). */
+    private static void scrollTo(Component row) {
         if (row != null) {
             row.getElement().executeJs("const el = this; requestAnimationFrame(() => "
                     + "el.scrollIntoView({block: 'center', behavior: 'instant'}));");

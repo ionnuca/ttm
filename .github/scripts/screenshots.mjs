@@ -237,16 +237,30 @@ await check('admin: seturi de departajare la turneul comercial', async () => {
   await expectText(page, 'Seturi de departajare');
   await expectText(page, '1=');
   await shot(page, '45-admin-departajare');
-  const first = page.getByRole('button', { name: /^Set de departajare/ }).first();
+  // primul set, pe telefon: după salvare pagina rămâne la seturile de departajare
+  const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'ro-RO', isMobile: true, hasTouch: true });
+  const p = await phone.newPage();
+  await login(p, 'admin', 'admin12345');
+  await p.goto(page.url());
+  await expectText(p, 'Seturi de departajare');
+  const first = p.getByRole('button', { name: /^Set de departajare/ }).first();
+  await first.scrollIntoViewIfNeeded();
   await first.click();
-  const dialog = page.getByRole('dialog');
+  const dialog = p.getByRole('dialog');
   await dialog.locator('input').nth(0).fill('11');
   await dialog.locator('input').nth(1).fill('10');
   await dialog.getByRole('button', { name: 'Salvează' }).click();
-  await expectText(page, 'Scor invalid pentru un set');
+  await expectText(p, 'Scor invalid pentru un set');
   await dialog.locator('input').nth(1).fill('7');
   await dialog.getByRole('button', { name: 'Salvează' }).click();
-  await expectText(page, 'Rezultat salvat');
+  await expectText(p, 'Rezultat salvat');
+  await p.waitForTimeout(1000);
+  const box = await p.getByRole('heading', { name: 'Seturi de departajare' }).boundingBox();
+  if (!box || box.y < 0 || box.y > 844) throw new Error(`după salvare pagina nu a rămas la seturile de departajare (y=${box?.y})`);
+  await p.screenshot({ path: `${OUT}/47-telefon-dupa-departajare.png` });
+  await phone.close();
+  await page.reload();
+  await settle(page);
   for (let i = 0; i < 2; i++) {
     await page.getByRole('button', { name: /^Set de departajare/ }).nth(1 + i).click();
     await page.getByRole('dialog').locator('input').nth(0).fill('11');
