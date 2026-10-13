@@ -2,6 +2,7 @@ package md.ttm;
 
 import com.vaadin.flow.component.page.AppShellConfigurator;
 import com.vaadin.flow.server.AppShellSettings;
+import com.vaadin.flow.component.page.Inline;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
@@ -27,6 +28,21 @@ public class TtmApplication implements AppShellConfigurator {
         settings.addMetaTag("mobile-web-app-capable", "yes");
         settings.addMetaTag("apple-mobile-web-app-capable", "yes");
         settings.addMetaTag("apple-mobile-web-app-title", "TTM");
+        // iPhone, aplicația de pe ecranul principal: tras în jos = reîncărcare (gestul nu există nativ)
+        settings.addInlineWithContents(Inline.Position.APPEND, PULL_TO_REFRESH, Inline.Wrapping.JAVASCRIPT);
+    }
+
+    private static final String PULL_TO_REFRESH = readResource("/pwa/pull-to-refresh.js");
+
+    private static String readResource(String path) {
+        try (java.io.InputStream in = TtmApplication.class.getResourceAsStream(path)) {
+            if (in == null) {
+                throw new IllegalStateException("Lipsește " + path);
+            }
+            return new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+        } catch (java.io.IOException e) {
+            throw new java.io.UncheckedIOException(e);
+        }
     }
 
     public static void main(String[] args) {
