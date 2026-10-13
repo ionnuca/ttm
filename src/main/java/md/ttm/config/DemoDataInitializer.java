@@ -91,7 +91,7 @@ public class DemoDataInitializer implements ApplicationRunner {
         userRepository.save(demoUser);
         userRepository.save(new AppUser("manager", passwordEncoder.encode("manager123"), Role.TOURNAMENT_MANAGER, lungu));
         createDemoTournaments();
-        log.info("Date demonstrative încărcate: 10 jucători, 4 turnee, utilizatorii 'jucator' (parola 'jucator123') și 'manager' (parola 'manager123')");
+        log.info("Date demonstrative încărcate: 10 jucători, 5 turnee, utilizatorii 'jucator' (parola 'jucator123') și 'manager' (parola 'manager123')");
     }
 
     /**
@@ -167,12 +167,46 @@ public class DemoDataInitializer implements ApplicationRunner {
                 w++;
             }
 
+            playTiebreaks(winterId);
+
+            // Turneu comercial cu egalitate totală (cerc 3:0): așteaptă seturile de departajare
+            Long tieId = tournamentService.create(
+                    new TournamentForm("Cupa egalității", LocalDate.now().minusDays(2))).getId();
+            byLastName(players, "Moraru", "Țurcanu", "Bîrcă")
+                    .forEach(p -> tournamentService.addParticipant(tieId, p.getId()));
+            tournamentService.start(tieId, TournamentSettings.commercial(5, 1, new BigDecimal("50")));
+            // cerc: primul îl bate pe al doilea, al doilea pe al treilea, al treilea pe primul
+            List<Long> ids = tournamentService.findDetails(tieId).orElseThrow().matches().stream()
+                    .flatMap(m -> java.util.stream.Stream.of(m.getParticipantA().getId(), m.getParticipantB().getId()))
+                    .distinct().sorted().toList();
+            for (TournamentMatch m : tournamentService.findDetails(tieId).orElseThrow().matches()) {
+                int ia = ids.indexOf(m.getParticipantA().getId());
+                int ib = ids.indexOf(m.getParticipantB().getId());
+                boolean aWins = (ia + 1) % 3 == ib;
+                tournamentService.recordResult(m.getId(), aWins ? MatchResultForm.sets(3, 0) : MatchResultForm.sets(0, 3));
+            }
+
             Long sundayId = tournamentService.create(
                     new TournamentForm("Turneul de duminică", LocalDate.now().plusDays(3))).getId();
             byLastName(players, "Rusu", "Ciobanu", "Lungu", "Moraru")
                     .forEach(p -> tournamentService.addParticipant(sundayId, p.getId()));
         } finally {
             SecurityContextHolder.getContext().setAuthentication(previous);
+        }
+    }
+
+    /** Dacă grupele au egalități nedepartajate, joacă seturile de departajare (câștigă primul jucător, 11:7). */
+    private void playTiebreaks(Long tournamentId) {
+        for (int guard = 0; guard < 20; guard++) {
+            var details = tournamentService.findDetails(tournamentId).orElseThrow();
+            var pending = details.groups().stream()
+                    .flatMap(g -> g.pendingTiebreaks().stream().map(p -> java.util.Map.entry(g.group().getId(), p)))
+                    .toList();
+            if (pending.isEmpty()) {
+                return;
+            }
+            pending.forEach(e -> tournamentService.recordTiebreak(tournamentId, e.getKey(), e.getValue().round(),
+                    e.getValue().a(), e.getValue().b(), 11, 7));
         }
     }
 

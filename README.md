@@ -75,7 +75,7 @@ Ratingul nu se modifică incremental, ci se **reconstruiește**: din ratingul in
 
 Unde se vede: coloana *Rating* din clasament; în tabelul unui turneu încheiat, sub fiecare nume, ratingul înainte → după; în lista meciurilor, schimbarea din fiecare meci; în „Profilul meu”, *Evoluția ratingului* pe turnee.
 
-Departajarea la egalitate de puncte: punctele din meciurile directe dintre jucătorii la egalitate, apoi raportul seturilor din aceste meciuri, apoi raportul seturilor din toate meciurile, apoi poziția în grupă. O victorie tehnică se socotește la seturi ca victorie la scor alb (3:0 la best of 5).
+Departajarea la egalitate de puncte ține cont doar de meciurile directe dintre jucătorii la egalitate: punctele, apoi raportul seturilor din aceste meciuri; pentru cei rămași la egalitate calculul se reia doar cu meciurile dintre ei. Egalitatea nedepartajată: la turneul obișnuit jucătorii împart locul (1=, 1=, 4); la turneul comercial, după toate meciurile grupei, joacă între ei câte un set de departajare la 11 puncte (setele câștigate, apoi raportul punctelor; la egalitate, o nouă rundă). Seturile de departajare (tabelul `tournament_tiebreak`) nu contează la rating sau la statistici. O victorie tehnică se socotește la seturi ca victorie la scor alb (3:0 la best of 5).
 
 ---
 

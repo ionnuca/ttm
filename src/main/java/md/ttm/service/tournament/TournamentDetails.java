@@ -19,6 +19,8 @@ import java.util.Map;
  * @param ownParticipant participarea utilizatorului curent, dacă e înscris
  * @param ratingChanges  ratingul înainte/după turneu, pe jucător (doar la turneele încheiate)
  * @param groups         la „Grupe + finale”: grupele etapei 1, apoi finalele (gol la Round Robin)
+ * @param tiebreaks      la Round Robin: seturile de departajare jucate (la „Grupe + finale” sunt în fiecare grupă)
+ * @param pendingTiebreaks la Round Robin: seturile de departajare care mai trebuie jucate
  */
 public record TournamentDetails(
         Tournament tournament,
@@ -32,7 +34,9 @@ public record TournamentDetails(
         boolean canSelfRegister,
         boolean canRecordResults,
         Map<Long, RatingHistory> ratingChanges,
-        List<GroupView> groups) {
+        List<GroupView> groups,
+        List<md.ttm.model.tournament.TournamentTiebreak> tiebreaks,
+        List<StandingsCalculator.Pairing> pendingTiebreaks) {
 
     public List<GroupView> groupStage() {
         return groups.stream().filter(g -> !g.group().isFinal()).toList();
@@ -42,7 +46,6 @@ public record TournamentDetails(
         return groups.stream().filter(g -> g.group().isFinal()).toList();
     }
 
-    /** Etapa 1 s-a terminat și se poate porni etapa 2. */
     /** Organizatorul poate încheia manual un turneu în desfășurare. */
     public boolean canFinishManually() {
         return manager && tournament.getStatus() == TournamentStatus.IN_PROGRESS
@@ -54,10 +57,16 @@ public record TournamentDetails(
         return matches.size() - playedMatches();
     }
 
+    /** Etapa 1 s-a terminat (meciuri și seturi de departajare) și se poate porni etapa 2. */
     public boolean canStartFinals() {
         return manager && tournament.isGroupsFormat()
                 && tournament.getStage() == md.ttm.model.tournament.TournamentStage.GROUPS
                 && !groupStage().isEmpty() && groupStage().stream().allMatch(GroupView::complete);
+    }
+
+    /** Seturile de departajare care mai trebuie jucate, în tot turneul. */
+    public long pendingTiebreakCount() {
+        return pendingTiebreaks.size() + groups.stream().mapToLong(g -> g.pendingTiebreaks().size()).sum();
     }
 
     /** Administratorul poate reîmpărți grupele: etapa 1, fără niciun rezultat înregistrat. */

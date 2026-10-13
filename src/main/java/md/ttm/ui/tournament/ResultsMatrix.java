@@ -70,8 +70,14 @@ class ResultsMatrix extends Div {
             }
             tr.appendChild(cell(row.setsWon() + "/" + row.setsLost(), "white-space:nowrap;"));
             tr.appendChild(cell(String.valueOf(row.points()), "font-weight:600;"));
-            tr.appendChild(cell(row.place() > 0 ? String.valueOf(row.place()) : "–",
-                    "font-weight:700;color:var(--lumo-primary-text-color);"));
+            Element place = cell(row.place() > 0 ? String.valueOf(row.place()) : "–",
+                    "font-weight:700;color:var(--lumo-primary-text-color);");
+            if (row.sharedPlace()) {
+                // egalitate nedepartajată: locul e împărțit
+                place.setText(row.place() + "=");
+                place.setAttribute("title", Tr.t("Loc împărțit: egalitate care nu poate fi departajată prin meciurile directe"));
+            }
+            tr.appendChild(place);
             body.appendChild(tr);
         }
         table.appendChild(body);
