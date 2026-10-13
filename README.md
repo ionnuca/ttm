@@ -252,6 +252,23 @@ Copiile de rezervă stau pe același server. Pentru siguranță, descărcați pe
 
 ---
 
+### Aplicația de test (test.tabletennis.omagiu.md)
+
+Pe același server rulează și versiunea din `develop`, la o adresă separată, protejată cu utilizator și parolă:
+
+- containerul `app-test` (`/opt/ttm-test`), cu memoria limitată (Java 288 MB, container 640 MB), ca să nu ia din memoria producției;
+- baza `ttm_test` din același PostgreSQL, o **copie a datelor din producție**; producția nu este atinsă;
+- servită de Caddy-ul producției (`/opt/ttm/sites/test.caddy`), cu HTTPS automat; în bara de sus apare eticheta **TEST**.
+
+Pregătire, o singură dată: înregistrarea DNS `test.tabletennis` (tip A, același IP), apoi pe server, ca root:
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/ionnuca/ttm/main/deploy/test-setup.sh
+bash test-setup.sh
+```
+
+După fiecare commit pe `develop` (CI reușit), workflow-ul **Publicare test** construiește imaginea `ghcr.io/ionnuca/ttm:develop` și actualizează aplicația de test. Funcționalitățile noi se lucrează pe ramuri separate și ajung pe `develop` (deci pe test) când sunt gata. Datele din producție se copiază din nou oricând cu `/opt/ttm-test/test-refresh.sh` (datele de test se pierd).
+
 ## Ramuri și release
 
 | Ramura | Rol | Ce se întâmplă la push |
