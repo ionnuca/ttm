@@ -617,6 +617,30 @@ await check('limba: utilizatorul o salvează în cont', async () => {
 });
 await ctx.close();
 
+// ---------- Autentificarea se păstrează (cookie „ține-mă minte”) ----------
+await check('autentificarea rămâne după închiderea sesiunii; Ieșire o șterge', async () => {
+  const c = await browser.newContext(desktop);
+  const p = await c.newPage();
+  await login(p, 'jucator', 'jucator123');
+  const cookies = await c.cookies();
+  if (!cookies.some(k => k.name === 'ttm-remember' && k.expires > Date.now() / 1000 + 20 * 86400)) {
+    throw new Error('lipsește cookie-ul ttm-remember valabil cel puțin 20 de zile');
+  }
+  // ca după închiderea aplicației: dispare cookie-ul de sesiune, rămâne doar ttm-remember
+  await c.clearCookies();
+  await c.addCookies(cookies.filter(k => k.name === 'ttm-remember'));
+  await p.goto(`${BASE}/profil`);
+  await settle(p);
+  await expectText(p, 'Profilul meu');
+  await p.getByRole('button', { name: 'Ieșire' }).click();
+  await p.waitForTimeout(2000);
+  await p.goto(`${BASE}/`);
+  await settle(p);
+  await p.getByRole('button', { name: 'Autentificare' }).waitFor({ timeout: 10000 });
+  if ((await c.cookies()).some(k => k.name === 'ttm-remember' && k.value)) throw new Error('cookie-ul ttm-remember a rămas după Ieșire');
+  await c.close();
+});
+
 // ---------- iPhone, aplicația de pe ecranul principal: tras în jos = reîncărcare ----------
 await check('iPhone (aplicație): tras în jos reîncarcă pagina', async () => {
   const ios = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'ro-RO', isMobile: true, hasTouch: true });
