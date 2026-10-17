@@ -252,7 +252,7 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
             Button register = new Button(Tr.t("Mă înscriu"), VaadinIcon.PLUS.create(),
                     e -> run(() -> tournamentService.registerSelf(tournamentId), details.manager()
                             ? Tr.t("V-ați înscris la turneu")
-                            : Tr.t("Cererea de înscriere a fost trimisă; veți primi o notificare după confirmare")));
+                            : Tr.t("Cerere trimisă; veți fi anunțat după confirmare")));
             register.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
             actions.add(register);
         }
