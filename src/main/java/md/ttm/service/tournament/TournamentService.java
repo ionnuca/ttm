@@ -13,6 +13,9 @@ import md.ttm.model.tournament.TournamentGroupMember;
 import md.ttm.model.tournament.TournamentParticipant;
 import md.ttm.model.tournament.TournamentStage;
 import md.ttm.model.tournament.TournamentStatus;
+import md.ttm.model.tournament.ParticipantStatus;
+import md.ttm.model.notification.NotificationType;
+import md.ttm.service.notification.NotificationService;
 import md.ttm.model.tournament.TournamentTiebreak;
 import md.ttm.repository.TournamentTiebreakRepository;
 import md.ttm.model.user.AppUser;
@@ -71,6 +74,7 @@ public class TournamentService {
     private final TournamentGroupRepository groupRepository;
     private final TournamentGroupMemberRepository memberRepository;
     private final TournamentTiebreakRepository tiebreakRepository;
+    private final NotificationService notificationService;
 
     public TournamentService(TournamentRepository tournamentRepository,
                              TournamentParticipantRepository participantRepository,
@@ -81,8 +85,10 @@ public class TournamentService {
                              RatingService ratingService,
                              TournamentGroupRepository groupRepository,
                              TournamentGroupMemberRepository memberRepository,
-                             TournamentTiebreakRepository tiebreakRepository) {
+                             TournamentTiebreakRepository tiebreakRepository,
+                             NotificationService notificationService) {
         this.tiebreakRepository = tiebreakRepository;
+        this.notificationService = notificationService;
         this.groupRepository = groupRepository;
         this.memberRepository = memberRepository;
         this.historyRepository = historyRepository;
@@ -104,8 +110,14 @@ public class TournamentService {
         for (Object[] row : participantRepository.countByTournament()) {
             counts.put((Long) row[0], (Long) row[1]);
         }
+        Map<Long, Long> pending = new HashMap<>();
+        if (SecurityUtils.canManageTournaments()) {
+            for (Object[] row : participantRepository.countPendingByTournament()) {
+                pending.put((Long) row[0], (Long) row[1]);
+            }
+        }
         return tournamentRepository.findAllByOrderByTournamentDateDescIdDesc().stream()
-                .map(t -> new TournamentSummary(t, counts.getOrDefault(t.getId(), 0L)))
+                .map(t -> new TournamentSummary(t, counts.getOrDefault(t.getId(), 0L), pending.getOrDefault(t.getId(), 0L)))
                 .toList();
     }
 
@@ -119,6 +131,7 @@ public class TournamentService {
         Set<Long> registered = new HashSet<>();
         participantRepository.findByTournamentIdWithPlayer(tournamentId)
                 .forEach(p -> registered.add(p.getPlayer().getId()));
+        // cererile neconfirmate rămân în listă: adăugarea de către organizator le confirmă
         return playerRepository.findAllByOrderByRatingDescLastNameAscFirstNameAsc().stream()
                 .filter(p -> !registered.contains(p.getId()))
                 .toList();
@@ -163,13 +176,50 @@ public class TournamentService {
     // Înscriere
     // ------------------------------------------------------------------
 
-    /** Utilizatorul curent se înscrie la turneu. */
+    /**
+     * Utilizatorul curent cere înscrierea la turneu. Cererea așteaptă confirmarea unui organizator,
+     * care primește o notificare; organizatorii (administrator, manager de turnee) se înscriu direct.
+     */
     @PreAuthorize("isAuthenticated()")
     @Transactional
     public TournamentParticipant registerSelf(Long tournamentId) {
         Player player = currentPlayer()
                 .orElseThrow(() -> new BusinessException("Contul nu are un profil de jucător"));
-        return register(requireTournament(tournamentId), player);
+        Tournament tournament = requireTournament(tournamentId);
+        boolean organizer = SecurityUtils.canManageTournaments();
+        TournamentParticipant participant = register(tournament, player,
+                organizer ? ParticipantStatus.CONFIRMED : ParticipantStatus.PENDING);
+        if (!organizer) {
+            notificationService.notifyOrganizers(NotificationType.REGISTRATION_REQUESTED, tournament, player.getDisplayName());
+        }
+        return participant;
+    }
+
+    /** Organizatorul confirmă o cerere de înscriere; jucătorul primește o notificare. */
+    @PreAuthorize("hasAnyRole('ADMIN', 'TOURNAMENT_MANAGER')")
+    @Transactional
+    public void confirmParticipant(Long tournamentId, Long participantId) {
+        Tournament tournament = requireOpenTournament(tournamentId);
+        TournamentParticipant participant = requirePending(tournamentId, participantId);
+        participant.setStatus(ParticipantStatus.CONFIRMED);
+        participantRepository.save(participant);
+        notificationService.notifyPlayer(participant.getPlayer(), NotificationType.REGISTRATION_CONFIRMED, tournament);
+    }
+
+    /** Organizatorul respinge o cerere de înscriere; jucătorul primește o notificare. */
+    @PreAuthorize("hasAnyRole('ADMIN', 'TOURNAMENT_MANAGER')")
+    @Transactional
+    public void rejectParticipant(Long tournamentId, Long participantId) {
+        Tournament tournament = requireOpenTournament(tournamentId);
+        TournamentParticipant participant = requirePending(tournamentId, participantId);
+        participantRepository.delete(participant);
+        notificationService.notifyPlayer(participant.getPlayer(), NotificationType.REGISTRATION_REJECTED, tournament);
+    }
+
+    private TournamentParticipant requirePending(Long tournamentId, Long participantId) {
+        return participantRepository.findById(participantId)
+                .filter(p -> p.getTournament().getId().equals(tournamentId) && !p.isConfirmed())
+                .orElseThrow(() -> new BusinessException("Cererea de înscriere nu mai există"));
     }
 
     /** Utilizatorul curent se retrage de la turneu (doar înainte de începere). */
@@ -185,12 +235,20 @@ public class TournamentService {
         participantRepository.delete(participant);
     }
 
+    /** Organizatorul înscrie un jucător, confirmat direct; dacă jucătorul ceruse deja înscrierea, cererea se confirmă. */
     @PreAuthorize("hasAnyRole('ADMIN', 'TOURNAMENT_MANAGER')")
     @Transactional
     public TournamentParticipant addParticipant(Long tournamentId, Long playerId) {
         Player player = playerRepository.findById(playerId)
                 .orElseThrow(() -> new BusinessException("Jucătorul nu mai există"));
-        return register(requireTournament(tournamentId), player);
+        Tournament tournament = requireTournament(tournamentId);
+        Optional<TournamentParticipant> request = participantRepository.findByTournamentIdAndPlayerId(tournamentId, playerId)
+                .filter(p -> !p.isConfirmed());
+        if (request.isPresent() && tournament.isRegistrationOpen()) {
+            confirmParticipant(tournamentId, request.get().getId());
+            return request.get();
+        }
+        return register(tournament, player, ParticipantStatus.CONFIRMED);
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'TOURNAMENT_MANAGER')")
@@ -203,14 +261,16 @@ public class TournamentService {
         participantRepository.delete(participant);
     }
 
-    private TournamentParticipant register(Tournament tournament, Player player) {
+    private TournamentParticipant register(Tournament tournament, Player player, ParticipantStatus status) {
         if (!tournament.isRegistrationOpen()) {
             throw new BusinessException("Înscrierea la acest turneu este închisă");
         }
         if (participantRepository.existsByTournamentIdAndPlayerId(tournament.getId(), player.getId())) {
             throw new BusinessException("{0} este deja înscris la acest turneu", player.getDisplayName());
         }
-        return participantRepository.save(new TournamentParticipant(tournament, player));
+        TournamentParticipant participant = new TournamentParticipant(tournament, player);
+        participant.setStatus(status);
+        return participantRepository.save(participant);
     }
 
     // ------------------------------------------------------------------
@@ -230,6 +290,11 @@ public class TournamentService {
             throw new BusinessException("Pentru a începe turneul sunt necesari cel puțin 2 participanți");
         }
         applySettings(settings, tournament, participants.size());
+        // cererile rămase neconfirmate nu intră în turneu; jucătorii sunt anunțați
+        for (TournamentParticipant request : participantRepository.findPendingByTournamentIdWithPlayer(tournamentId)) {
+            participantRepository.delete(request);
+            notificationService.notifyPlayer(request.getPlayer(), NotificationType.REGISTRATION_EXPIRED, tournament);
+        }
         participants.sort(BY_RATING);
         for (int i = 0; i < participants.size(); i++) {
             TournamentParticipant participant = participants.get(i);
@@ -676,14 +741,17 @@ public class TournamentService {
         }
 
         Optional<Player> currentPlayer = currentPlayer();
+        List<TournamentParticipant> pending = tournament.isRegistrationOpen()
+                ? participantRepository.findPendingByTournamentIdWithPlayer(tournament.getId())
+                : List.of();
         TournamentParticipant own = currentPlayer
-                .flatMap(player -> participants.stream()
+                .flatMap(player -> java.util.stream.Stream.concat(participants.stream(), pending.stream())
                         .filter(p -> p.getPlayer().getId().equals(player.getId()))
                         .findFirst())
                 .orElse(null);
         boolean manager = SecurityUtils.canManageTournaments();
         boolean canSelfRegister = tournament.isRegistrationOpen() && currentPlayer.isPresent() && own == null;
-        boolean canRecord = (tournament.getStatus() == TournamentStatus.IN_PROGRESS && (manager || own != null))
+        boolean canRecord = (tournament.getStatus() == TournamentStatus.IN_PROGRESS && (manager || (own != null && own.isConfirmed())))
                 || (tournament.getStatus() == TournamentStatus.FINISHED && manager);
 
         Map<Long, RatingHistory> ratingChanges = new HashMap<>();
@@ -694,7 +762,8 @@ public class TournamentService {
 
         return new TournamentDetails(tournament, participants, matches, standings, pool, prizes, own,
                 manager, canSelfRegister, canRecord, ratingChanges, groups,
-                tournament.isGroupsFormat() ? List.of() : tiebreaks, table.tiebreaks());
+                tournament.isGroupsFormat() ? List.of() : tiebreaks, table.tiebreaks(),
+                manager ? pending : List.of());
     }
 
     private static StandingsCalculator.Table standings(Tournament tournament,

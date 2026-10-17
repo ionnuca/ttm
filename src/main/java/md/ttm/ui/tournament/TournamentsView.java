@@ -92,7 +92,9 @@ public class TournamentsView extends VerticalLayout implements HasDynamicTitle {
                         : "—")
                 .setHeader(Tr.t("Format"))
                 .setAutoWidth(true).setFlexGrow(0);
-        Grid.Column<TournamentSummary> participants = grid.addColumn(TournamentSummary::participants)
+        Grid.Column<TournamentSummary> participants = grid.addColumn(s -> s.pendingRequests() > 0
+                        ? Tr.t("{0} (+{1} cereri)", s.participants(), s.pendingRequests())
+                        : String.valueOf(s.participants()))
                 .setHeader(Tr.t("Participanți"))
                 .setAutoWidth(true).setFlexGrow(0)
                 .setTextAlign(ColumnTextAlign.END)
@@ -127,6 +129,7 @@ public class TournamentsView extends VerticalLayout implements HasDynamicTitle {
         name.getStyle().set("font-weight", "500");
         Span details = new Span(TournamentLabels.shortDate(t.getTournamentDate()) + " · "
                 + Tr.t("{0} participanți", summary.participants())
+                + (summary.pendingRequests() > 0 ? " · " + Tr.t("{0} cereri de confirmat", summary.pendingRequests()) : "")
                 + (t.isCommercial() ? " · " + typeLabel(t) : ""));
         details.getStyle()
                 .set("font-size", "var(--lumo-font-size-s)")

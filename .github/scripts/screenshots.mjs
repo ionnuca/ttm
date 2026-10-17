@@ -448,12 +448,13 @@ await check('utilizator: introduce un rezultat', async () => {
   await expectText(page, 'Meciuri jucate: 10 din 15');
   await shot(page, '25-utilizator-turneu-dupa-rezultat');
 });
-await check('utilizator: se înscrie la turneu', async () => {
+await check('utilizator: cere înscrierea la turneu (așteaptă confirmarea)', async () => {
   await page.goto(`${BASE}/turnee`);
   await page.getByText('Turneul de duminică').first().click();
   await page.getByRole('button', { name: 'Mă înscriu' }).click();
-  await expectText(page, 'Participanți înscriși (5)');
-  await expectText(page, 'Mă retrag');
+  await expectText(page, 'Cererea de înscriere așteaptă confirmarea organizatorului');
+  await expectText(page, 'Participanți înscriși (4)');
+  await expectText(page, 'Retrag cererea');
   await shot(page, '26-utilizator-inscris');
 });
 await ctx.close();
@@ -477,12 +478,32 @@ await check('manager: poate crea turnee', async () => {
   await shot(page, '34-manager-turneu-nou');
   await page.keyboard.press('Escape');
 });
-await check('manager: conduce turneul (Începe turneul)', async () => {
+await check('manager: notificarea cererii și confirmarea înscrierii', async () => {
   await page.goto(`${BASE}/turnee`);
+  await expectText(page, '(+1 cereri)');
+  await page.getByRole('button', { name: 'Notificări' }).click();
+  await expectText(page, 'a cerut înscrierea la turneul „Turneul de duminică”');
+  await shot(page, '48-manager-notificari');
+  await page.keyboard.press('Escape');
   await page.getByText('Turneul de duminică').first().click();
+  await expectText(page, 'Cereri de înscriere (1)');
   await expectText(page, 'Începe turneul');
   await expectText(page, 'Adaugă un jucător');
   await shot(page, '35-manager-turneu-inscriere');
+  await page.getByRole('button', { name: 'Confirmă' }).click();
+  await expectText(page, 'Participanți înscriși (5)');
+  await expectNoText(page, 'Cereri de înscriere');
+});
+await check('utilizator: vede notificarea confirmării', async () => {
+  const c = await browser.newContext(desktop);
+  const p = await c.newPage();
+  await login(p, 'jucator', 'jucator123');
+  const bell = p.getByRole('button', { name: 'Notificări' });
+  await bell.waitFor({ timeout: 10000 });
+  await bell.click();
+  await expectText(p, 'Înscrierea la turneul „Turneul de duminică” a fost confirmată');
+  await shot(p, '49-utilizator-notificare-confirmare');
+  await c.close();
 });
 await check('manager: pagina Utilizatori e interzisă', async () => {
   await page.goto(`${BASE}/utilizatori`);

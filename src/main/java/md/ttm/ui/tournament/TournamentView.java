@@ -208,6 +208,38 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
     // Înainte de începere: înscrierea
     // ------------------------------------------------------------------
 
+    /** Cererile de înscriere neconfirmate, cu confirmare sau respingere (organizatori). */
+    private Component pendingRequests(TournamentDetails details) {
+        Div card = card();
+        card.getStyle()
+                .set("border-color", "var(--lumo-primary-color-50pct)")
+                .set("background", "var(--lumo-primary-color-10pct)");
+        H4 title = new H4(Tr.t("Cereri de înscriere ({0})", details.pendingRequests().size()));
+        title.getStyle().set("margin", "0 0 var(--lumo-space-xs)");
+        card.add(title, hint(Tr.t("Jucătorii de mai jos au cerut înscrierea. Doar cei confirmați intră în turneu; cererile neconfirmate se anulează la începerea turneului.")));
+        for (TournamentParticipant p : details.pendingRequests()) {
+            Span name = new Span(p.getPlayer().getDisplayName() + " · " + Tr.t("rating {0}", p.getPlayer().getRating()));
+            name.getStyle().set("flex", "1").set("min-width", "0");
+            Button confirm = new Button(Tr.t("Confirmă"), VaadinIcon.CHECK.create(), e -> run(
+                    () -> tournamentService.confirmParticipant(tournamentId, p.getId()),
+                    Tr.t("Înscrierea lui {0} a fost confirmată", p.getPlayer().getDisplayName())));
+            confirm.addThemeVariants(ButtonVariant.LUMO_SUCCESS, ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_SMALL);
+            Button reject = new Button(Tr.t("Respinge"), VaadinIcon.CLOSE_SMALL.create(), e -> run(
+                    () -> tournamentService.rejectParticipant(tournamentId, p.getId()),
+                    Tr.t("Cererea lui {0} a fost respinsă", p.getPlayer().getDisplayName())));
+            reject.addThemeVariants(ButtonVariant.LUMO_ERROR, ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL);
+            HorizontalLayout row = new HorizontalLayout(name, confirm, reject);
+            row.setWidthFull();
+            row.setAlignItems(FlexComponent.Alignment.CENTER);
+            row.getStyle()
+                    .set("flex-wrap", "wrap")
+                    .set("padding", "var(--lumo-space-xs) 0")
+                    .set("border-top", "1px solid var(--lumo-contrast-10pct)");
+            card.add(row);
+        }
+        return card;
+    }
+
     private Component createRegistration(TournamentDetails details) {
         VerticalLayout section = new VerticalLayout();
         section.setPadding(false);
@@ -218,12 +250,20 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         actions.getStyle().set("flex-wrap", "wrap");
         if (details.canSelfRegister()) {
             Button register = new Button(Tr.t("Mă înscriu"), VaadinIcon.PLUS.create(),
-                    e -> run(() -> tournamentService.registerSelf(tournamentId), Tr.t("V-ați înscris la turneu")));
+                    e -> run(() -> tournamentService.registerSelf(tournamentId), details.manager()
+                            ? Tr.t("V-ați înscris la turneu")
+                            : Tr.t("Cererea de înscriere a fost trimisă; veți primi o notificare după confirmare")));
             register.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
             actions.add(register);
         }
+        if (details.ownRequestPending()) {
+            Span pending = Badges.badge(Tr.t("Cererea de înscriere așteaptă confirmarea organizatorului"), Badges.Tone.PRIMARY);
+            pending.getStyle().set("white-space", "normal");
+            actions.add(pending);
+        }
         if (details.canSelfUnregister()) {
-            Button leave = new Button(Tr.t("Mă retrag"), VaadinIcon.MINUS.create(),
+            Button leave = new Button(details.ownRequestPending() ? Tr.t("Retrag cererea") : Tr.t("Mă retrag"),
+                    VaadinIcon.MINUS.create(),
                     e -> run(() -> tournamentService.unregisterSelf(tournamentId), Tr.t("V-ați retras de la turneu")));
             actions.add(leave);
         }
@@ -254,6 +294,9 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         }
         if (actions.getComponentCount() > 0) {
             section.add(actions);
+        }
+        if (details.manager() && !details.pendingRequests().isEmpty()) {
+            section.add(pendingRequests(details));
         }
         if (!SecurityUtils.isAuthenticated()) {
             Paragraph hint = new Paragraph();

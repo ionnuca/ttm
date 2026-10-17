@@ -6,6 +6,8 @@ import com.vaadin.flow.router.RouterLink;
 import md.ttm.ui.help.HelpView;
 import md.ttm.model.user.AppUser;
 import md.ttm.ui.components.LanguageSwitcher;
+import md.ttm.ui.components.NotificationBell;
+import md.ttm.service.notification.NotificationService;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.info.BuildProperties;
 import md.ttm.model.user.Role;
@@ -50,6 +52,7 @@ public class MainLayout extends AppLayout {
     private final List<Component> hiddenWhenNarrow = new ArrayList<>();
 
     public MainLayout(AuthenticationContext authenticationContext, UserService userService,
+                      NotificationService notificationService,
                       ObjectProvider<BuildProperties> buildProperties,
                       @Value("${app.environment-label:}") String environmentLabel) {
         setPrimarySection(Section.DRAWER);
@@ -62,7 +65,7 @@ public class MainLayout extends AppLayout {
             label.getStyle().set("margin-left", "var(--lumo-space-s)").set("font-weight", "700");
             addToNavbar(label);
         }
-        addToNavbar(createUserArea(authenticationContext, userService));
+        addToNavbar(createUserArea(authenticationContext, userService, notificationService));
         BuildProperties build = buildProperties.getIfAvailable();
         addToDrawer(createDrawerHeader(build == null ? null : build.getVersion()), new Scroller(createNavigation()));
         Responsive.onNarrowChange(this, narrow -> hiddenWhenNarrow.forEach(c -> c.setVisible(!narrow)));
@@ -134,7 +137,8 @@ public class MainLayout extends AppLayout {
         return nav;
     }
 
-    private Component createUserArea(AuthenticationContext authenticationContext, UserService userService) {
+    private Component createUserArea(AuthenticationContext authenticationContext, UserService userService,
+                                     NotificationService notificationService) {
         HorizontalLayout area = new HorizontalLayout();
         area.setAlignItems(FlexComponent.Alignment.CENTER);
         area.setSpacing(true);
@@ -158,7 +162,7 @@ public class MainLayout extends AppLayout {
             hiddenWhenNarrow.add(user);
             Button logout = new Button(Tr.t("Ieșire"), VaadinIcon.SIGN_OUT.create(), e -> authenticationContext.logout());
             logout.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL);
-            area.add(new LanguageSwitcher(userService), user, logout);
+            area.add(new LanguageSwitcher(userService), new NotificationBell(notificationService), user, logout);
         } else {
             Button login = new Button(Tr.t("Autentificare"), VaadinIcon.SIGN_IN.create(),
                     e -> e.getSource().getUI().ifPresent(ui -> ui.navigate(LoginView.class)));
