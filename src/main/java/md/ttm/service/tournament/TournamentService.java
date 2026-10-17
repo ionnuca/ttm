@@ -233,6 +233,9 @@ public class TournamentService {
                 .findByTournamentIdAndPlayerId(tournament.getId(), player.getId())
                 .orElseThrow(() -> new BusinessException("Nu sunteți înscris la acest turneu"));
         participantRepository.delete(participant);
+        if (!participant.isConfirmed()) {
+            notificationService.withdrawRequest(player, tournament);
+        }
     }
 
     /** Organizatorul înscrie un jucător, confirmat direct; dacă jucătorul ceruse deja înscrierea, cererea se confirmă. */
