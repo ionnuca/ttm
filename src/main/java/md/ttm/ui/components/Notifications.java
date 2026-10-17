@@ -1,6 +1,7 @@
 package md.ttm.ui.components;
 
 import md.ttm.i18n.Tr;
+import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.notification.Notification;
 import com.vaadin.flow.component.notification.NotificationVariant;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
@@ -14,13 +15,34 @@ public final class Notifications {
     }
 
     public static void success(String message) {
-        Notification n = Notification.show(message, 3000, Notification.Position.BOTTOM_START);
-        n.addThemeVariants(NotificationVariant.LUMO_SUCCESS);
+        show(message, 3000, Notification.Position.BOTTOM_CENTER, NotificationVariant.LUMO_SUCCESS);
     }
 
     public static void error(String message) {
-        Notification n = Notification.show(message, 6000, Notification.Position.MIDDLE);
-        n.addThemeVariants(NotificationVariant.LUMO_ERROR);
+        show(message, 6000, Notification.Position.MIDDLE, NotificationVariant.LUMO_ERROR);
+    }
+
+    /**
+     * Mesajul într-un card lat cât textul (până la lățimea ecranului), cu spațiere mai mică:
+     * pe telefon încape de obicei pe un rând sau două, nu într-o coloană îngustă.
+     */
+    private static void show(String message, int duration, Notification.Position position, NotificationVariant variant) {
+        Span text = new Span(message);
+        text.getStyle()
+                .set("display", "block")
+                .set("width", "max-content")
+                .set("max-width", "min(calc(100vw - 3.5rem), 32rem)")
+                .set("white-space", "normal")
+                .set("font-size", "var(--lumo-font-size-s)")
+                .set("line-height", "1.35");
+        Notification n = new Notification(text);
+        n.setDuration(duration);
+        n.setPosition(position);
+        n.addThemeVariants(variant);
+        n.getElement().getStyle()
+                .set("--lumo-space-l", "var(--lumo-space-s)")
+                .set("--lumo-space-wide-l", "var(--lumo-space-m)");
+        n.open();
     }
 
     /** Mesajul afișat când salvarea eșuează; tratează separat editarea simultană. */
