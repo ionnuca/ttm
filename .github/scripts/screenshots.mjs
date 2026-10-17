@@ -278,6 +278,7 @@ await check('admin: seturi de departajare la turneul comercial', async () => {
 await check('admin: dialog utilizator nou', async () => {
   await page.getByText('Adaugă utilizator').click();
   await expectText(page, 'Utilizator nou');
+  await expectText(page, 'Se înscrie la turnee fără confirmare');
   await page.getByRole('dialog').locator('vaadin-select:visible').first().click();
   await page.getByRole('option', { name: 'Manager de turnee' }).waitFor({ timeout: 10000 });
   await page.keyboard.press('Escape');

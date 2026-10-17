@@ -250,9 +250,17 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         actions.getStyle().set("flex-wrap", "wrap");
         if (details.canSelfRegister()) {
             Button register = new Button(Tr.t("Mă înscriu"), VaadinIcon.PLUS.create(),
-                    e -> run(() -> tournamentService.registerSelf(tournamentId), details.manager()
-                            ? Tr.t("V-ați înscris la turneu")
-                            : Tr.t("Cerere trimisă; veți fi anunțat după confirmare")));
+                    e -> {
+                        try {
+                            boolean confirmed = tournamentService.registerSelf(tournamentId).isConfirmed();
+                            Notifications.success(confirmed
+                                    ? Tr.t("V-ați înscris la turneu")
+                                    : Tr.t("Cerere trimisă; veți fi anunțat după confirmare"));
+                        } catch (RuntimeException ex) {
+                            Notifications.error(Notifications.saveError(ex));
+                        }
+                        refresh();
+                    });
             register.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
             actions.add(register);
         }

@@ -178,7 +178,8 @@ public class TournamentService {
 
     /**
      * Utilizatorul curent cere înscrierea la turneu. Cererea așteaptă confirmarea unui organizator,
-     * care primește o notificare; organizatorii (administrator, manager de turnee) se înscriu direct.
+     * care primește o notificare; organizatorii (administrator, manager de turnee) și utilizatorii marcați
+     * „fără confirmare” se înscriu direct.
      */
     @PreAuthorize("isAuthenticated()")
     @Transactional
@@ -186,10 +187,11 @@ public class TournamentService {
         Player player = currentPlayer()
                 .orElseThrow(() -> new BusinessException("Contul nu are un profil de jucător"));
         Tournament tournament = requireTournament(tournamentId);
-        boolean organizer = SecurityUtils.canManageTournaments();
+        boolean direct = SecurityUtils.canManageTournaments()
+                || SecurityUtils.currentUsername().flatMap(userRepository::findByUsername).map(AppUser::isTrusted).orElse(false);
         TournamentParticipant participant = register(tournament, player,
-                organizer ? ParticipantStatus.CONFIRMED : ParticipantStatus.PENDING);
-        if (!organizer) {
+                direct ? ParticipantStatus.CONFIRMED : ParticipantStatus.PENDING);
+        if (!direct) {
             notificationService.notifyOrganizers(NotificationType.REGISTRATION_REQUESTED, tournament, player.getDisplayName());
         }
         return participant;

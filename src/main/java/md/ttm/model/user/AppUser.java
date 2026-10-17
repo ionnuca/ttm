@@ -47,6 +47,10 @@ public class AppUser {
     @Column(name = "enabled", nullable = false)
     private boolean enabled = true;
 
+    /** Se înscrie la turnee fără confirmarea unui organizator. */
+    @Column(name = "trusted", nullable = false)
+    private boolean trusted;
+
     /** Limba interfeței (ro / ru / en). */
     @Column(name = "language", nullable = false, length = 2)
     private String language = "ro";
@@ -120,6 +124,14 @@ public class AppUser {
 
     public void setRole(Role role) {
         this.role = role;
+    }
+
+    public boolean isTrusted() {
+        return trusted;
+    }
+
+    public void setTrusted(boolean trusted) {
+        this.trusted = trusted;
     }
 
     public boolean isEnabled() {
