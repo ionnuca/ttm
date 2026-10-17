@@ -1,0 +1,31 @@
+# Aplicația de test: versiunea din develop, pe același server cu producția.
+# Pe server se află în /opt/ttm-test/docker-compose.yml (pregătit de test-setup.sh).
+#   - folosește PostgreSQL-ul producției, dar baza separată ttm_test (o copie a datelor din producție);
+#   - e servită de Caddy-ul producției la adresa de test, cu parolă (/opt/ttm/sites/test.caddy);
+#   - are memoria limitată, ca să nu ia din memoria producției.
+#   Actualizare:  docker compose pull && docker compose up -d   (o face GitHub Actions după fiecare commit pe develop)
+#   Jurnal:       docker compose logs -f app-test
+#   Oprire:       docker compose stop
+name: ttm-test
+
+services:
+  app-test:
+    image: ghcr.io/ionnuca/ttm:develop
+    restart: unless-stopped
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/ttm_test
+      DB_USER: ttm
+      DB_PASSWORD: ${DB_PASSWORD:?Lipsește DB_PASSWORD în /opt/ttm-test/.env}
+      APP_ENVIRONMENT_LABEL: TEST
+      APP_REGISTRATION_ENABLED: "true"
+      JAVA_OPTS: -Xmx288m -XX:MaxMetaspaceSize=192m -Xss512k -XX:+UseSerialGC
+      TZ: Europe/Chisinau
+    mem_limit: 640m
+    expose:
+      - "8080"
+
+# Rețeaua producției: aici se găsesc baza de date (db) și Caddy
+networks:
+  default:
+    name: ttm_default
+    external: true

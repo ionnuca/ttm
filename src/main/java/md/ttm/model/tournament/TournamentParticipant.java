@@ -16,7 +16,9 @@ import java.time.Instant;
 import java.util.Objects;
 
 /**
- * Înscrierea unui jucător la un turneu. După începerea turneului primește poziția în grupă (seed).
+ * Înscrierea unui jucător la un turneu. Cererea făcută de jucător așteaptă confirmarea unui organizator
+ * ({@link ParticipantStatus#PENDING}); doar participanții confirmați intră în turneu.
+ * După începerea turneului primește poziția în grupă (seed).
  */
 @Entity
 @Table(name = "tournament_participant")
@@ -40,6 +42,10 @@ public class TournamentParticipant {
     @Column(name = "seed_rating")
     private Integer seedRating;
 
+    @jakarta.persistence.Enumerated(jakarta.persistence.EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 20)
+    private ParticipantStatus status = ParticipantStatus.CONFIRMED;
+
     @CreationTimestamp
     @Column(name = "registered_at", nullable = false, updatable = false)
     private Instant registeredAt;
@@ -50,6 +56,18 @@ public class TournamentParticipant {
     public TournamentParticipant(Tournament tournament, Player player) {
         this.tournament = tournament;
         this.player = player;
+    }
+
+    public ParticipantStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(ParticipantStatus status) {
+        this.status = status;
+    }
+
+    public boolean isConfirmed() {
+        return status == ParticipantStatus.CONFIRMED;
     }
 
     public Long getId() {

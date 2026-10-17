@@ -1,0 +1,102 @@
+name: Publicare test
+
+# După fiecare CI reușit pe develop (sau pornit manual): construiește imaginea ghcr.io/ionnuca/ttm:develop
+# și actualizează aplicația de test de pe server (/opt/ttm-test, pregătită o dată cu deploy/test-setup.sh).
+# Producția nu este atinsă.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: publicare-test
+  cancel-in-progress: true
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}
+
+jobs:
+  test:
+    name: Aplicația de test
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+      SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.SHA }}
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Build de producție
+        run: |
+          mvn -B -Pproduction -DskipTests package
+          mkdir -p image
+          cp target/ttm-*.jar image/app.jar
+          cp deploy/Dockerfile image/
+
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Imaginea de test (ttm:develop)
+        uses: docker/build-push-action@v6
+        with:
+          context: image
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:develop
+            ${{ env.IMAGE }}:develop-${{ env.SHA }}
+
+      - name: Cheia SSH
+        if: env.DEPLOY_HOST != ''
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" | tr -d '\r' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' > ~/.ssh/deploy
+          chmod 600 ~/.ssh/deploy
+          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Actualizarea aplicației de test pe server
+        if: env.DEPLOY_HOST != ''
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SSH="ssh -i $HOME/.ssh/deploy $DEPLOY_USER@$DEPLOY_HOST"
+          if ! $SSH "test -f /opt/ttm-test/.env"; then
+            echo "::notice::Aplicația de test nu e pregătită pe server (rulați o dată deploy/test-setup.sh). Imaginea ttm:develop e publicată."
+            exit 0
+          fi
+          scp -i ~/.ssh/deploy deploy/docker-compose.test.yml "$DEPLOY_USER@$DEPLOY_HOST:/opt/ttm-test/docker-compose.yml"
+          scp -i ~/.ssh/deploy deploy/test-refresh.sh "$DEPLOY_USER@$DEPLOY_HOST:/opt/ttm-test/"
+          echo "$TOKEN" | $SSH "docker login ghcr.io -u ${{ github.actor }} --password-stdin"
+          $SSH "cd /opt/ttm-test && chmod +x test-refresh.sh && docker compose pull -q && docker compose up -d; rc=\$?; docker logout ghcr.io; exit \$rc"
+          $SSH "docker image prune -f > /dev/null"
+          for i in $(seq 1 60); do
+            if $SSH "cd /opt/ttm-test && docker compose logs app-test 2>&1 | grep -q 'Started TtmApplication'"; then
+              echo "### Aplicația de test a pornit (${SHA:0:7})" >> "$GITHUB_STEP_SUMMARY"
+              $SSH "cd /opt/ttm-test && docker compose ps"
+              exit 0
+            fi
+            sleep 3
+          done
+          $SSH "cd /opt/ttm-test && docker compose ps && docker compose logs --tail 100 app-test"
+          echo "::error::Aplicația de test nu a pornit pe server în 3 minute"
+          exit 1

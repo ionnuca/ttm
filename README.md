@@ -22,7 +22,9 @@ Aplicație web (instalabilă și pe telefon, ca PWA) pentru gestionarea jucător
 | „Profilul meu”: poza, date personale, stil și mână de joc, oraș, telefon, echipament, schimbarea parolei (administratorul își stabilește aici și ratingul inițial) | – | ✅ | ✅ | ✅ |
 | „Utilizatori”: lista completă, adăugare, editare (rol, blocare, parolă), ștergere | – | – | – | ✅ |
 | „Turnee”: lista turneelor, tabelul și meciurile fiecărui turneu | ✅ | ✅ | ✅ | ✅ |
-| Înscriere / retragere la un turneu (cât timp înscrierea e deschisă) | – | ✅ | ✅ | ✅ |
+| Cerere de înscriere / retragere la un turneu (cât timp înscrierea e deschisă); utilizatorul așteaptă confirmarea, organizatorii se înscriu direct | – | ✅ | ✅ | ✅ |
+| Confirmarea sau respingerea cererilor de înscriere | – | – | ✅ | ✅ |
+| Notificări (clopoțelul din bara de sus): cereri de înscriere pentru organizatori, confirmare / respingere pentru jucători | – | ✅ | ✅ | ✅ |
 | Introducerea rezultatelor (participanții turneului) | – | ✅ | ✅ | ✅ |
 | Creare (nume, dată), editare, ștergere turneu; adăugare/scoatere participanți; „Începe turneul” și „Începe etapa 2”; „Încheie turneul” manual; corectarea rezultatelor, inclusiv după încheiere | – | – | ✅ | ✅ |
 | „Setări”: versiunea aplicației, descărcarea unui backup al bazei de date la momentul curent | – | – | – | ✅ |
@@ -50,7 +52,7 @@ Reguli:
 
 Tipul se alege la „Începe turneul”, împreună cu **numărul de grupe** (minimum 2, cu cel puțin 2 jucători în fiecare).
 
-1. **Etapa 1 — Grupe.** Grupele se formează prin **tragere la sorți pe urne**: jucătorii se ordonează după rating; primii *N* (N = numărul de grupe) formează o urnă și se împart aleatoriu, câte unul în fiecare grupă; apoi următorii *N*, și tot așa. Din ultima urnă, incompletă, jucătorii ajung aleatoriu în grupe diferite. Fiecare grupă are astfel câte un jucător din fiecare nivel de rating; în grupă ordinea rămâne cea după rating. Fiecare grupă joacă Round Robin, cu tabel propriu.
+1. **Etapa 1 — Grupe.** Grupele se formează prin **tragere la sorți pe urne**: jucătorii se ordonează după rating; primii *N* (N = numărul de grupe) formează o urnă și se împart aleatoriu, câte unul în fiecare grupă; apoi următorii *N*, și tot așa. Din ultima urnă, incompletă, jucătorii ajung aleatoriu în grupe diferite. Fiecare grupă are astfel câte un jucător din fiecare nivel de rating; în grupă ordinea rămâne cea după rating. Cât timp nu există niciun rezultat, administratorul poate reface tragerea la sorți („Reîmparte grupele”). Fiecare grupă joacă Round Robin, cu tabel propriu.
 2. **Începe etapa 2** (organizatorul, după ultimul rezultat din grupe): se alege câți jucători din fiecare grupă se califică. Primii N din fiecare grupă joacă în **Finala 1**, ceilalți în **Finala 2**. Dialogul arată componența finalelor înainte de confirmare.
 3. **Etapa 2 — Finale.** Ambele finale se joacă Round Robin. Jucătorii care s-au întâlnit deja în aceeași grupă **nu mai joacă** între ei: rezultatul din etapa 1 se preia în tabelul finalei (fiecare meci contează o singură dată la rating). După pornirea etapei 2, rezultatele din grupe nu mai pot fi modificate, pentru că au stabilit calificarea.
 4. **Premii (turneu comercial):** câștigătorul Finalei 2 primește obligatoriu cât **taxa de participare**; restul sumei acumulate se împarte între premiații Finalei 1, ca la turneul comercial obișnuit (100% / 60–40% / 50–30–20%). De aceea un turneu comercial cu două etape se poate încheia manual doar după „Începe etapa 2”; dacă o finală se încheie fără toate meciurile, premiații se stabilesc din clasamentul ei de până atunci, iar fără niciun meci jucat, după ordinea de calificare (locul în grupă, apoi ratingul).
@@ -143,7 +145,7 @@ psql -U postgres -f database/create_database.sql
 
 ## Baza de date
 
-- **Scripturile de creare a tabelelor:** `src/main/resources/db/migration/` (`V1__jucatori_si_utilizatori.sql`, `V2__jucator_mana_si_echipament.sql`, `V3__turnee.sql`, `V4__rating_elo.sql`, `V5__grupe_si_finale.sql`, `V6__rol_manager_turnee.sql`, `V7__poze_jucatori.sql`, `V8__poze_marime_mare.sql`, `V9__limba_utilizator.sql`). Le aplică automat **Flyway** la pornirea aplicației, în ordinea versiunilor; nu e nevoie să le rulați manual.
+- **Scripturile de creare a tabelelor:** `src/main/resources/db/migration/` (`V1__jucatori_si_utilizatori.sql`, `V2__jucator_mana_si_echipament.sql`, `V3__turnee.sql`, `V4__rating_elo.sql`, `V5__grupe_si_finale.sql`, `V6__rol_manager_turnee.sql`, `V7__poze_jucatori.sql`, `V8__poze_marime_mare.sql`, `V9__limba_utilizator.sql`, `V10__seturi_departajare.sql`, `V11__confirmare_inscriere_notificari.sql`). Le aplică automat **Flyway** la pornirea aplicației, în ordinea versiunilor; nu e nevoie să le rulați manual.
 - **Modificări de schemă:** nu se editează niciodată un script deja aplicat. Se adaugă unul nou: `V2__descriere.sql`, `V3__...` etc.
 - **Crearea bazei de date și a utilizatorului:** `database/create_database.sql` (fără Docker) sau automat de `docker-compose.yml`.
 - **Baza pentru teste:** `ttm_test`, creată de `database/init/01-create-test-db.sql` la prima pornire a containerului.
@@ -251,6 +253,23 @@ docker compose exec -T db psql -U ttm -d ttm < ttm-backup-2026-10-10-190507.sql
 Copiile de rezervă stau pe același server. Pentru siguranță, descărcați periodic una pe alt calculator: `scp <utilizator>@<server>:/opt/ttm/backups/<fișier>.dump .`
 
 ---
+
+### Aplicația de test (test.tabletennis.omagiu.md)
+
+Pe același server rulează și versiunea din `develop`, la o adresă separată, protejată cu utilizator și parolă:
+
+- containerul `app-test` (`/opt/ttm-test`), cu memoria limitată (Java 288 MB, container 640 MB), ca să nu ia din memoria producției;
+- baza `ttm_test` din același PostgreSQL, o **copie a datelor din producție**; producția nu este atinsă;
+- servită de Caddy-ul producției (`/opt/ttm/sites/test.caddy`), cu HTTPS automat; în bara de sus apare eticheta **TEST**.
+
+Pregătire, o singură dată: înregistrarea DNS `test.tabletennis` (tip A, același IP), apoi pe server, ca root:
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/ionnuca/ttm/main/deploy/test-setup.sh
+bash test-setup.sh
+```
+
+După fiecare commit pe `develop` (CI reușit), workflow-ul **Publicare test** construiește imaginea `ghcr.io/ionnuca/ttm:develop` și actualizează aplicația de test. Funcționalitățile noi se lucrează pe ramuri separate și ajung pe `develop` (deci pe test) când sunt gata. Datele din producție se copiază din nou oricând cu `/opt/ttm-test/test-refresh.sh` (datele de test se pierd).
 
 ## Ramuri și release
 

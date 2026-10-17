@@ -237,16 +237,30 @@ await check('admin: seturi de departajare la turneul comercial', async () => {
   await expectText(page, 'Seturi de departajare');
   await expectText(page, '1=');
   await shot(page, '45-admin-departajare');
-  const first = page.getByRole('button', { name: /^Set de departajare/ }).first();
+  // primul set, pe telefon: după salvare pagina rămâne la seturile de departajare
+  const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'ro-RO', isMobile: true, hasTouch: true });
+  const p = await phone.newPage();
+  await login(p, 'admin', 'admin12345');
+  await p.goto(page.url());
+  await expectText(p, 'Seturi de departajare');
+  const first = p.getByRole('button', { name: /^Set de departajare/ }).first();
+  await first.scrollIntoViewIfNeeded();
   await first.click();
-  const dialog = page.getByRole('dialog');
+  const dialog = p.getByRole('dialog');
   await dialog.locator('input').nth(0).fill('11');
   await dialog.locator('input').nth(1).fill('10');
   await dialog.getByRole('button', { name: 'Salvează' }).click();
-  await expectText(page, 'Scor invalid pentru un set');
+  await expectText(p, 'Scor invalid pentru un set');
   await dialog.locator('input').nth(1).fill('7');
   await dialog.getByRole('button', { name: 'Salvează' }).click();
-  await expectText(page, 'Rezultat salvat');
+  await expectText(p, 'Rezultat salvat');
+  await p.waitForTimeout(1000);
+  const box = await p.getByRole('heading', { name: 'Seturi de departajare' }).boundingBox();
+  if (!box || box.y < 0 || box.y > 844) throw new Error(`după salvare pagina nu a rămas la seturile de departajare (y=${box?.y})`);
+  await p.screenshot({ path: `${OUT}/47-telefon-dupa-departajare.png` });
+  await phone.close();
+  await page.reload();
+  await settle(page);
   for (let i = 0; i < 2; i++) {
     await page.getByRole('button', { name: /^Set de departajare/ }).nth(1 + i).click();
     await page.getByRole('dialog').locator('input').nth(0).fill('11');
@@ -434,12 +448,13 @@ await check('utilizator: introduce un rezultat', async () => {
   await expectText(page, 'Meciuri jucate: 10 din 15');
   await shot(page, '25-utilizator-turneu-dupa-rezultat');
 });
-await check('utilizator: se înscrie la turneu', async () => {
+await check('utilizator: cere înscrierea la turneu (așteaptă confirmarea)', async () => {
   await page.goto(`${BASE}/turnee`);
   await page.getByText('Turneul de duminică').first().click();
   await page.getByRole('button', { name: 'Mă înscriu' }).click();
-  await expectText(page, 'Participanți înscriși (5)');
-  await expectText(page, 'Mă retrag');
+  await expectText(page, 'Cererea de înscriere așteaptă confirmarea organizatorului');
+  await expectText(page, 'Participanți înscriși (4)');
+  await expectText(page, 'Retrag cererea');
   await shot(page, '26-utilizator-inscris');
 });
 await ctx.close();
@@ -463,12 +478,32 @@ await check('manager: poate crea turnee', async () => {
   await shot(page, '34-manager-turneu-nou');
   await page.keyboard.press('Escape');
 });
-await check('manager: conduce turneul (Începe turneul)', async () => {
+await check('manager: notificarea cererii și confirmarea înscrierii', async () => {
   await page.goto(`${BASE}/turnee`);
+  await expectText(page, '(+1 cereri)');
+  await page.getByRole('button', { name: 'Notificări' }).click();
+  await expectText(page, 'a cerut înscrierea la turneul „Turneul de duminică”');
+  await shot(page, '48-manager-notificari');
+  await page.keyboard.press('Escape');
   await page.getByText('Turneul de duminică').first().click();
+  await expectText(page, 'Cereri de înscriere (1)');
   await expectText(page, 'Începe turneul');
   await expectText(page, 'Adaugă un jucător');
   await shot(page, '35-manager-turneu-inscriere');
+  await page.getByRole('button', { name: 'Confirmă' }).click();
+  await expectText(page, 'Participanți înscriși (5)');
+  await expectNoText(page, 'Cereri de înscriere');
+});
+await check('utilizator: vede notificarea confirmării', async () => {
+  const c = await browser.newContext(desktop);
+  const p = await c.newPage();
+  await login(p, 'jucator', 'jucator123');
+  const bell = p.getByRole('button', { name: 'Notificări' });
+  await bell.waitFor({ timeout: 10000 });
+  await bell.click();
+  await expectText(p, 'Înscrierea la turneul „Turneul de duminică” a fost confirmată');
+  await shot(p, '49-utilizator-notificare-confirmare');
+  await c.close();
 });
 await check('manager: pagina Utilizatori e interzisă', async () => {
   await page.goto(`${BASE}/utilizatori`);
@@ -602,6 +637,58 @@ await check('limba: utilizatorul o salvează în cont', async () => {
   await expectText(page, 'ultimele');
 });
 await ctx.close();
+
+// ---------- Autentificarea se păstrează (cookie „ține-mă minte”) ----------
+await check('autentificarea rămâne după închiderea sesiunii; Ieșire o șterge', async () => {
+  const c = await browser.newContext(desktop);
+  const p = await c.newPage();
+  await login(p, 'jucator', 'jucator123');
+  const cookies = await c.cookies();
+  if (!cookies.some(k => k.name === 'ttm-remember' && k.expires > Date.now() / 1000 + 20 * 86400)) {
+    throw new Error('lipsește cookie-ul ttm-remember valabil cel puțin 20 de zile');
+  }
+  // ca după închiderea aplicației: dispare cookie-ul de sesiune, rămâne doar ttm-remember
+  await c.clearCookies();
+  await c.addCookies(cookies.filter(k => k.name === 'ttm-remember'));
+  await p.goto(`${BASE}/profil`);
+  await settle(p);
+  await expectText(p, 'Profilul meu');
+  await p.getByRole('button', { name: 'Ieșire' }).click();
+  await p.waitForTimeout(2000);
+  await p.goto(`${BASE}/`);
+  await settle(p);
+  await p.getByRole('button', { name: 'Autentificare' }).waitFor({ timeout: 10000 });
+  if ((await c.cookies()).some(k => k.name === 'ttm-remember' && k.value)) throw new Error('cookie-ul ttm-remember a rămas după Ieșire');
+  await c.close();
+});
+
+// ---------- iPhone, aplicația de pe ecranul principal: tras în jos = reîncărcare ----------
+await check('iPhone (aplicație): tras în jos reîncarcă pagina', async () => {
+  const ios = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: 'ro-RO', isMobile: true, hasTouch: true });
+  await ios.addInitScript(() => Object.defineProperty(window.navigator, 'standalone', { get: () => true }));
+  const p = await ios.newPage();
+  await p.goto(`${BASE}/turnee`);
+  await settle(p);
+  await p.evaluate(() => { window.__ttmMarker = 1; });
+  const pull = async (from, to) => p.evaluate(([y0, y1]) => {
+    const target = document.elementFromPoint(200, y0);
+    const touch = y => new Touch({ identifier: 1, target, clientX: 200, clientY: y });
+    target.dispatchEvent(new TouchEvent('touchstart', { touches: [touch(y0)], bubbles: true, composed: true }));
+    for (let y = y0; y <= y1; y += 20) {
+      target.dispatchEvent(new TouchEvent('touchmove', { touches: [touch(y)], bubbles: true, composed: true }));
+    }
+    target.dispatchEvent(new TouchEvent('touchend', { touches: [], bubbles: true, composed: true }));
+  }, [from, to]);
+  // tras puțin: nu se reîncarcă
+  await pull(200, 260);
+  await p.waitForTimeout(1000);
+  if (await p.evaluate(() => window.__ttmMarker) !== 1) throw new Error('s-a reîncărcat la o tragere scurtă');
+  // tras suficient: se reîncarcă
+  await Promise.all([p.waitForEvent('load', { timeout: 15000 }), pull(200, 400)]);
+  await settle(p);
+  if (await p.evaluate(() => window.__ttmMarker) === 1) throw new Error('pagina nu s-a reîncărcat');
+  await ios.close();
+});
 
 await browser.close();
 
