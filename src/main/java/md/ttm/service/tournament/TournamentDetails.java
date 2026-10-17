@@ -21,6 +21,7 @@ import java.util.Map;
  * @param groups         la „Grupe + finale”: grupele etapei 1, apoi finalele (gol la Round Robin)
  * @param tiebreaks      la Round Robin: seturile de departajare jucate (la „Grupe + finale” sunt în fiecare grupă)
  * @param pendingTiebreaks la Round Robin: seturile de departajare care mai trebuie jucate
+ * @param pendingRequests  pentru organizatori: cererile de înscriere neconfirmate (cât timp înscrierea e deschisă)
  */
 public record TournamentDetails(
         Tournament tournament,
@@ -36,7 +37,8 @@ public record TournamentDetails(
         Map<Long, RatingHistory> ratingChanges,
         List<GroupView> groups,
         List<md.ttm.model.tournament.TournamentTiebreak> tiebreaks,
-        List<StandingsCalculator.Pairing> pendingTiebreaks) {
+        List<StandingsCalculator.Pairing> pendingTiebreaks,
+        List<TournamentParticipant> pendingRequests) {
 
     public List<GroupView> groupStage() {
         return groups.stream().filter(g -> !g.group().isFinal()).toList();
@@ -77,6 +79,11 @@ public record TournamentDetails(
 
     public long playedMatches() {
         return matches.stream().filter(TournamentMatch::isPlayed).count();
+    }
+
+    /** Utilizatorul curent a cerut înscrierea, iar cererea nu e încă confirmată. */
+    public boolean ownRequestPending() {
+        return ownParticipant != null && !ownParticipant.isConfirmed();
     }
 
     public boolean canSelfUnregister() {

@@ -18,4 +18,7 @@ public interface AppUserRepository extends JpaRepository<AppUser, Long> {
     long countByRoleAndEnabledTrue(Role role);
 
     List<AppUser> findAllByOrderByUsernameAsc();
+
+    /** Conturile active cu unul dintre rolurile date (de exemplu organizatorii, pentru notificări). */
+    List<AppUser> findByEnabledTrueAndRoleIn(java.util.Collection<md.ttm.model.user.Role> roles);
 }

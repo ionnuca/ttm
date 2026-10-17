@@ -22,7 +22,9 @@ Aplicație web (instalabilă și pe telefon, ca PWA) pentru gestionarea jucător
 | „Profilul meu”: poza, date personale, stil și mână de joc, oraș, telefon, echipament, schimbarea parolei (administratorul își stabilește aici și ratingul inițial) | – | ✅ | ✅ | ✅ |
 | „Utilizatori”: lista completă, adăugare, editare (rol, blocare, parolă), ștergere | – | – | – | ✅ |
 | „Turnee”: lista turneelor, tabelul și meciurile fiecărui turneu | ✅ | ✅ | ✅ | ✅ |
-| Înscriere / retragere la un turneu (cât timp înscrierea e deschisă) | – | ✅ | ✅ | ✅ |
+| Cerere de înscriere / retragere la un turneu (cât timp înscrierea e deschisă); utilizatorul așteaptă confirmarea, organizatorii se înscriu direct | – | ✅ | ✅ | ✅ |
+| Confirmarea sau respingerea cererilor de înscriere | – | – | ✅ | ✅ |
+| Notificări (clopoțelul din bara de sus): cereri de înscriere pentru organizatori, confirmare / respingere pentru jucători | – | ✅ | ✅ | ✅ |
 | Introducerea rezultatelor (participanții turneului) | – | ✅ | ✅ | ✅ |
 | Creare (nume, dată), editare, ștergere turneu; adăugare/scoatere participanți; „Începe turneul” și „Începe etapa 2”; „Încheie turneul” manual; corectarea rezultatelor, inclusiv după încheiere | – | – | ✅ | ✅ |
 | „Setări”: versiunea aplicației, descărcarea unui backup al bazei de date la momentul curent | – | – | – | ✅ |
@@ -143,7 +145,7 @@ psql -U postgres -f database/create_database.sql
 
 ## Baza de date
 
-- **Scripturile de creare a tabelelor:** `src/main/resources/db/migration/` (`V1__jucatori_si_utilizatori.sql`, `V2__jucator_mana_si_echipament.sql`, `V3__turnee.sql`, `V4__rating_elo.sql`, `V5__grupe_si_finale.sql`, `V6__rol_manager_turnee.sql`, `V7__poze_jucatori.sql`, `V8__poze_marime_mare.sql`, `V9__limba_utilizator.sql`). Le aplică automat **Flyway** la pornirea aplicației, în ordinea versiunilor; nu e nevoie să le rulați manual.
+- **Scripturile de creare a tabelelor:** `src/main/resources/db/migration/` (`V1__jucatori_si_utilizatori.sql`, `V2__jucator_mana_si_echipament.sql`, `V3__turnee.sql`, `V4__rating_elo.sql`, `V5__grupe_si_finale.sql`, `V6__rol_manager_turnee.sql`, `V7__poze_jucatori.sql`, `V8__poze_marime_mare.sql`, `V9__limba_utilizator.sql`, `V10__seturi_departajare.sql`, `V11__confirmare_inscriere_notificari.sql`). Le aplică automat **Flyway** la pornirea aplicației, în ordinea versiunilor; nu e nevoie să le rulați manual.
 - **Modificări de schemă:** nu se editează niciodată un script deja aplicat. Se adaugă unul nou: `V2__descriere.sql`, `V3__...` etc.
 - **Crearea bazei de date și a utilizatorului:** `database/create_database.sql` (fără Docker) sau automat de `docker-compose.yml`.
 - **Baza pentru teste:** `ttm_test`, creată de `database/init/01-create-test-db.sql` la prima pornire a containerului.
