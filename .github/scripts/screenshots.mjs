@@ -278,6 +278,7 @@ await check('admin: seturi de departajare la turneul comercial', async () => {
 await check('admin: dialog utilizator nou', async () => {
   await page.getByText('Adaugă utilizator').click();
   await expectText(page, 'Utilizator nou');
+  await expectText(page, 'Se înscrie la turnee fără confirmare');
   await page.getByRole('dialog').locator('vaadin-select:visible').first().click();
   await page.getByRole('option', { name: 'Manager de turnee' }).waitFor({ timeout: 10000 });
   await page.keyboard.press('Escape');
@@ -448,12 +449,13 @@ await check('utilizator: introduce un rezultat', async () => {
   await expectText(page, 'Meciuri jucate: 10 din 15');
   await shot(page, '25-utilizator-turneu-dupa-rezultat');
 });
-await check('utilizator: se înscrie la turneu', async () => {
+await check('utilizator: cere înscrierea la turneu (așteaptă confirmarea)', async () => {
   await page.goto(`${BASE}/turnee`);
   await page.getByText('Turneul de duminică').first().click();
   await page.getByRole('button', { name: 'Mă înscriu' }).click();
-  await expectText(page, 'Participanți înscriși (5)');
-  await expectText(page, 'Mă retrag');
+  await expectText(page, 'Cererea de înscriere așteaptă confirmarea organizatorului');
+  await expectText(page, 'Participanți înscriși (4)');
+  await expectText(page, 'Retrag cererea');
   await shot(page, '26-utilizator-inscris');
 });
 await ctx.close();
@@ -477,12 +479,42 @@ await check('manager: poate crea turnee', async () => {
   await shot(page, '34-manager-turneu-nou');
   await page.keyboard.press('Escape');
 });
-await check('manager: conduce turneul (Începe turneul)', async () => {
+await check('manager: notificarea cererii și confirmarea înscrierii', async () => {
   await page.goto(`${BASE}/turnee`);
-  await page.getByText('Turneul de duminică').first().click();
+  await expectText(page, '(+1 cereri)');
+  await page.getByRole('button', { name: 'Notificări' }).click();
+  await expectText(page, 'a cerut înscrierea la turneul „Turneul de duminică”');
+  await shot(page, '48-manager-notificari');
+  // linkul din notificare deschide turneul și închide lista
+  await page.getByRole('dialog').getByRole('link', { name: 'Deschide turneul' }).first().click();
+  await page.waitForURL(/\/turneu\/\d+/, { timeout: 10000 });
+  await page.getByRole('dialog').waitFor({ state: 'detached', timeout: 10000 });
+  await expectText(page, 'Cereri de înscriere (1)');
   await expectText(page, 'Începe turneul');
   await expectText(page, 'Adaugă un jucător');
   await shot(page, '35-manager-turneu-inscriere');
+  await page.getByRole('button', { name: 'Confirmă' }).click();
+  await expectText(page, 'Participanți înscriși (5)');
+  await expectNoText(page, 'Cereri de înscriere');
+});
+await check('utilizator: vede notificarea confirmării', async () => {
+  const c = await browser.newContext(desktop);
+  const p = await c.newPage();
+  await login(p, 'jucator', 'jucator123');
+  const bell = p.getByRole('button', { name: 'Notificări' });
+  await bell.waitFor({ timeout: 10000 });
+  await bell.click();
+  await expectText(p, 'Înscrierea la turneul „Turneul de duminică” a fost confirmată');
+  await shot(p, '49-utilizator-notificare-confirmare');
+  // pe telefon fereastra încape: butonul de ștergere e vizibil pe ecran
+  await p.setViewportSize({ width: 390, height: 844 });
+  await p.waitForTimeout(500);
+  const del = await p.getByRole('button', { name: 'Șterge notificarea' }).first().boundingBox();
+  if (!del || del.x < 0 || del.x + del.width > 390) throw new Error(`butonul × nu e pe ecran (x=${del?.x})`);
+  await p.screenshot({ path: `${OUT}/50-telefon-notificari.png` });
+  await p.getByRole('button', { name: 'Șterge notificarea' }).first().click();
+  await expectText(p, 'Nu aveți notificări.');
+  await c.close();
 });
 await check('manager: pagina Utilizatori e interzisă', async () => {
   await page.goto(`${BASE}/utilizatori`);

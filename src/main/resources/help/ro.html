@@ -7,7 +7,7 @@ Pagina principală arată ultimele meciuri; clasamentul general e la <b>Jucător
   <tr><th>Rol</th><th>Ce poate face</th></tr>
   <tr><td>Vizitator (fără cont)</td><td>Vede meciurile, clasamentul, paginile jucătorilor și turneele.</td></tr>
   <tr><td>Utilizator</td><td>Își face cont din „Cont nou” (fiecare cont este și jucător, cu ratingul inițial 1000).
-      Se înscrie la turnee, introduce rezultatele propriilor meciuri, își completează profilul și poza.</td></tr>
+      Cere înscrierea la turnee (confirmată de organizator), introduce rezultatele propriilor meciuri, își completează profilul și poza.</td></tr>
   <tr><td>Manager de turnee</td><td>Creează și conduce turneele: înscrieri, start, etapa 2, încheiere, corectarea oricărui rezultat.</td></tr>
   <tr><td>Administrator</td><td>Tot ce face managerul, plus utilizatorii și rolurile, jucătorii (inclusiv ratingul inițial) și backup-ul datelor.</td></tr>
 </table>
@@ -15,7 +15,7 @@ Pagina principală arată ultimele meciuri; clasamentul general e la <b>Jucător
 <h3>2. Cum se organizează un turneu</h3>
 <ol>
   <li><b>Crearea.</b> Managerul (sau administratorul) apasă „Turneu nou” la <b>Turnee</b> și dă doar numele și data. Înscrierea se deschide imediat.</li>
-  <li><b>Înscrierea.</b> Jucătorii cu cont apasă „Mă înscriu” pe pagina turneului; organizatorul poate adăuga sau scoate pe oricine.</li>
+  <li><b>Înscrierea.</b> Jucătorii cu cont apasă „Mă înscriu” pe pagina turneului: se trimite o <b>cerere de înscriere</b>, care așteaptă confirmarea unui organizator (administrator sau manager de turnee). Organizatorii primesc o notificare și, pe pagina turneului, la „Cereri de înscriere”, apasă <b>Confirmă</b> sau <b>Respinge</b>. Jucătorul vede răspunsul în <b>notificări</b> (clopoțelul din bara de sus). Administratorul poate marca un utilizator „Se înscrie la turnee fără confirmare” (la <b>Utilizatori</b>): înscrierea lui e confirmată automat. Organizatorul poate adăuga sau scoate direct pe oricine; cererile rămase neconfirmate se anulează la începerea turneului.</li>
   <li><b>Începerea.</b> „Începe turneul” închide înscrierea. Atunci se alege:
     <ul>
       <li>tipul: <b>Round robin</b> sau <b>Grupe + finale</b> (cu numărul de grupe);</li>

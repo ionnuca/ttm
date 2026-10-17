@@ -32,6 +32,7 @@ public class UserFormDialog extends Dialog {
     private final PasswordField password = new PasswordField(Tr.t("Parolă"));
     private final Select<Role> role = new Select<>();
     private final Checkbox enabled = new Checkbox(Tr.t("Cont activ (se poate autentifica)"));
+    private final Checkbox trusted = new Checkbox(Tr.t("Se înscrie la turnee fără confirmare"));
 
     private final BeanValidationBinder<UserForm> binder = new BeanValidationBinder<>(UserForm.class);
 
@@ -73,17 +74,20 @@ public class UserFormDialog extends Dialog {
                 .bind("password");
         binder.forField(role).asRequired(Tr.t("Alegeți rolul")).bind("role");
         binder.forField(enabled).bind("enabled");
+        binder.forField(trusted).bind("trusted");
+        trusted.setTooltipText(Tr.t("Cererea de înscriere la turneu e confirmată automat; organizatorii se înscriu oricum direct"));
         binder.readBean(form);
 
         FormLayout layout = new FormLayout();
         if (hasPlayer) {
             layout.add(lastName, firstName);
         }
-        layout.add(username, password, role, enabled);
+        layout.add(username, password, role, enabled, trusted);
         layout.setResponsiveSteps(
                 new FormLayout.ResponsiveStep("0", 1),
                 new FormLayout.ResponsiveStep("26rem", 2));
         layout.setColspan(enabled, 2);
+        layout.setColspan(trusted, 2);
         add(layout);
 
         Button save = new Button(Tr.t("Salvează"), e -> {

@@ -13,6 +13,9 @@ import md.ttm.model.user.Role;
 import md.ttm.repository.AppUserRepository;
 import md.ttm.repository.PlayerRepository;
 import md.ttm.service.player.PlayerService;
+import md.ttm.model.notification.Notification;
+import md.ttm.model.notification.NotificationType;
+import md.ttm.service.notification.NotificationService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
@@ -42,6 +45,8 @@ class TournamentServiceIT {
     AppUserRepository userRepository;
     @Autowired
     EntityManager entityManager;
+    @Autowired
+    NotificationService notificationService;
 
     @Test
     @WithMockUser(username = "admin", roles = "ADMIN")
@@ -172,11 +177,35 @@ class TournamentServiceIT {
         userRepository.save(new AppUser("strain", "x", Role.USER, player("Mihai", "Rusu", 1300)));
 
         Long tournamentId = as("admin", true, () -> tournamentService.create(form("Turneu")).getId());
+        long adminUnread = as("admin", true, () -> notificationService.countUnread());
         as("ana", false, () -> tournamentService.registerSelf(tournamentId));
         as("ion", false, () -> tournamentService.registerSelf(tournamentId));
 
         assertThatThrownBy(() -> as("ana", false, () -> tournamentService.registerSelf(tournamentId)))
                 .isInstanceOf(BusinessException.class);
+
+        // cererile așteaptă confirmarea; organizatorii primesc câte o notificare
+        TournamentDetails requested = as("admin", true, () -> tournamentService.findDetails(tournamentId).orElseThrow());
+        assertThat(requested.participants()).isEmpty();
+        assertThat(requested.pendingRequests()).hasSize(2);
+        assertThat(as("admin", true, () -> notificationService.countUnread())).isEqualTo(adminUnread + 2);
+        assertThat(as("ana", false, () -> tournamentService.findDetails(tournamentId).orElseThrow().ownRequestPending())).isTrue();
+        assertThatThrownBy(() -> as("ana", false, () -> {
+            tournamentService.confirmParticipant(tournamentId, requested.pendingRequests().get(0).getId());
+            return null;
+        })).isInstanceOf(AccessDeniedException.class);
+        as("admin", true, () -> {
+            requested.pendingRequests().forEach(p -> tournamentService.confirmParticipant(tournamentId, p.getId()));
+            return null;
+        });
+        assertThat(as("ana", false, () -> notificationService.findRecent()))
+                .extracting(Notification::getType).containsExactly(NotificationType.REGISTRATION_CONFIRMED);
+        assertThat(as("ana", false, () -> notificationService.countUnread())).isEqualTo(1);
+        as("ana", false, () -> {
+            notificationService.markAllRead();
+            return null;
+        });
+        assertThat(as("ana", false, () -> notificationService.countUnread())).isZero();
         assertThatThrownBy(() -> as("ana", false, () -> {
             tournamentService.start(tournamentId, TournamentSettings.roundRobin(5));
             return null;
@@ -206,6 +235,114 @@ class TournamentServiceIT {
                 .matches().get(0));
         assertThat(recorded.getRecordedBy()).isEqualTo("ana");
         assertThat(recorded.getWinner().getPlayer().getLastName()).isEqualTo("Ciobanu");
+    }
+
+    @Test
+    void utilizatorulFaraConfirmareSeInscrieDirect() {
+        Player ana = player("Ana", "Ciobanu", 1200);
+        AppUser user = new AppUser("ana", "x", Role.USER, ana);
+        user.setTrusted(true);
+        userRepository.save(user);
+        Long tournamentId = as("admin", true, () -> tournamentService.create(form("Turneu")).getId());
+
+        assertThat(as("ana", false, () -> tournamentService.registerSelf(tournamentId)).isConfirmed()).isTrue();
+        TournamentDetails details = as("admin", true, () -> tournamentService.findDetails(tournamentId).orElseThrow());
+        assertThat(details.participants()).hasSize(1);
+        assertThat(details.pendingRequests()).isEmpty();
+        assertThat(requestsFor(tournamentId)).isZero();
+    }
+
+    @Test
+    void notificarileNuSeRepeta_siSePotSterge() {
+        Player ana = player("Ana", "Ciobanu", 1200);
+        userRepository.save(new AppUser("ana", "x", Role.USER, ana));
+        Long tournamentId = as("admin", true, () -> tournamentService.create(form("Turneu")).getId());
+
+        // cerere, retragere, cerere din nou: organizatorul vede o singură cerere
+        as("ana", false, () -> tournamentService.registerSelf(tournamentId));
+        as("ana", false, () -> {
+            tournamentService.unregisterSelf(tournamentId);
+            return null;
+        });
+        assertThat(requestsFor(tournamentId)).isZero();
+        as("ana", false, () -> tournamentService.registerSelf(tournamentId));
+        as("ana", false, () -> {
+            tournamentService.unregisterSelf(tournamentId);
+            return null;
+        });
+        as("ana", false, () -> tournamentService.registerSelf(tournamentId));
+        assertThat(requestsFor(tournamentId)).isEqualTo(1);
+
+        // respinsă, apoi cerută și confirmată: jucătorul vede doar starea curentă
+        Long request = as("admin", true, () -> tournamentService.findDetails(tournamentId).orElseThrow()
+                .pendingRequests().get(0).getId());
+        as("admin", true, () -> {
+            tournamentService.rejectParticipant(tournamentId, request);
+            return null;
+        });
+        assertThat(requestsFor(tournamentId)).isZero();
+        as("ana", false, () -> tournamentService.registerSelf(tournamentId));
+        Long again = as("admin", true, () -> tournamentService.findDetails(tournamentId).orElseThrow()
+                .pendingRequests().get(0).getId());
+        as("admin", true, () -> {
+            tournamentService.confirmParticipant(tournamentId, again);
+            return null;
+        });
+        List<Notification> anaNotifications = as("ana", false, () -> notificationService.findRecent());
+        assertThat(anaNotifications).extracting(Notification::getType)
+                .containsExactly(NotificationType.REGISTRATION_CONFIRMED);
+        assertThat(requestsFor(tournamentId)).isZero();
+
+        // ștergerea unei notificări
+        as("ana", false, () -> {
+            notificationService.delete(anaNotifications.get(0).getId());
+            return null;
+        });
+        assertThat(as("ana", false, () -> notificationService.findRecent())).isEmpty();
+    }
+
+    /** Câte cereri de înscriere la turneul dat vede administratorul în notificări. */
+    private long requestsFor(Long tournamentId) {
+        return as("admin", true, () -> notificationService.findRecent()).stream()
+                .filter(n -> n.getType() == NotificationType.REGISTRATION_REQUESTED && tournamentId.equals(n.getTournamentId()))
+                .count();
+    }
+
+    @Test
+    void cerereaRespinsaSauNeconfirmataNuIntraInTurneu() {
+        Player ana = player("Ana", "Ciobanu", 1200);
+        Player ion = player("Ion", "Popescu", 1500);
+        Player dan = player("Dan", "Rusu", 1300);
+        Player eva = player("Eva", "Lungu", 1100);
+        userRepository.save(new AppUser("ana", "x", Role.USER, ana));
+        userRepository.save(new AppUser("ion", "x", Role.USER, ion));
+        userRepository.save(new AppUser("dan", "x", Role.USER, dan));
+
+        Long tournamentId = as("admin", true, () -> tournamentService.create(form("Turneu")).getId());
+        as("ana", false, () -> tournamentService.registerSelf(tournamentId));
+        as("ion", false, () -> tournamentService.registerSelf(tournamentId));
+        as("dan", false, () -> tournamentService.registerSelf(tournamentId));
+        TournamentDetails requested = as("admin", true, () -> tournamentService.findDetails(tournamentId).orElseThrow());
+        Long anaRequest = requested.pendingRequests().stream()
+                .filter(p -> p.getPlayer().getId().equals(ana.getId())).findFirst().orElseThrow().getId();
+
+        as("admin", true, () -> {
+            tournamentService.rejectParticipant(tournamentId, anaRequest);
+            // adăugarea de către organizator confirmă cererea existentă
+            tournamentService.addParticipant(tournamentId, ion.getId());
+            tournamentService.addParticipant(tournamentId, eva.getId());
+            tournamentService.start(tournamentId, TournamentSettings.roundRobin(5));
+            return null;
+        });
+
+        TournamentDetails started = as("admin", true, () -> tournamentService.findDetails(tournamentId).orElseThrow());
+        assertThat(started.participants()).extracting(p -> p.getPlayer().getFirstName()).containsExactlyInAnyOrder("Ion", "Eva");
+        assertThat(as("ana", false, () -> notificationService.findRecent()))
+                .extracting(Notification::getType).containsExactly(NotificationType.REGISTRATION_REJECTED);
+        assertThat(as("ion", false, () -> notificationService.findRecent()))
+                .extracting(Notification::getType).containsExactly(NotificationType.REGISTRATION_CONFIRMED);
+        assertThat(as("dan", false, () -> notificationService.findRecent()))
+                .extracting(Notification::getType).containsExactly(NotificationType.REGISTRATION_EXPIRED);
     }
 
     @Test
