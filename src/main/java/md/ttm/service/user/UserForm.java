@@ -31,11 +31,15 @@ public class UserForm {
 
     private boolean enabled = true;
 
+    /** Înscrierea la turnee fără confirmare. */
+    private boolean trusted;
+
     public static UserForm from(AppUser user) {
         UserForm form = new UserForm();
         form.setUsername(user.getUsername());
         form.setRole(user.getRole());
         form.setEnabled(user.isEnabled());
+        form.setTrusted(user.isTrusted());
         if (user.getPlayer() != null) {
             form.setFirstName(user.getPlayer().getFirstName());
             form.setLastName(user.getPlayer().getLastName());
@@ -73,6 +77,14 @@ public class UserForm {
 
     public void setLastName(String lastName) {
         this.lastName = lastName;
+    }
+
+    public boolean isTrusted() {
+        return trusted;
+    }
+
+    public void setTrusted(boolean trusted) {
+        this.trusted = trusted;
     }
 
     public Role getRole() {

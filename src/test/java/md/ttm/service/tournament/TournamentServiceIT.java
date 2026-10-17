@@ -238,6 +238,21 @@ class TournamentServiceIT {
     }
 
     @Test
+    void utilizatorulFaraConfirmareSeInscrieDirect() {
+        Player ana = player("Ana", "Ciobanu", 1200);
+        AppUser user = new AppUser("ana", "x", Role.USER, ana);
+        user.setTrusted(true);
+        userRepository.save(user);
+        Long tournamentId = as("admin", true, () -> tournamentService.create(form("Turneu")).getId());
+
+        assertThat(as("ana", false, () -> tournamentService.registerSelf(tournamentId)).isConfirmed()).isTrue();
+        TournamentDetails details = as("admin", true, () -> tournamentService.findDetails(tournamentId).orElseThrow());
+        assertThat(details.participants()).hasSize(1);
+        assertThat(details.pendingRequests()).isEmpty();
+        assertThat(requestsFor(tournamentId)).isZero();
+    }
+
+    @Test
     void notificarileNuSeRepeta_siSePotSterge() {
         Player ana = player("Ana", "Ciobanu", 1200);
         userRepository.save(new AppUser("ana", "x", Role.USER, ana));
