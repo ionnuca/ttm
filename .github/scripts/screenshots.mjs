@@ -484,8 +484,10 @@ await check('manager: notificarea cererii și confirmarea înscrierii', async ()
   await page.getByRole('button', { name: 'Notificări' }).click();
   await expectText(page, 'a cerut înscrierea la turneul „Turneul de duminică”');
   await shot(page, '48-manager-notificari');
-  await page.keyboard.press('Escape');
-  await page.getByText('Turneul de duminică').first().click();
+  // linkul din notificare deschide turneul și închide lista
+  await page.getByRole('dialog').getByRole('link', { name: 'Deschide turneul' }).first().click();
+  await page.waitForURL(/\/turneu\/\d+/, { timeout: 10000 });
+  await page.getByRole('dialog').waitFor({ state: 'detached', timeout: 10000 });
   await expectText(page, 'Cereri de înscriere (1)');
   await expectText(page, 'Începe turneul');
   await expectText(page, 'Adaugă un jucător');
@@ -503,6 +505,14 @@ await check('utilizator: vede notificarea confirmării', async () => {
   await bell.click();
   await expectText(p, 'Înscrierea la turneul „Turneul de duminică” a fost confirmată');
   await shot(p, '49-utilizator-notificare-confirmare');
+  // pe telefon fereastra încape: butonul de ștergere e vizibil pe ecran
+  await p.setViewportSize({ width: 390, height: 844 });
+  await p.waitForTimeout(500);
+  const del = await p.getByRole('button', { name: 'Șterge notificarea' }).first().boundingBox();
+  if (!del || del.x < 0 || del.x + del.width > 390) throw new Error(`butonul × nu e pe ecran (x=${del?.x})`);
+  await p.screenshot({ path: `${OUT}/50-telefon-notificari.png` });
+  await p.getByRole('button', { name: 'Șterge notificarea' }).first().click();
+  await expectText(p, 'Nu aveți notificări.');
   await c.close();
 });
 await check('manager: pagina Utilizatori e interzisă', async () => {

@@ -238,6 +238,62 @@ class TournamentServiceIT {
     }
 
     @Test
+    void notificarileNuSeRepeta_siSePotSterge() {
+        Player ana = player("Ana", "Ciobanu", 1200);
+        userRepository.save(new AppUser("ana", "x", Role.USER, ana));
+        Long tournamentId = as("admin", true, () -> tournamentService.create(form("Turneu")).getId());
+
+        // cerere, retragere, cerere din nou: organizatorul vede o singură cerere
+        as("ana", false, () -> tournamentService.registerSelf(tournamentId));
+        as("ana", false, () -> {
+            tournamentService.unregisterSelf(tournamentId);
+            return null;
+        });
+        assertThat(requestsFor(tournamentId)).isZero();
+        as("ana", false, () -> tournamentService.registerSelf(tournamentId));
+        as("ana", false, () -> {
+            tournamentService.unregisterSelf(tournamentId);
+            return null;
+        });
+        as("ana", false, () -> tournamentService.registerSelf(tournamentId));
+        assertThat(requestsFor(tournamentId)).isEqualTo(1);
+
+        // respinsă, apoi cerută și confirmată: jucătorul vede doar starea curentă
+        Long request = as("admin", true, () -> tournamentService.findDetails(tournamentId).orElseThrow()
+                .pendingRequests().get(0).getId());
+        as("admin", true, () -> {
+            tournamentService.rejectParticipant(tournamentId, request);
+            return null;
+        });
+        assertThat(requestsFor(tournamentId)).isZero();
+        as("ana", false, () -> tournamentService.registerSelf(tournamentId));
+        Long again = as("admin", true, () -> tournamentService.findDetails(tournamentId).orElseThrow()
+                .pendingRequests().get(0).getId());
+        as("admin", true, () -> {
+            tournamentService.confirmParticipant(tournamentId, again);
+            return null;
+        });
+        List<Notification> anaNotifications = as("ana", false, () -> notificationService.findRecent());
+        assertThat(anaNotifications).extracting(Notification::getType)
+                .containsExactly(NotificationType.REGISTRATION_CONFIRMED);
+        assertThat(requestsFor(tournamentId)).isZero();
+
+        // ștergerea unei notificări
+        as("ana", false, () -> {
+            notificationService.delete(anaNotifications.get(0).getId());
+            return null;
+        });
+        assertThat(as("ana", false, () -> notificationService.findRecent())).isEmpty();
+    }
+
+    /** Câte cereri de înscriere la turneul dat vede administratorul în notificări. */
+    private long requestsFor(Long tournamentId) {
+        return as("admin", true, () -> notificationService.findRecent()).stream()
+                .filter(n -> n.getType() == NotificationType.REGISTRATION_REQUESTED && tournamentId.equals(n.getTournamentId()))
+                .count();
+    }
+
+    @Test
     void cerereaRespinsaSauNeconfirmataNuIntraInTurneu() {
         Player ana = player("Ana", "Ciobanu", 1200);
         Player ion = player("Ion", "Popescu", 1500);

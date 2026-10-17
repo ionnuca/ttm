@@ -18,6 +18,7 @@ import java.time.Instant;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Notificările din aplicație: cererile de înscriere (pentru organizatori) și răspunsul la ele (pentru jucători).
@@ -56,16 +57,50 @@ public class NotificationService {
         currentUser().ifPresent(u -> notificationRepository.markAllRead(u.getId(), Instant.now()));
     }
 
-    /** Notifică jucătorul (dacă are cont). */
+    /** Tipurile de notificări pentru jucător despre înscrierea lui; contează doar ultima. */
+    private static final Set<NotificationType> PLAYER_TYPES = EnumSet.of(NotificationType.REGISTRATION_CONFIRMED,
+            NotificationType.REGISTRATION_REJECTED, NotificationType.REGISTRATION_EXPIRED);
+
+    /**
+     * Notifică jucătorul (dacă are cont). Înlocuiește notificările lui mai vechi despre înscrierea la același turneu,
+     * deci rămâne doar starea curentă. Cererea fiind rezolvată, organizatorii nu o mai văd în notificări.
+     */
     @Transactional
     public void notifyPlayer(Player player, NotificationType type, Tournament tournament) {
-        userRepository.findByPlayerId(player.getId())
-                .ifPresent(user -> notificationRepository.save(new Notification(user, type, tournament, null)));
+        notificationRepository.deleteRequests(tournament.getId(), player.getDisplayName());
+        userRepository.findByPlayerId(player.getId()).ifPresent(user -> {
+            notificationRepository.deleteForUserAndTournament(user.getId(), tournament.getId(), PLAYER_TYPES);
+            notificationRepository.save(new Notification(user, type, tournament, null));
+        });
     }
 
-    /** Notifică toți organizatorii activi (administratori și manageri de turnee), în afară de cel care a făcut acțiunea. */
+    /** Jucătorul și-a retras cererea: organizatorii nu o mai văd în notificări. */
+    @Transactional
+    public void withdrawRequest(Player player, Tournament tournament) {
+        notificationRepository.deleteRequests(tournament.getId(), player.getDisplayName());
+    }
+
+    /** Șterge o notificare a utilizatorului curent. */
+    @PreAuthorize("isAuthenticated()")
+    @Transactional
+    public void delete(Long notificationId) {
+        currentUser().ifPresent(u -> notificationRepository.deleteOwn(notificationId, u.getId()));
+    }
+
+    /** Șterge toate notificările utilizatorului curent. */
+    @PreAuthorize("isAuthenticated()")
+    @Transactional
+    public void deleteAll() {
+        currentUser().ifPresent(u -> notificationRepository.deleteAllOwn(u.getId()));
+    }
+
+    /**
+     * Notifică toți organizatorii activi (administratori și manageri de turnee), în afară de cel care a făcut acțiunea.
+     * O cerere repetată a aceluiași jucător înlocuiește cererea lui anterioară.
+     */
     @Transactional
     public void notifyOrganizers(NotificationType type, Tournament tournament, String playerName) {
+        notificationRepository.deleteRequests(tournament.getId(), playerName);
         String self = SecurityUtils.currentUsername().orElse(null);
         for (AppUser user : userRepository.findByEnabledTrueAndRoleIn(EnumSet.of(Role.ADMIN, Role.TOURNAMENT_MANAGER))) {
             if (!user.getUsername().equals(self)) {
