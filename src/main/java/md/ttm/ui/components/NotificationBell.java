@@ -74,9 +74,20 @@ public class NotificationBell extends Div {
     private void fill() {
         list.removeAll();
         Span title = new Span(Tr.t("Notificări"));
-        title.getStyle().set("font-weight", "600").set("padding", "var(--lumo-space-xs) 0");
-        list.add(title);
+        title.getStyle().set("font-weight", "600").set("flex", "1");
         var notifications = notificationService.findRecent();
+        Div header = new Div(title);
+        header.getStyle().set("display", "flex").set("align-items", "center").set("width", "100%")
+                .set("padding", "var(--lumo-space-xs) 0");
+        if (!notifications.isEmpty()) {
+            Button clear = new Button(Tr.t("Șterge toate"), e -> {
+                notificationService.deleteAll();
+                fill();
+            });
+            clear.addThemeVariants(ButtonVariant.LUMO_TERTIARY_INLINE, ButtonVariant.LUMO_SMALL);
+            header.add(clear);
+        }
+        list.add(header);
         if (notifications.isEmpty()) {
             Span empty = new Span(Tr.t("Nu aveți notificări."));
             empty.getStyle().set("color", "var(--lumo-secondary-text-color)").set("font-size", "var(--lumo-font-size-s)");
@@ -86,7 +97,7 @@ public class NotificationBell extends Div {
         notifications.forEach(n -> list.add(item(n)));
     }
 
-    private static Div item(Notification n) {
+    private Div item(Notification n) {
         Div item = new Div();
         item.getStyle()
                 .set("padding", "var(--lumo-space-s) 0")
@@ -107,6 +118,18 @@ public class NotificationBell extends Div {
             item.add(link);
         }
         item.add(when);
+
+        Button delete = new Button(VaadinIcon.CLOSE_SMALL.create(), e -> {
+            notificationService.delete(n.getId());
+            fill();
+        });
+        delete.addThemeVariants(ButtonVariant.LUMO_ICON, ButtonVariant.LUMO_TERTIARY_INLINE, ButtonVariant.LUMO_SMALL);
+        delete.setAriaLabel(Tr.t("Șterge notificarea"));
+        delete.setTooltipText(Tr.t("Șterge notificarea"));
+        delete.getStyle().set("position", "absolute").set("top", "var(--lumo-space-xs)").set("right", "0")
+                .set("color", "var(--lumo-secondary-text-color)");
+        item.getStyle().set("position", "relative").set("padding-right", "1.75rem").set("box-sizing", "border-box");
+        item.add(delete);
         return item;
     }
 

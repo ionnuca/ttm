@@ -503,6 +503,8 @@ await check('utilizator: vede notificarea confirmării', async () => {
   await bell.click();
   await expectText(p, 'Înscrierea la turneul „Turneul de duminică” a fost confirmată');
   await shot(p, '49-utilizator-notificare-confirmare');
+  await p.getByRole('button', { name: 'Șterge notificarea' }).first().click();
+  await expectText(p, 'Nu aveți notificări.');
   await c.close();
 });
 await check('manager: pagina Utilizatori e interzisă', async () => {
