@@ -109,6 +109,7 @@ class KnockoutTournamentIT {
         assertThatThrownBy(() -> tournamentService.recordResult(first.getId(), MatchResultForm.sets(0, 3)))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("nu se mai poate schimba");
+        entityManager.clear(); // în aplicație tranzacția se anulează; aici renunțăm la modificarea nesalvată
 
         // corectura marii finale: meciul decisiv (nejucat) dispare
         win(id, "GF", "P1");
