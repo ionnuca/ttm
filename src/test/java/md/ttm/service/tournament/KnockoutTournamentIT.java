@@ -88,7 +88,7 @@ class KnockoutTournamentIT {
     @Test
     void ramuraDeJos_mareaFinalaCuMeciDecisiv_corecturi() {
         Long id = tournamentWith(4);
-        tournamentService.start(id, TournamentSettings.groupsKnockout(3, 1));
+        tournamentService.start(id, TournamentSettings.groupsKnockout(5, 1));
         playGroupFavourites(id);
         tournamentService.startKnockout(id, 4, KnockoutType.DOUBLE);
 
@@ -132,7 +132,7 @@ class KnockoutTournamentIT {
     @Test
     void tablouCuLocuriLibere() {
         Long id = tournamentWith(6);
-        tournamentService.start(id, TournamentSettings.groupsKnockout(3, 2));
+        tournamentService.start(id, TournamentSettings.groupsKnockout(5, 2));
         playGroupFavourites(id);
         assertThatThrownBy(() -> tournamentService.startKnockout(id, 4, KnockoutType.SINGLE))
                 .isInstanceOf(BusinessException.class)
