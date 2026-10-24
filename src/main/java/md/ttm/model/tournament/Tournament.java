@@ -64,6 +64,10 @@ public class Tournament {
     @Column(name = "stage", length = 20)
     private TournamentStage stage;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "knockout_type", length = 20)
+    private KnockoutType knockoutType;
+
     @Column(name = "group_count")
     private Integer groupCount;
 
@@ -174,8 +178,22 @@ public class Tournament {
         this.entryFee = entryFee;
     }
 
+    /** Turneu cu etapa grupelor: „Grupe + finale” sau „Grupe + eliminare”. */
     public boolean isGroupsFormat() {
-        return format == TournamentFormat.GROUPS_FINALS;
+        return format == TournamentFormat.GROUPS_FINALS || format == TournamentFormat.GROUPS_KNOCKOUT;
+    }
+
+    /** „Grupe + eliminare”: etapa 2 e un tablou eliminatoriu. */
+    public boolean isKnockoutFormat() {
+        return format == TournamentFormat.GROUPS_KNOCKOUT;
+    }
+
+    public KnockoutType getKnockoutType() {
+        return knockoutType;
+    }
+
+    public void setKnockoutType(KnockoutType knockoutType) {
+        this.knockoutType = knockoutType;
     }
 
     public TournamentStage getStage() {

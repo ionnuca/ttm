@@ -59,6 +59,18 @@ Tipul se alege la „Începe turneul”, împreună cu **numărul de grupe** (mi
 4. **Premii (turneu comercial):** câștigătorul Finalei 2 primește obligatoriu cât **taxa de participare**; restul sumei acumulate se împarte între premiații Finalei 1, ca la turneul comercial obișnuit (100% / 60–40% / 50–30–20%). De aceea un turneu comercial cu două etape se poate încheia manual doar după „Începe etapa 2”; dacă o finală se încheie fără toate meciurile, premiații se stabilesc din clasamentul ei de până atunci, iar fără niciun meci jucat, după ordinea de calificare (locul în grupă, apoi ratingul).
 5. Turneul se încheie după ultimul rezultat din finale; ratingul Elo se calculează pe toate meciurile din ambele etape.
 
+### Turnee „Grupe + eliminare”
+
+Etapa 1 este ca la „Grupe + finale” (tragere la sorți pe urne, Round Robin în fiecare grupă), dar numărul de grupe poate fi și **1** (toți joacă cu toți).
+
+1. **Începe etapa 2** (organizatorul, după ultimul rezultat din grupe și după seturile de departajare): se alege câți jucători din fiecare grupă intră în tablou (1 … mărimea celei mai mici grupe) și tipul tabloului:
+   - **Olimpic** (eliminare simplă): cine pierde iese; învinșii din același tur împart locul (semifinale → locul 3, sferturi → locul 5 …).
+   - **Olimpic cu ramura de jos** (eliminare dublă): prima înfrângere trimite jucătorul în ramura de jos, a doua îl elimină. Marea finală: câștigătorul tabloului principal contra câștigătorului ramurii de jos; dacă acesta din urmă câștigă, se joacă un meci decisiv (*bracket reset*).
+2. **Așezarea în tablou:** după locul din grupă (câștigătorii de grupă întâi), apoi ratingul la începerea turneului; pozițiile standard (1–8, 4–5, 2–7, 3–6 …) fac ca primii favoriți să se întâlnească cât mai târziu. Tabloul are mărimea puterii lui 2 imediat superioare; locurile libere (*bye*) le revin celor mai bine clasați, care trec direct în turul următor.
+3. **Meciurile** se creează pe măsură ce se știu jucătorii (coloana `tournament_match.bracket_slot`: `W<tur>-<n>` tabloul principal, `L<tur>-<n>` ramura de jos, `GF`, `GF2`). Motorul tabloului (`Bracket`) e pur: din jucători și câștigătorii fiecărui slot recalculează tot tabloul și locurile. La corectarea unui rezultat, meciurile următoare nejucate se refac; dacă un meci următor are deja rezultat, corectura e refuzată.
+4. **Premii (turneu comercial):** suma acumulată se împarte (100% / 60–40% / 50–30–20%) după locurile din tablou; la un loc împărțit premiile se adună și se împart egal.
+5. Turneul se încheie automat când tabloul are câștigător; ratingul Elo se calculează pe toate meciurile din ambele etape.
+
 ### Ratingul (Elo)
 
 Ratingul se calculează după formula Elo, la încheierea fiecărui turneu:
@@ -146,7 +158,7 @@ psql -U postgres -f database/create_database.sql
 
 ## Baza de date
 
-- **Scripturile de creare a tabelelor:** `src/main/resources/db/migration/` (`V1__jucatori_si_utilizatori.sql`, `V2__jucator_mana_si_echipament.sql`, `V3__turnee.sql`, `V4__rating_elo.sql`, `V5__grupe_si_finale.sql`, `V6__rol_manager_turnee.sql`, `V7__poze_jucatori.sql`, `V8__poze_marime_mare.sql`, `V9__limba_utilizator.sql`, `V10__seturi_departajare.sql`, `V11__confirmare_inscriere_notificari.sql`, `V12__inscriere_fara_confirmare.sql`). Le aplică automat **Flyway** la pornirea aplicației, în ordinea versiunilor; nu e nevoie să le rulați manual.
+- **Scripturile de creare a tabelelor:** `src/main/resources/db/migration/` (`V1__jucatori_si_utilizatori.sql`, `V2__jucator_mana_si_echipament.sql`, `V3__turnee.sql`, `V4__rating_elo.sql`, `V5__grupe_si_finale.sql`, `V6__rol_manager_turnee.sql`, `V7__poze_jucatori.sql`, `V8__poze_marime_mare.sql`, `V9__limba_utilizator.sql`, `V10__seturi_departajare.sql`, `V11__confirmare_inscriere_notificari.sql`, `V12__inscriere_fara_confirmare.sql`, `V13__grupe_si_eliminare.sql`). Le aplică automat **Flyway** la pornirea aplicației, în ordinea versiunilor; nu e nevoie să le rulați manual.
 - **Modificări de schemă:** nu se editează niciodată un script deja aplicat. Se adaugă unul nou: `V2__descriere.sql`, `V3__...` etc.
 - **Crearea bazei de date și a utilizatorului:** `database/create_database.sql` (fără Docker) sau automat de `docker-compose.yml`.
 - **Baza pentru teste:** `ttm_test`, creată de `database/init/01-create-test-db.sql` la prima pornire a containerului.

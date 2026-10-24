@@ -42,6 +42,10 @@ public class TournamentMatch {
     @Column(name = "round_no", nullable = false)
     private int roundNo;
 
+    /** Locul în tabloul eliminatoriu ({@code W1-2}, {@code L3-1}, {@code GF} …); {@code null} în grupe. */
+    @Column(name = "bracket_slot", length = 10)
+    private String bracketSlot;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "participant_a", nullable = false)
     private TournamentParticipant participantA;
@@ -91,6 +95,14 @@ public class TournamentMatch {
                            TournamentParticipant a, TournamentParticipant b) {
         this(tournament, roundNo, a, b);
         this.group = group;
+    }
+
+    public String getBracketSlot() {
+        return bracketSlot;
+    }
+
+    public void setBracketSlot(String bracketSlot) {
+        this.bracketSlot = bracketSlot;
     }
 
     public TournamentGroup getGroup() {
