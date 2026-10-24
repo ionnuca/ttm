@@ -542,6 +542,42 @@ public class TournamentService {
         return view;
     }
 
+    /**
+     * Verifică, înainte de a modifica meciul, că noul câștigător (sau {@code null}, la ștergerea rezultatului) nu
+     * schimbă jucătorii unui meci următor din tablou care are deja rezultat.
+     */
+    private void requireBracketChangeAllowed(TournamentMatch match, Long newWinner) {
+        if (match.getGroup() == null || !match.getGroup().isKnockout() || match.getBracketSlot() == null) {
+            return;
+        }
+        KnockoutView view = knockoutView(match.getTournament());
+        if (view == null) {
+            return;
+        }
+        Map<String, Long> winners = new HashMap<>();
+        view.matches().forEach((slot, row) -> {
+            if (row.isPlayed()) {
+                winners.put(slot, row.getWinner().getId());
+            }
+        });
+        if (newWinner == null) {
+            winners.remove(match.getBracketSlot());
+        } else {
+            winners.put(match.getBracketSlot(), newWinner);
+        }
+        Map<String, long[]> playable = Bracket.playable(Bracket.compute(match.getTournament().getKnockoutType(),
+                view.members().stream().map(TournamentParticipant::getId).toList(), winners));
+        for (TournamentMatch row : view.matches().values()) {
+            if (!row.isPlayed() || row.getBracketSlot().equals(match.getBracketSlot())) {
+                continue;
+            }
+            long[] pair = playable.get(row.getBracketSlot());
+            if (pair == null || row.getParticipantA().getId() != pair[0] || row.getParticipantB().getId() != pair[1]) {
+                throw new BusinessException("Rezultatul nu se mai poate schimba: meciurile următoare din tablou au deja rezultat. Ștergeți întâi rezultatele lor.");
+            }
+        }
+    }
+
     /** Un rezultat corectat într-un turneu încheiat a redeschis tabloul (de exemplu, e nevoie de meciul decisiv). */
     private void reopenIfBracketIncomplete(Tournament tournament, KnockoutView view) {
         if (view != null && !view.state().complete() && tournament.getStatus() == TournamentStatus.FINISHED) {
@@ -678,9 +714,11 @@ public class TournamentService {
             if (!valid) {
                 throw new BusinessException("Scor invalid: câștigătorul trebuie să aibă {0} seturi, iar adversarul mai puține", setsToWin);
             }
+            TournamentParticipant winner = a > b ? match.getParticipantA() : match.getParticipantB();
+            requireBracketChangeAllowed(match, winner.getId());
             match.setSetsA(a);
             match.setSetsB(b);
-            match.setWinner(a > b ? match.getParticipantA() : match.getParticipantB());
+            match.setWinner(winner);
         } else {
             Long winnerId = result.walkoverWinner();
             TournamentParticipant winner;
@@ -691,6 +729,7 @@ public class TournamentService {
             } else {
                 throw new BusinessException("Alegeți jucătorul care câștigă tehnic");
             }
+            requireBracketChangeAllowed(match, winner.getId());
             match.setSetsA(null);
             match.setSetsB(null);
             match.setWinner(winner);
@@ -830,6 +869,7 @@ public class TournamentService {
         TournamentMatch match = matchRepository.findByIdWithParticipants(matchId)
                 .orElseThrow(() -> new BusinessException("Meciul nu mai există"));
         requireEditableStage(match);
+        requireBracketChangeAllowed(match, null);
         match.clearResult();
         matchRepository.saveAndFlush(match);
         deleteTiebreaks(match.getTournament().getId(), match.getGroup());
