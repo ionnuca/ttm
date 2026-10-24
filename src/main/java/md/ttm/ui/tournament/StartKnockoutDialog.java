@@ -83,8 +83,8 @@ class StartKnockoutDialog extends Dialog {
             text += " " + Tr.t("Tabloul are {0} locuri: cei mai bine clasați {1} trec direct în turul 2.", size, byes);
         }
         text += " " + (type.getValue() == KnockoutType.SINGLE
-                ? Tr.t("Cine pierde iese din turneu; cei învinși în semifinale împart locul 3.")
-                : Tr.t("Cine pierde în tabloul principal trece în ramura de jos; cine pierde și acolo iese. Câștigătorul ramurii de jos joacă marea finală; dacă o câștigă, se joacă un meci decisiv."));
+                ? Tr.t("Cine pierde iese din turneu. Finala decide locurile 1 și 2, iar cei învinși în semifinale joacă meciul pentru locul 3.")
+                : Tr.t("Finala tabloului principal decide locurile 1 și 2. Cine pierde înainte de finală trece în ramura de jos, unde cine pierde iese; finala ramurii de jos decide locurile 3 și 4."));
         preview.setText(text);
     }
 }

@@ -16,20 +16,22 @@ import java.util.Map;
  * dați întâi celor mai bine clasați. Așezarea e cea standard: 1 – ultimul, 2 – penultimul …, primii doi se pot
  * întâlni abia în finală.
  * <ul>
- *     <li><b>Olimpic</b> ({@link KnockoutType#SINGLE}): cine pierde iese. Finala decide locurile 1 și 2;
- *     cei învinși în semifinale împart locul 3, cei din sferturi locul 5 ș.a.m.d.</li>
- *     <li><b>Cu ramura de jos</b> ({@link KnockoutType#DOUBLE}): cine pierde în tabloul principal trece în ramura
- *     de jos; cine pierde în ramura de jos iese. Câștigătorul ramurii de jos joacă marea finală cu câștigătorul
- *     tabloului principal; dacă o câștigă, se joacă un meci decisiv (fiecare a pierdut o dată).
- *     Locul 3 e cel care pierde finala ramurii de jos.</li>
+ *     <li><b>Olimpic</b> ({@link KnockoutType#SINGLE}): cine pierde iese. Finala decide locurile 1 și 2, iar cei
+ *     învinși în semifinale joacă meciul pentru locul 3; cei din sferturi împart locul 5 ș.a.m.d.</li>
+ *     <li><b>Cu ramura de jos</b> ({@link KnockoutType#DOUBLE}): finala tabloului principal decide locurile 1 și 2.
+ *     Cine pierde înainte de finală trece în ramura de jos, unde cine pierde iese; finala ramurii de jos decide
+ *     locurile 3 și 4.</li>
  * </ul>
  * Cheile meciurilor: {@code W<tur>-<nr>} (tabloul principal), {@code L<tur>-<nr>} (ramura de jos),
- * {@code GF} (marea finală), {@code GF2} (meciul decisiv).
+ * {@code P3} (meciul pentru locul 3 la sistemul olimpic).
  */
 public final class Bracket {
 
     /** Locul liber („fără adversar”). */
     public static final long BYE = -1L;
+
+    /** Cheia meciului pentru locul 3 la sistemul olimpic. */
+    public static final String THIRD_PLACE = "P3";
 
     public enum Section { UPPER, LOWER, FINAL }
 
@@ -57,7 +59,7 @@ public final class Bracket {
     /**
      * @param matches  toate meciurile tabloului, în ordinea în care se joacă
      * @param placings locurile stabilite până acum, de la primul
-     * @param complete câștigătorul turneului e stabilit
+     * @param complete s-au jucat finala și meciul pentru locul 3
      */
     public record State(KnockoutType type, int size, List<Match> matches, List<Placing> placings, boolean complete) {
 
@@ -101,67 +103,56 @@ public final class Bracket {
             }
         }
         Match upperFinal = upper[k][0];
+        Long champion = upperFinal.winner();
+        Long runnerUp = upperFinal.decided() ? upperFinal.loser() : null;
 
-        List<List<Long>> eliminated = new ArrayList<>(); // de la primii eliminați spre ultimii
-        Long champion;
-        Long runnerUp;
+        // de la primii eliminați spre ultimii; ultimele două niveluri sunt locul 4 și locul 3
+        List<List<Long>> eliminated = new ArrayList<>();
+        Match thirdPlace = null;
         if (type == KnockoutType.SINGLE) {
-            for (int r = 1; r < k; r++) {
+            for (int r = 1; r < k - 1; r++) {
                 eliminated.add(losers(upper[r]));
             }
-            champion = upperFinal.winner();
-            runnerUp = upperFinal.decided() ? upperFinal.loser() : null;
-        } else {
-            Long lowerChampion;
-            if (k == 1) {
-                lowerChampion = upperFinal.decided() ? upperFinal.loser() : null;
-            } else {
-                int lowerRounds = 2 * k - 2;
-                Match[] previous = new Match[size / 4];
-                for (int j = 1; j <= size / 4; j++) {
-                    previous[j - 1] = b.add("L1-" + j, Section.LOWER, 1, j, lowerRounds,
-                            upper[1][2 * j - 2].loser(), upper[1][2 * j - 1].loser());
-                }
+            if (k >= 2) {
+                thirdPlace = b.add(THIRD_PLACE, Section.FINAL, 1, 1, 1,
+                        upper[k - 1][0].loser(), upper[k - 1][1].loser());
+            }
+        } else if (k >= 2) {
+            int lowerRounds = 2 * k - 3;
+            Match[] previous = new Match[size / 4];
+            for (int j = 1; j <= size / 4; j++) {
+                previous[j - 1] = b.add("L1-" + j, Section.LOWER, 1, j, lowerRounds,
+                        upper[1][2 * j - 2].loser(), upper[1][2 * j - 1].loser());
+            }
+            for (int t = 1; t <= k - 2; t++) {
                 eliminated.add(losers(previous));
-                for (int t = 1; t <= k - 1; t++) {
-                    // cei învinși în tabloul principal (turul t+1) intră în ramura de jos, în ordine inversă
-                    // la fiecare al doilea tur, ca să nu se reîntâlnească prea repede
-                    Match[] incoming = upper[t + 1];
-                    Match[] even = new Match[previous.length];
-                    for (int j = 1; j <= even.length; j++) {
-                        Match from = t % 2 == 1 ? incoming[incoming.length - j] : incoming[j - 1];
-                        even[j - 1] = b.add("L" + (2 * t) + "-" + j, Section.LOWER, 2 * t, j, lowerRounds,
-                                previous[j - 1].winner(), from.loser());
-                    }
-                    eliminated.add(losers(even));
-                    previous = even;
-                    if (t < k - 1) {
-                        Match[] odd = new Match[even.length / 2];
-                        for (int j = 1; j <= odd.length; j++) {
-                            odd[j - 1] = b.add("L" + (2 * t + 1) + "-" + j, Section.LOWER, 2 * t + 1, j, lowerRounds,
-                                    even[2 * j - 2].winner(), even[2 * j - 1].winner());
-                        }
-                        eliminated.add(losers(odd));
-                        previous = odd;
-                    }
+                // cei învinși în tabloul principal (turul t+1) intră în ramura de jos, în ordine inversă
+                // la fiecare al doilea tur, ca să nu se reîntâlnească prea repede
+                Match[] incoming = upper[t + 1];
+                Match[] even = new Match[previous.length];
+                for (int j = 1; j <= even.length; j++) {
+                    Match from = t % 2 == 1 ? incoming[incoming.length - j] : incoming[j - 1];
+                    even[j - 1] = b.add("L" + (2 * t) + "-" + j, Section.LOWER, 2 * t, j, lowerRounds,
+                            previous[j - 1].winner(), from.loser());
                 }
-                lowerChampion = previous[0].winner();
+                eliminated.add(losers(even));
+                Match[] odd = new Match[even.length / 2];
+                for (int j = 1; j <= odd.length; j++) {
+                    odd[j - 1] = b.add("L" + (2 * t + 1) + "-" + j, Section.LOWER, 2 * t + 1, j, lowerRounds,
+                            even[2 * j - 2].winner(), even[2 * j - 1].winner());
+                }
+                previous = odd;
             }
-            Match grandFinal = b.add("GF", Section.FINAL, 1, 1, 2, upperFinal.winner(), lowerChampion);
-            if (grandFinal.decided() && grandFinal.winner().equals(grandFinal.b())
-                    && grandFinal.b() != BYE && grandFinal.a() != BYE) {
-                // câștigătorul ramurii de jos a câștigat: ambii au câte o înfrângere, se joacă meciul decisiv
-                Match decider = b.add("GF2", Section.FINAL, 2, 1, 2, grandFinal.a(), grandFinal.b());
-                champion = decider.winner();
-                runnerUp = decider.decided() ? decider.loser() : null;
-            } else {
-                champion = grandFinal.winner();
-                runnerUp = grandFinal.decided() ? grandFinal.loser() : null;
-            }
+            thirdPlace = previous[0]; // finala ramurii de jos
         }
+        if (thirdPlace != null) {
+            eliminated.add(Collections.singletonList(thirdPlace.decided() ? thirdPlace.loser() : null));
+            eliminated.add(Collections.singletonList(thirdPlace.decided() ? thirdPlace.winner() : null));
+        }
+        boolean complete = champion != null && (thirdPlace == null || thirdPlace.decided());
 
         List<Placing> placings = new ArrayList<>();
-        if (champion != null) {
+        if (complete) {
             // turneul s-a încheiat: primul, al doilea, apoi cei eliminați, de la ultimul tur spre primul
             List<List<Long>> tiers = new ArrayList<>();
             tiers.add(List.of(champion));
@@ -195,7 +186,7 @@ public final class Bracket {
             Collections.reverse(fromBottom);
             placings.addAll(fromBottom);
         }
-        return new State(type, size, b.matches, placings, champion != null);
+        return new State(type, size, b.matches, placings, complete);
     }
 
     /** Așezarea standard a capilor de serie: pentru 8, [1, 8, 4, 5, 2, 7, 3, 6]. */

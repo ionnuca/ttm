@@ -66,60 +66,12 @@ class KnockoutTournamentIT {
 
         win(id, "W1-1", "P1");
         win(id, "W1-2", "P2");
-        assertThat(details(id).knockout().matches()).containsKey("W2-1");
-        assertThat(details(id).tournament().getStatus()).isEqualTo(TournamentStatus.IN_PROGRESS);
+        assertThat(details(id).knockout().matches()).containsOnlyKeys("W1-1", "W1-2", "W2-1", Bracket.THIRD_PLACE);
+        // învinșii din semifinale joacă pentru locul 3
+        assertThat(pair(details(id).knockout(), Bracket.THIRD_PLACE)).isEqualTo("P4-P3");
         win(id, "W2-1", "P1");
-
-        TournamentDetails done = details(id);
-        assertThat(done.tournament().getStatus()).isEqualTo(TournamentStatus.FINISHED);
-        Map<Integer, List<String>> places = places(done.knockout());
-        assertThat(places.get(1)).containsExactly("P1");
-        assertThat(places.get(2)).containsExactly("P2");
-        assertThat(places.get(3)).containsExactlyInAnyOrder("P3", "P4");
-
-        // locul 3 e împărțit de cei învinși în semifinale
-        assertThat(done.prizes()).hasSize(3);
-        assertThat(done.prizes().get(0).winnerName()).isEqualTo("Test P1");
-        assertThat(done.prizes().get(1).winnerName()).isEqualTo("Test P2");
-        assertThat(done.prizes().get(2).winnerName()).contains("Test P3", "Test P4");
-        assertThat(done.prizes().get(2).shared()).isTrue();
-    }
-
-    @Test
-    void ramuraDeJos_mareaFinalaCuMeciDecisiv_corecturi() {
-        Long id = tournamentWith(4);
-        tournamentService.start(id, TournamentSettings.groupsKnockout(5, 1));
-        playGroupFavourites(id);
-        tournamentService.startKnockout(id, 4, KnockoutType.DOUBLE);
-
-        win(id, "W1-1", "P1");
-        win(id, "W1-2", "P2");
-        win(id, "W2-1", "P1");
-        win(id, "L1-1", "P3");
-        win(id, "L2-1", "P2");
-        assertThat(pair(details(id).knockout(), "GF")).isEqualTo("P1-P2");
-
-        // câștigătorul ramurii de jos câștigă marea finală: se joacă meciul decisiv
-        win(id, "GF", "P2");
-        assertThat(details(id).knockout().matches()).containsKey("GF2");
         assertThat(details(id).tournament().getStatus()).isEqualTo(TournamentStatus.IN_PROGRESS);
-
-        // un rezultat de la care depind meciuri jucate nu se mai poate schimba
-        TournamentMatch first = details(id).knockout().matches().get("W1-1");
-        assertThatThrownBy(() -> tournamentService.recordResult(first.getId(), MatchResultForm.sets(0, 3)))
-                .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("nu se mai poate schimba");
-        entityManager.clear(); // în aplicație tranzacția se anulează; aici renunțăm la modificarea nesalvată
-
-        // corectura marii finale: meciul decisiv (nejucat) dispare
-        win(id, "GF", "P1");
-        assertThat(details(id).knockout().matches()).doesNotContainKey("GF2");
-        assertThat(details(id).tournament().getStatus()).isEqualTo(TournamentStatus.FINISHED);
-
-        // înapoi: P2 câștigă marea finală, turneul se redeschide pentru meciul decisiv
-        win(id, "GF", "P2");
-        assertThat(details(id).tournament().getStatus()).isEqualTo(TournamentStatus.IN_PROGRESS);
-        win(id, "GF2", "P1");
+        win(id, Bracket.THIRD_PLACE, "P3");
 
         TournamentDetails done = details(id);
         assertThat(done.tournament().getStatus()).isEqualTo(TournamentStatus.FINISHED);
@@ -128,6 +80,53 @@ class KnockoutTournamentIT {
         assertThat(places.get(2)).containsExactly("P2");
         assertThat(places.get(3)).containsExactly("P3");
         assertThat(places.get(4)).containsExactly("P4");
+
+        assertThat(done.prizes()).extracting(PrizePlace::winnerName)
+                .containsExactly("Test P1", "Test P2", "Test P3");
+        assertThat(done.prizes()).noneMatch(PrizePlace::shared);
+    }
+
+    @Test
+    void ramuraDeJos_finalaRamuriiDeJosPentruLocul3_corecturi() {
+        Long id = tournamentWith(4);
+        tournamentService.start(id, TournamentSettings.groupsKnockout(5, 1));
+        playGroupFavourites(id);
+        tournamentService.startKnockout(id, 4, KnockoutType.DOUBLE);
+
+        win(id, "W1-1", "P1");
+        win(id, "W1-2", "P2");
+        // învinșii din primul tur trec în ramura de jos, a cărei finală e pentru locul 3
+        assertThat(pair(details(id).knockout(), "L1-1")).isEqualTo("P4-P3");
+        win(id, "L1-1", "P3");
+        assertThat(details(id).tournament().getStatus()).isEqualTo(TournamentStatus.IN_PROGRESS);
+        win(id, "W2-1", "P1");
+        assertThat(details(id).tournament().getStatus()).isEqualTo(TournamentStatus.FINISHED);
+
+        // un rezultat de la care depind meciuri jucate nu se mai poate schimba
+        TournamentMatch first = details(id).knockout().matches().get("W1-1");
+        assertThatThrownBy(() -> tournamentService.recordResult(first.getId(), MatchResultForm.sets(0, 3)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("nu se mai poate schimba");
+        entityManager.clear(); // în aplicație tranzacția se anulează; aici renunțăm la modificarea nesalvată
+
+        // corectura finalei
+        win(id, "W2-1", "P2");
+        Map<Integer, List<String>> corrected = places(details(id).knockout());
+        assertThat(corrected.get(1)).containsExactly("P2");
+        assertThat(corrected.get(2)).containsExactly("P1");
+
+        // ștergerea rezultatului pentru locul 3 redeschide turneul
+        tournamentService.clearResult(details(id).knockout().matches().get("L1-1").getId());
+        assertThat(details(id).tournament().getStatus()).isEqualTo(TournamentStatus.IN_PROGRESS);
+        win(id, "L1-1", "P4");
+
+        TournamentDetails done = details(id);
+        assertThat(done.tournament().getStatus()).isEqualTo(TournamentStatus.FINISHED);
+        Map<Integer, List<String>> places = places(done.knockout());
+        assertThat(places.get(1)).containsExactly("P2");
+        assertThat(places.get(2)).containsExactly("P1");
+        assertThat(places.get(3)).containsExactly("P4");
+        assertThat(places.get(4)).containsExactly("P3");
     }
 
     @Test

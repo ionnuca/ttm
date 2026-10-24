@@ -18,7 +18,7 @@ class BracketTest {
     }
 
     @Test
-    void olimpic_cinciJucatori_ceiMaiBuniTrecDirect() {
+    void olimpic_cinciJucatori_ceiMaiBuniTrecDirect_meciPentruLocul3() {
         List<Long> seeds = List.of(1L, 2L, 3L, 4L, 5L);
         Map<String, Long> winners = new HashMap<>();
 
@@ -33,19 +33,23 @@ class BracketTest {
         Bracket.State semis = Bracket.compute(KnockoutType.SINGLE, seeds, winners);
         assertThat(semis.match("W3-1").a()).isEqualTo(1L);
         assertThat(semis.match("W3-1").b()).isEqualTo(2L);
-        // locurile celor eliminați se știu deja: 4 și 3 pe locul 3, 5 pe locul 5
-        assertThat(semis.placings()).extracting(Bracket.Placing::place).containsExactly(3, 3, 5);
+        // învinșii din semifinale joacă pentru locul 3
+        assertThat(semis.match(Bracket.THIRD_PLACE).a()).isEqualTo(4L);
+        assertThat(semis.match(Bracket.THIRD_PLACE).b()).isEqualTo(3L);
+        assertThat(semis.placings()).containsExactly(new Bracket.Placing(5, 5));
 
         winners.put("W3-1", 2L);
+        assertThat(Bracket.compute(KnockoutType.SINGLE, seeds, winners).complete()).isFalse();
+        winners.put(Bracket.THIRD_PLACE, 3L);
         Bracket.State done = Bracket.compute(KnockoutType.SINGLE, seeds, winners);
         assertThat(done.complete()).isTrue();
         assertThat(done.placings()).containsExactly(
                 new Bracket.Placing(2, 1), new Bracket.Placing(1, 2),
-                new Bracket.Placing(4, 3), new Bracket.Placing(3, 3), new Bracket.Placing(5, 5));
+                new Bracket.Placing(3, 3), new Bracket.Placing(4, 4), new Bracket.Placing(5, 5));
     }
 
     @Test
-    void ramuraDeJos_patruJucatori_cuMeciDecisiv() {
+    void ramuraDeJos_patruJucatori_finalaRamuriiDeJosEsteLocul3() {
         List<Long> seeds = List.of(1L, 2L, 3L, 4L);
         Map<String, Long> winners = new HashMap<>();
         winners.put("W1-1", 1L); // 1–4
@@ -56,31 +60,49 @@ class BracketTest {
         assertThat(afterRound1.match("W2-1").playable()).isTrue();
 
         winners.put("L1-1", 3L);
-        winners.put("W2-1", 1L);
-        winners.put("L2-1", 2L); // 2 (învins în finala tabloului principal) îl bate pe 3
-        Bracket.State grandFinal = Bracket.compute(KnockoutType.DOUBLE, seeds, winners);
-        assertThat(grandFinal.match("GF").a()).isEqualTo(1L);
-        assertThat(grandFinal.match("GF").b()).isEqualTo(2L);
-        assertThat(grandFinal.placings()).containsExactly(new Bracket.Placing(3, 3), new Bracket.Placing(4, 4));
+        Bracket.State lowerDone = Bracket.compute(KnockoutType.DOUBLE, seeds, winners);
+        assertThat(lowerDone.complete()).isFalse();
+        assertThat(lowerDone.placings()).containsExactly(new Bracket.Placing(3, 3), new Bracket.Placing(4, 4));
 
-        // câștigă cel din ramura de jos: meci decisiv
-        winners.put("GF", 2L);
-        Bracket.State decider = Bracket.compute(KnockoutType.DOUBLE, seeds, winners);
-        assertThat(decider.complete()).isFalse();
-        assertThat(decider.match("GF2").playable()).isTrue();
-
-        winners.put("GF2", 1L);
+        winners.put("W2-1", 2L);
         Bracket.State done = Bracket.compute(KnockoutType.DOUBLE, seeds, winners);
         assertThat(done.complete()).isTrue();
-        assertThat(done.placings()).containsExactly(new Bracket.Placing(1, 1), new Bracket.Placing(2, 2),
+        assertThat(done.placings()).containsExactly(new Bracket.Placing(2, 1), new Bracket.Placing(1, 2),
                 new Bracket.Placing(3, 3), new Bracket.Placing(4, 4));
+        assertThat(done.matches()).noneMatch(m -> m.section() == Bracket.Section.FINAL);
+    }
 
-        // dacă marea finală o câștigă cel din tabloul principal, nu se mai joacă meciul decisiv
-        winners.put("GF", 1L);
-        winners.remove("GF2");
-        Bracket.State noDecider = Bracket.compute(KnockoutType.DOUBLE, seeds, winners);
-        assertThat(noDecider.complete()).isTrue();
-        assertThat(noDecider.match("GF2")).isNull();
+    @Test
+    void ramuraDeJos_optJucatori() {
+        List<Long> seeds = List.of(1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L);
+        Map<String, Long> winners = new HashMap<>();
+        winners.put("W1-1", 1L); // 1–8
+        winners.put("W1-2", 4L); // 4–5
+        winners.put("W1-3", 2L); // 2–7
+        winners.put("W1-4", 3L); // 3–6
+        winners.put("L1-1", 5L); // 8–5
+        winners.put("L1-2", 6L); // 7–6
+        winners.put("W2-1", 1L); // 1–4
+        winners.put("W2-2", 2L); // 2–3
+        Bracket.State state = Bracket.compute(KnockoutType.DOUBLE, seeds, winners);
+        // învinșii din semifinale intră în ramura de jos în ordine inversă
+        assertThat(state.match("L2-1").a()).isEqualTo(5L);
+        assertThat(state.match("L2-1").b()).isEqualTo(3L);
+        assertThat(state.match("L2-2").a()).isEqualTo(6L);
+        assertThat(state.match("L2-2").b()).isEqualTo(4L);
+
+        winners.put("L2-1", 3L);
+        winners.put("L2-2", 4L);
+        winners.put("L3-1", 3L); // finala ramurii de jos: locul 3
+        winners.put("W3-1", 1L); // finala: locul 1
+        Bracket.State done = Bracket.compute(KnockoutType.DOUBLE, seeds, winners);
+        assertThat(done.complete()).isTrue();
+        assertThat(done.match("L3-1").rounds()).isEqualTo(3);
+        assertThat(done.placings()).containsExactly(
+                new Bracket.Placing(1, 1), new Bracket.Placing(2, 2),
+                new Bracket.Placing(3, 3), new Bracket.Placing(4, 4),
+                new Bracket.Placing(5, 5), new Bracket.Placing(6, 5),
+                new Bracket.Placing(8, 7), new Bracket.Placing(7, 7));
     }
 
     @Test
@@ -92,21 +114,20 @@ class BracketTest {
 
         winners.put("W1-2", 3L);
         Bracket.State next = Bracket.compute(KnockoutType.DOUBLE, seeds, winners);
-        // 2 a pierdut și trece direct în turul 2 al ramurii de jos (în turul 1 n-are adversar)
+        // 2 a pierdut și n-are adversar în ramura de jos: e pe locul 3
         assertThat(next.match("L1-1").winner()).isEqualTo(2L);
         assertThat(Bracket.playable(next)).containsOnlyKeys("W1-2", "W2-1");
+        assertThat(next.placings()).containsExactly(new Bracket.Placing(2, 3));
     }
 
     @Test
     void doiJucatori() {
         Map<String, Long> winners = new HashMap<>(Map.of("W1-1", 2L));
-        Bracket.State single = Bracket.compute(KnockoutType.SINGLE, List.of(1L, 2L), winners);
-        assertThat(single.complete()).isTrue();
-        assertThat(single.placings()).containsExactly(new Bracket.Placing(2, 1), new Bracket.Placing(1, 2));
-
-        Bracket.State doubleElim = Bracket.compute(KnockoutType.DOUBLE, List.of(1L, 2L), winners);
-        assertThat(doubleElim.match("GF").a()).isEqualTo(2L);
-        assertThat(doubleElim.match("GF").b()).isEqualTo(1L);
-        assertThat(doubleElim.complete()).isFalse();
+        for (KnockoutType type : KnockoutType.values()) {
+            Bracket.State state = Bracket.compute(type, List.of(1L, 2L), winners);
+            assertThat(state.complete()).isTrue();
+            assertThat(state.matches()).hasSize(1);
+            assertThat(state.placings()).containsExactly(new Bracket.Placing(2, 1), new Bracket.Placing(1, 2));
+        }
     }
 }
