@@ -660,11 +660,10 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
             if (rounds.isEmpty()) {
                 continue;
             }
-            if (doubleElimination) {
+            if (doubleElimination && part != Bracket.Section.FINAL) {
                 H4 partTitle = new H4(switch (part) {
                     case UPPER -> Tr.t("Tabloul principal");
-                    case LOWER -> Tr.t("Ramura de jos");
-                    case FINAL -> Tr.t("Marea finală");
+                    default -> Tr.t("Ramura de jos");
                 });
                 partTitle.getStyle().set("margin", "var(--lumo-space-s) 0 0");
                 section.add(partTitle);
@@ -710,7 +709,7 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
                 }
                 yield fromEnd == 1 ? Tr.t("Semifinale") : fromEnd == 2 ? Tr.t("Sferturi de finală") : Tr.t("Turul {0}", m.round());
             }
-            case LOWER -> m.round() == m.rounds() ? Tr.t("Finala ramurii de jos") : Tr.t("Ramura de jos · turul {0}", m.round());
+            case LOWER -> m.round() == m.rounds() ? Tr.t("Finala ramurii de jos") : Tr.t("Turul {0}", m.round());
             case FINAL -> m.round() == 1 ? Tr.t("Marea finală") : Tr.t("Meci decisiv");
         };
     }
