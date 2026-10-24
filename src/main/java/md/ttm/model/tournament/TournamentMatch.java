@@ -42,7 +42,7 @@ public class TournamentMatch {
     @Column(name = "round_no", nullable = false)
     private int roundNo;
 
-    /** Locul în tabloul eliminatoriu ({@code W1-2}, {@code L3-1}, {@code GF} …); {@code null} în grupe. */
+    /** Locul în tabloul eliminatoriu ({@code W1-2}, {@code L3-1}, {@code P3} …); {@code null} în grupe. */
     @Column(name = "bracket_slot", length = 10)
     private String bracketSlot;
 

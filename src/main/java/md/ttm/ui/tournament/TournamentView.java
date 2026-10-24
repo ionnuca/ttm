@@ -663,7 +663,7 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
             if (doubleElimination && part != Bracket.Section.FINAL) {
                 H4 partTitle = new H4(switch (part) {
                     case UPPER -> Tr.t("Tabloul principal");
-                    default -> Tr.t("Ramura de jos");
+                    default -> Tr.t("Ramura de jos (pentru locul 3)");
                 });
                 partTitle.getStyle().set("margin", "var(--lumo-space-s) 0 0");
                 section.add(partTitle);
@@ -705,12 +705,12 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
             case UPPER -> {
                 int fromEnd = m.rounds() - m.round();
                 if (fromEnd == 0) {
-                    yield type == md.ttm.model.tournament.KnockoutType.SINGLE ? Tr.t("Finala") : Tr.t("Finala tabloului principal");
+                    yield Tr.t("Finala");
                 }
                 yield fromEnd == 1 ? Tr.t("Semifinale") : fromEnd == 2 ? Tr.t("Sferturi de finală") : Tr.t("Turul {0}", m.round());
             }
-            case LOWER -> m.round() == m.rounds() ? Tr.t("Finala ramurii de jos") : Tr.t("Turul {0}", m.round());
-            case FINAL -> m.round() == 1 ? Tr.t("Marea finală") : Tr.t("Meci decisiv");
+            case LOWER -> m.round() == m.rounds() ? Tr.t("Finala ramurii de jos (locul 3)") : Tr.t("Turul {0}", m.round());
+            case FINAL -> Tr.t("Meci pentru locul 3");
         };
     }
 
