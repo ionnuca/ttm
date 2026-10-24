@@ -32,6 +32,8 @@ import md.ttm.model.tournament.TournamentMatch;
 import md.ttm.model.tournament.TournamentParticipant;
 import md.ttm.model.tournament.TournamentTiebreak;
 import md.ttm.service.tournament.StandingsCalculator;
+import md.ttm.service.tournament.Bracket;
+import md.ttm.service.tournament.KnockoutView;
 import md.ttm.model.tournament.TournamentStage;
 import md.ttm.model.tournament.TournamentStatus;
 import md.ttm.security.SecurityUtils;
@@ -250,9 +252,17 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         actions.getStyle().set("flex-wrap", "wrap");
         if (details.canSelfRegister()) {
             Button register = new Button(Tr.t("Mă înscriu"), VaadinIcon.PLUS.create(),
-                    e -> run(() -> tournamentService.registerSelf(tournamentId), details.manager()
-                            ? Tr.t("V-ați înscris la turneu")
-                            : Tr.t("Cerere trimisă; veți fi anunțat după confirmare")));
+                    e -> {
+                        try {
+                            boolean confirmed = tournamentService.registerSelf(tournamentId).isConfirmed();
+                            Notifications.success(confirmed
+                                    ? Tr.t("V-ați înscris la turneu")
+                                    : Tr.t("Cerere trimisă; veți fi anunțat după confirmare"));
+                        } catch (RuntimeException ex) {
+                            Notifications.error(Notifications.saveError(ex));
+                        }
+                        refresh();
+                    });
             register.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
             actions.add(register);
         }
@@ -441,6 +451,9 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         if (details.canStartFinals()) {
             add(createStartFinalsCard(details));
         }
+        if (details.knockout() != null) {
+            add(knockoutSection(details));
+        }
         if (!details.finals().isEmpty()) {
             add(stageTitle(TournamentStage.FINALS, details.finals()));
             for (GroupView group : details.finals()) {
@@ -454,7 +467,7 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
             redraw.setTooltipText(Tr.t("O nouă tragere la sorți, cât timp nu există rezultate"));
             add(redraw);
         }
-        if (t.getStage() == TournamentStage.FINALS) {
+        if (t.getStage() != TournamentStage.GROUPS) {
             add(hint(Tr.t("Rezultatele din grupe au stabilit calificarea și nu mai pot fi modificate.")));
         }
         boolean groupsEditable = details.canRecordResults() && t.getStage() == TournamentStage.GROUPS;
@@ -582,13 +595,25 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         card.getStyle()
                 .set("border-color", "var(--lumo-success-color-50pct)")
                 .set("background", "var(--lumo-success-color-10pct)");
-        Span text = new Span(Tr.t("Etapa 1 s-a terminat. Alegeți câți jucători din fiecare grupă trec în Finala 1; ceilalți joacă în Finala 2."));
-        Button start = new Button(Tr.t("Începe etapa 2"), VaadinIcon.PLAY.create(), e -> new StartFinalsDialog(
-                details.groupStage(), qualifiers -> {
+        boolean knockout = details.tournament().isKnockoutFormat();
+        Span text = new Span(knockout
+                ? Tr.t("Etapa 1 s-a terminat. Alegeți câți jucători din fiecare grupă intră în tabloul eliminatoriu și tipul tabloului.")
+                : Tr.t("Etapa 1 s-a terminat. Alegeți câți jucători din fiecare grupă trec în Finala 1; ceilalți joacă în Finala 2."));
+        Button start = new Button(Tr.t("Începe etapa 2"), VaadinIcon.PLAY.create(), e -> {
+            if (knockout) {
+                new StartKnockoutDialog(details.groupStage(), (qualifiers, type) -> {
+                    tournamentService.startKnockout(tournamentId, qualifiers, type);
+                    Notifications.success(Tr.t("Etapa 2 a început"));
+                    refresh();
+                }).open();
+            } else {
+                new StartFinalsDialog(details.groupStage(), qualifiers -> {
                     tournamentService.startFinals(tournamentId, qualifiers);
                     Notifications.success(Tr.t("Etapa 2 a început"));
                     refresh();
-                }).open());
+                }).open();
+            }
+        });
         start.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_SUCCESS);
         HorizontalLayout row = new HorizontalLayout(text, start);
         row.setAlignItems(FlexComponent.Alignment.CENTER);
@@ -596,6 +621,155 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         row.getStyle().set("flex-wrap", "wrap");
         text.getStyle().set("flex", "1");
         card.add(row);
+        return card;
+    }
+
+    // ------------------------------------------------------------------
+    // Tabloul eliminatoriu („Grupe + eliminare”)
+    // ------------------------------------------------------------------
+
+    private Component knockoutSection(TournamentDetails details) {
+        KnockoutView view = details.knockout();
+        Bracket.State state = view.state();
+        VerticalLayout section = new VerticalLayout();
+        section.setPadding(false);
+
+        H3 title = new H3(TournamentStage.KNOCKOUT.getLabel());
+        title.getStyle().set("margin-bottom", "0");
+        long played = view.matches().values().stream().filter(TournamentMatch::isPlayed).count();
+        Span progress = new Span(Tr.t("Meciuri jucate: {0} din {1}", played, view.matches().size()));
+        progress.getStyle().set("color", "var(--lumo-secondary-text-color)");
+        HorizontalLayout heading = new HorizontalLayout(title, progress,
+                Badges.badge(details.tournament().getKnockoutType().getLabel(), Badges.Tone.CONTRAST));
+        heading.setAlignItems(FlexComponent.Alignment.BASELINE);
+        heading.getStyle().set("flex-wrap", "wrap").set("margin-top", "var(--lumo-space-l)");
+        section.add(heading);
+
+        if (!state.placings().isEmpty()) {
+            section.add(knockoutStandings(view));
+        }
+
+        Long own = ownId(details);
+        boolean editable = details.canRecordResults();
+        boolean doubleElimination = state.type() == md.ttm.model.tournament.KnockoutType.DOUBLE;
+        for (Bracket.Section part : Bracket.Section.values()) {
+            Map<Integer, List<Bracket.Match>> rounds = state.matches().stream()
+                    .filter(m -> m.section() == part)
+                    .filter(m -> visible(m))
+                    .collect(Collectors.groupingBy(Bracket.Match::round, TreeMap::new, Collectors.toList()));
+            if (rounds.isEmpty()) {
+                continue;
+            }
+            if (doubleElimination) {
+                H4 partTitle = new H4(switch (part) {
+                    case UPPER -> Tr.t("Tabloul principal");
+                    case LOWER -> Tr.t("Ramura de jos");
+                    case FINAL -> Tr.t("Marea finală");
+                });
+                partTitle.getStyle().set("margin", "var(--lumo-space-s) 0 0");
+                section.add(partTitle);
+            }
+            Div grid = new Div();
+            grid.getStyle()
+                    .set("display", "grid")
+                    .set("grid-template-columns", "repeat(auto-fill, minmax(min(100%, 22rem), 1fr))")
+                    .set("gap", "var(--lumo-space-m)")
+                    .set("width", "100%");
+            rounds.forEach((round, matches) -> {
+                Div roundCard = card();
+                H4 roundTitle = new H4(roundLabel(matches.get(0), state.type()));
+                roundTitle.getStyle().set("margin", "0 0 var(--lumo-space-xs)");
+                roundCard.add(roundTitle);
+                for (Bracket.Match m : matches) {
+                    TournamentMatch row = view.matches().get(m.key());
+                    roundCard.add(row != null ? matchRow(details, row, own, editable) : bracketPlaceholder(view, m));
+                }
+                grid.add(roundCard);
+            });
+            section.add(grid);
+        }
+        return section;
+    }
+
+    /** Meciurile fără niciun jucător real (două locuri libere) sau cu o trecere directă încă necunoscută nu se arată. */
+    private static boolean visible(Bracket.Match m) {
+        boolean byeA = m.a() != null && m.a() == Bracket.BYE;
+        boolean byeB = m.b() != null && m.b() == Bracket.BYE;
+        if (byeA && byeB) {
+            return false;
+        }
+        return !((byeA && m.b() == null) || (byeB && m.a() == null));
+    }
+
+    private static String roundLabel(Bracket.Match m, md.ttm.model.tournament.KnockoutType type) {
+        return switch (m.section()) {
+            case UPPER -> {
+                int fromEnd = m.rounds() - m.round();
+                if (fromEnd == 0) {
+                    yield type == md.ttm.model.tournament.KnockoutType.SINGLE ? Tr.t("Finala") : Tr.t("Finala tabloului principal");
+                }
+                yield fromEnd == 1 ? Tr.t("Semifinale") : fromEnd == 2 ? Tr.t("Sferturi de finală") : Tr.t("Turul {0}", m.round());
+            }
+            case LOWER -> m.round() == m.rounds() ? Tr.t("Finala ramurii de jos") : Tr.t("Ramura de jos · turul {0}", m.round());
+            case FINAL -> m.round() == 1 ? Tr.t("Marea finală") : Tr.t("Meci decisiv");
+        };
+    }
+
+    /** Un meci din tablou care încă nu se joacă: jucătorii știuți, „?” pentru cei încă necunoscuți, sau trecerea directă. */
+    private static Component bracketPlaceholder(KnockoutView view, Bracket.Match m) {
+        Span nameA = placeholderName(view, m.a(), true);
+        Span nameB = placeholderName(view, m.b(), false);
+        Span middle;
+        if ((m.a() != null && m.a() == Bracket.BYE) || (m.b() != null && m.b() == Bracket.BYE)) {
+            middle = Badges.badge(Tr.t("trece direct"), Badges.Tone.CONTRAST);
+        } else {
+            middle = new Span("–:–");
+            middle.getStyle().set("color", "var(--lumo-tertiary-text-color)");
+        }
+        middle.getStyle().set("min-width", "3.5rem").set("text-align", "center");
+        HorizontalLayout row = new HorizontalLayout(nameA, middle, nameB);
+        row.setWidthFull();
+        row.setAlignItems(FlexComponent.Alignment.CENTER);
+        row.getStyle()
+                .set("padding", "var(--lumo-space-xs) 0")
+                .set("border-top", "1px solid var(--lumo-contrast-10pct)")
+                .set("color", "var(--lumo-secondary-text-color)");
+        return row;
+    }
+
+    private static Span placeholderName(KnockoutView view, Long id, boolean alignRight) {
+        String text;
+        if (id == null) {
+            text = "?";
+        } else if (id == Bracket.BYE) {
+            text = "—";
+        } else {
+            TournamentParticipant p = view.participant(id);
+            text = p != null ? p.getPlayer().getDisplayName() : "?";
+        }
+        Span name = new Span(text);
+        name.getStyle().set("flex", "1").set("min-width", "0").set("text-align", alignRight ? "right" : "left");
+        return name;
+    }
+
+    /** Locurile stabilite în tabloul eliminatoriu (toate, după încheiere; până atunci, ale celor eliminați). */
+    private static Component knockoutStandings(KnockoutView view) {
+        Div card = card();
+        H4 title = new H4(view.state().complete() ? Tr.t("Clasamentul final") : Tr.t("Locuri stabilite până acum"));
+        title.getStyle().set("margin", "0 0 var(--lumo-space-xs)");
+        card.add(title);
+        Div list = new Div();
+        list.getStyle()
+                .set("display", "grid")
+                .set("grid-template-columns", "auto 1fr")
+                .set("gap", "var(--lumo-space-xs) var(--lumo-space-m)");
+        for (Bracket.Placing placing : view.state().placings()) {
+            Span place = new Span(Tr.t("Locul {0}", placing.place()));
+            place.getStyle().set("font-weight", "600").set("white-space", "nowrap");
+            TournamentParticipant p = view.participant(placing.participantId());
+            list.add(place, new Span(p != null ? p.getPlayer().getDisplayName() : "?"));
+        }
+        card.add(list);
         return card;
     }
 

@@ -278,6 +278,7 @@ await check('admin: seturi de departajare la turneul comercial', async () => {
 await check('admin: dialog utilizator nou', async () => {
   await page.getByText('Adaugă utilizator').click();
   await expectText(page, 'Utilizator nou');
+  await expectText(page, 'Se înscrie la turnee fără confirmare');
   await page.getByRole('dialog').locator('vaadin-select:visible').first().click();
   await page.getByRole('option', { name: 'Manager de turnee' }).waitFor({ timeout: 10000 });
   await page.keyboard.press('Escape');
@@ -356,6 +357,24 @@ await check('admin: încheierea manuală a turneului', async () => {
   await expectText(page, 'Turneu încheiat');
   await expectText(page, 'nejucat');
   await shot(page, '37-admin-turneu-incheiat-manual');
+});
+await check('admin: „Grupe + eliminare” — tabloul cu ramura de jos', async () => {
+  await page.goto(`${BASE}/turnee`);
+  await page.getByText('Cupa eliminatorie').first().click();
+  await expectText(page, 'intră în tabloul eliminatoriu');
+  await page.getByRole('button', { name: 'Începe etapa 2' }).click();
+  await expectText(page, 'Calificați din fiecare grupă în tabloul eliminatoriu');
+  await page.getByRole('dialog').getByText('Olimpic cu ramura de jos: iese după a doua înfrângere').click();
+  await expectText(page, 'În tablou intră 4 jucători');
+  await expectText(page, 'se joacă un meci decisiv');
+  await shot(page, '38-admin-incepe-tablou');
+  await page.getByRole('dialog').getByRole('button', { name: 'Începe etapa 2' }).click();
+  await expectText(page, 'Etapa 2 — Tablou eliminatoriu');
+  await expectText(page, 'Tabloul principal');
+  await expectText(page, 'Ramura de jos');
+  await expectText(page, 'Marea finală');
+  await expectText(page, 'Semifinale');
+  await shot(page, '39-admin-tablou-eliminatoriu');
 });
 await check('admin: setări și backup', async () => {
   await page.goto(`${BASE}/setari`);
@@ -542,6 +561,13 @@ await check('telefon: turneu cu finale', async () => {
   await page.getByText('Liga de iarnă').first().click();
   await expectText(page, 'Finala 1');
   await shot(page, '32-telefon-finale');
+});
+await check('telefon: tablou eliminatoriu', async () => {
+  await page.goto(`${BASE}/turnee`);
+  await page.getByText('Cupa eliminatorie').first().click();
+  await expectText(page, 'Etapa 2 — Tablou eliminatoriu');
+  await page.getByText('Tabloul principal').scrollIntoViewIfNeeded();
+  await shot(page, '40-telefon-tablou');
 });
 await check('telefon: admin', async () => {
   await login(page, 'admin', 'admin12345');

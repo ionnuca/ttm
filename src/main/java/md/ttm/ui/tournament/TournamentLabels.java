@@ -53,6 +53,9 @@ public final class TournamentLabels {
         if (stored.startsWith("Finala ")) {
             return Tr.t("Finala {0}", stored.substring("Finala ".length()));
         }
+        if (stored.equals("Tablou eliminatoriu")) {
+            return Tr.t("Tablou eliminatoriu");
+        }
         return stored;
     }
 

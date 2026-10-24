@@ -263,8 +263,17 @@ public class UsersView extends VerticalLayout implements HasDynamicTitle {
     }
 
     private static Component statusBadge(AppUser user) {
-        return user.isEnabled()
+        Span status = user.isEnabled()
                 ? Badges.badge(Tr.t("Activ"), Badges.Tone.SUCCESS)
                 : Badges.badge(Tr.t("Blocat"), Badges.Tone.ERROR);
+        if (!user.isTrusted() || user.getRole() != md.ttm.model.user.Role.USER) {
+            return status;
+        }
+        Span trusted = Badges.badge(Tr.t("Fără confirmare"), Badges.Tone.PRIMARY);
+        trusted.getElement().setAttribute("title", Tr.t("Se înscrie la turnee fără confirmare"));
+        HorizontalLayout badges = new HorizontalLayout(status, trusted);
+        badges.setSpacing(false);
+        badges.getStyle().set("gap", "var(--lumo-space-xs)").set("flex-wrap", "wrap");
+        return badges;
     }
 }

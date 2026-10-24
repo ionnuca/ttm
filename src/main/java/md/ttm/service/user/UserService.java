@@ -101,6 +101,7 @@ public class UserService {
         AppUser user = new AppUser(username, passwordEncoder.encode(form.getPassword()),
                 form.getRole() != null ? form.getRole() : Role.USER, player);
         user.setEnabled(form.isEnabled());
+        user.setTrusted(form.isTrusted());
         return userRepository.save(user);
     }
 
@@ -126,6 +127,7 @@ public class UserService {
         user.setUsername(newUsername);
         user.setRole(newRole);
         user.setEnabled(form.isEnabled());
+        user.setTrusted(form.isTrusted());
         String password = form.getPassword();
         if (password != null && !password.isBlank()) {
             requireValidPassword(password);

@@ -22,6 +22,7 @@ import java.util.Map;
  * @param tiebreaks      la Round Robin: seturile de departajare jucate (la „Grupe + finale” sunt în fiecare grupă)
  * @param pendingTiebreaks la Round Robin: seturile de departajare care mai trebuie jucate
  * @param pendingRequests  pentru organizatori: cererile de înscriere neconfirmate (cât timp înscrierea e deschisă)
+ * @param knockout         la „Grupe + eliminare”, după începerea etapei 2: tabloul eliminatoriu
  */
 public record TournamentDetails(
         Tournament tournament,
@@ -38,7 +39,8 @@ public record TournamentDetails(
         List<GroupView> groups,
         List<md.ttm.model.tournament.TournamentTiebreak> tiebreaks,
         List<StandingsCalculator.Pairing> pendingTiebreaks,
-        List<TournamentParticipant> pendingRequests) {
+        List<TournamentParticipant> pendingRequests,
+        KnockoutView knockout) {
 
     public List<GroupView> groupStage() {
         return groups.stream().filter(g -> !g.group().isFinal()).toList();
