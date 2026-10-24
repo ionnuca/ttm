@@ -61,6 +61,16 @@ public class TournamentGroup {
         return stage == TournamentStage.FINALS;
     }
 
+    /** Tabloul eliminatoriu (etapa 2 la „Grupe + eliminare”). */
+    public boolean isKnockout() {
+        return stage == TournamentStage.KNOCKOUT;
+    }
+
+    /** O grupă din etapa 1. */
+    public boolean isGroupStage() {
+        return stage == TournamentStage.GROUPS;
+    }
+
     public Long getId() {
         return id;
     }

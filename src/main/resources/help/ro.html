@@ -18,7 +18,7 @@ Pagina principală arată ultimele meciuri; clasamentul general e la <b>Jucător
   <li><b>Înscrierea.</b> Jucătorii cu cont apasă „Mă înscriu” pe pagina turneului: se trimite o <b>cerere de înscriere</b>, care așteaptă confirmarea unui organizator (administrator sau manager de turnee). Organizatorii primesc o notificare și, pe pagina turneului, la „Cereri de înscriere”, apasă <b>Confirmă</b> sau <b>Respinge</b>. Jucătorul vede răspunsul în <b>notificări</b> (clopoțelul din bara de sus). Administratorul poate marca un utilizator „Se înscrie la turnee fără confirmare” (la <b>Utilizatori</b>): înscrierea lui e confirmată automat. Organizatorul poate adăuga sau scoate direct pe oricine; cererile rămase neconfirmate se anulează la începerea turneului.</li>
   <li><b>Începerea.</b> „Începe turneul” închide înscrierea. Atunci se alege:
     <ul>
-      <li>tipul: <b>Round robin</b> sau <b>Grupe + finale</b> (cu numărul de grupe);</li>
+      <li>tipul: <b>Round robin</b>, <b>Grupe + finale</b> sau <b>Grupe + eliminare</b> (cu numărul de grupe);</li>
       <li>numărul de seturi: best of 3, 5 sau 7 (câștigă primul la 2, 3 sau 4 seturi);</li>
       <li>opțional, <b>turneu comercial</b>: taxa de participare și numărul de premiați.</li>
     </ul>
@@ -48,6 +48,20 @@ Pagina principală arată ultimele meciuri; clasamentul general e la <b>Jucător
       Ambele finale se joacă round robin, dar jucătorii care s-au întâlnit deja în grupă nu mai joacă: rezultatul din etapa 1 se preia.
       După începerea etapei 2, rezultatele din grupe nu se mai pot schimba.</li>
 </ol>
+
+<p><b>Grupe + eliminare</b> – etapa 1 e la fel (grupe pe urne, round robin), dar aici se poate alege și <b>o singură grupă</b> (toți joacă cu toți).
+Etapa 2 este un <b>tablou eliminatoriu</b>:</p>
+<ul>
+  <li>după grupe, organizatorul apasă „Începe etapa 2”, alege câți jucători din fiecare grupă intră în tablou și tipul tabloului;</li>
+  <li>jucătorii se așază în tablou după locul din grupă (întâi câștigătorii de grupă), apoi după rating; cei mai bine clasați se întâlnesc cât mai târziu.
+      Dacă numărul lor nu e o putere a lui 2 (4, 8, 16…), cei mai bine clasați <b>trec direct</b> în turul 2;</li>
+  <li><b>Olimpic</b>: cine pierde iese din turneu. Cei învinși în semifinale împart locul 3, cei învinși în sferturi locul 5 ș.a.m.d.;</li>
+  <li><b>Olimpic cu ramura de jos</b>: cine pierde în tabloul principal trece în <b>ramura de jos</b>; cine pierde și acolo iese. Câștigătorul ramurii de jos
+      joacă <b>marea finală</b> cu câștigătorul tabloului principal; dacă o câștigă, fiecare are câte o înfrângere și se joacă un <b>meci decisiv</b>.
+      Așa se stabilesc distinct locurile 1, 2 și 3;</li>
+  <li>meciurile din tablou apar pe măsură ce se știu jucătorii lor. Un rezultat se poate corecta doar cât timp meciul următor în care a ajuns câștigătorul (sau învinsul) nu are rezultat;</li>
+  <li>după începerea etapei 2, rezultatele din grupe nu se mai pot schimba. La un turneu comercial premiile se dau după locurile din tablou (la un loc împărțit, premiile se adună și se împart egal).</li>
+</ul>
 
 <h3>4. Punctele și clasamentul în grupă</h3>
 <table>
