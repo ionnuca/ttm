@@ -559,6 +559,7 @@ await check('telefon: guest', async () => {
       .filter(c => c.scrollWidth > c.clientWidth + 1).map(c => c.textContent.trim());
   });
   if (cut.length) throw new Error('victorii/înfrângeri tăiate: ' + cut.slice(0, 3).join(', '));
+  await expectText(page, '🥇 1');
   await shot(page, '12-telefon-guest-jucatori');
 });
 await check('telefon: turneu', async () => {
