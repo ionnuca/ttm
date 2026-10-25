@@ -2,14 +2,14 @@ package md.ttm.ui.player;
 
 import md.ttm.i18n.Tr;
 import md.ttm.common.BusinessException;
-import md.ttm.model.player.PlayStyle;
 import md.ttm.model.player.Player;
 import md.ttm.security.SecurityUtils;
 import md.ttm.service.player.PlayerPhotoService;
 import md.ttm.service.player.PlayerService;
 import md.ttm.ui.components.PlayerAvatar;
 import md.ttm.service.player.RankedPlayer;
-import md.ttm.ui.components.Badges;
+import md.ttm.service.tournament.Podium;
+import md.ttm.service.tournament.TournamentService;
 import md.ttm.ui.components.Notifications;
 import md.ttm.ui.components.Responsive;
 import md.ttm.ui.layout.MainLayout;
@@ -62,13 +62,16 @@ public class PlayersView extends VerticalLayout implements HasDynamicTitle {
     private final Span counter = new Span();
     private final Span tapHint = new Span(Tr.t("Apăsați pe un jucător pentru detalii, statistici și meciuri."));
     private final PlayerPhotoService photoService;
+    private final TournamentService tournamentService;
     private Map<Long, Long> photoVersions = Map.of();
+    private Map<Long, Podium> podiums = Map.of();
     private List<RankedPlayer> players = List.of();
     private boolean narrowScreen;
 
-    public PlayersView(PlayerService playerService, PlayerPhotoService photoService) {
+    public PlayersView(PlayerService playerService, PlayerPhotoService photoService, TournamentService tournamentService) {
         this.playerService = playerService;
         this.photoService = photoService;
+        this.tournamentService = tournamentService;
         this.admin = SecurityUtils.isAdmin();
 
         setSizeFull();
@@ -134,46 +137,33 @@ public class PlayersView extends VerticalLayout implements HasDynamicTitle {
                 .setSortable(true)
                 .setComparator(byName);
 
-        // Pe telefon: o singură coloană cu numele și, dedesubt, stilul, orașul (și telefonul pentru admin)
+        // Pe telefon: avatarul și numele, pe mai multe rânduri dacă e nevoie
         Grid.Column<RankedPlayer> compact = grid.addComponentColumn(this::compactPlayerCell)
                 .setHeader(Tr.t("Jucător"))
-                .setFlexGrow(1)
+                .setWidth("10rem").setFlexGrow(1)
                 .setSortable(true)
                 .setComparator(byName);
         compact.setVisible(false);
 
-        Grid.Column<RankedPlayer> style = grid.addComponentColumn(rp -> playStyleBadge(rp.player().getPlayStyle()))
-                .setHeader(Tr.t("Stil de joc"))
-                .setAutoWidth(true).setFlexGrow(0)
-                .setSortable(true)
-                .setComparator(Comparator.comparing((RankedPlayer rp) -> rp.player().getPlayStyle()));
-
-        Grid.Column<RankedPlayer> hand = grid.addColumn(rp -> handLabel(rp.player()))
-                .setHeader(Tr.t("Mâna"))
-                .setAutoWidth(true).setFlexGrow(0)
-                .setSortable(true)
-                .setComparator(Comparator.comparing((RankedPlayer rp) -> handLabel(rp.player())));
-
-        Grid.Column<RankedPlayer> city = grid.addColumn(rp -> valueOrDash(rp.player().getCity()))
-                .setHeader(Tr.t("Oraș"))
-                .setFlexGrow(2)
-                .setSortable(true)
-                .setComparator(Comparator.comparing(
-                        (RankedPlayer rp) -> valueOrDash(rp.player().getCity()), String.CASE_INSENSITIVE_ORDER));
-
-        grid.addColumn(rp -> rp.player().getRating())
+        Grid.Column<RankedPlayer> rating = grid.addColumn(rp -> rp.player().getRating())
                 .setHeader(Tr.t("Rating"))
-                .setAutoWidth(true).setFlexGrow(0)
+                .setWidth("5.5rem").setFlexGrow(0)
                 .setTextAlign(ColumnTextAlign.END)
                 .setSortable(true)
                 .setComparator(Comparator.comparingInt((RankedPlayer rp) -> rp.player().getRating()));
 
         Grid.Column<RankedPlayer> winLoss = grid.addColumn(rp -> rp.player().getWins() + " / " + rp.player().getLosses())
                 .setHeader(Tr.t("Victorii / Înfrângeri"))
-                .setAutoWidth(true).setFlexGrow(0)
+                .setWidth("11rem").setFlexGrow(0)
                 .setTextAlign(ColumnTextAlign.CENTER)
                 .setSortable(true)
                 .setComparator(Comparator.comparingInt((RankedPlayer rp) -> rp.player().getWins()));
+
+        List<Grid.Column<RankedPlayer>> podiumColumns = List.of(
+                podiumColumn("🥇", Tr.t("Locul 1 în turnee"), Podium::first),
+                podiumColumn("🥈", Tr.t("Locul 2 în turnee"), Podium::second),
+                podiumColumn("🥉", Tr.t("Locul 3 în turnee"), Podium::third),
+                podiumColumn("F2", Tr.t("Câștigător al Finalei 2"), Podium::final2));
 
         Grid.Column<RankedPlayer> phone = null;
         Grid.Column<RankedPlayer> actions = null;
@@ -198,20 +188,21 @@ public class PlayersView extends VerticalLayout implements HasDynamicTitle {
         });
         Responsive.onNarrowChange(this, narrow -> {
             narrowScreen = narrow;
-            rank.setWidth(narrow ? "3rem" : "4.5rem");
+            rank.setWidth(narrow ? "2.5rem" : "4.5rem");
             rank.setHeader(narrow ? "#" : Tr.t("Loc"));
             if (actionsColumn != null) {
                 actionsColumn.setVisible(!narrow);
             }
             name.setVisible(!narrow);
-            style.setVisible(!narrow);
-            hand.setVisible(!narrow);
-            city.setVisible(!narrow);
             if (phoneColumn != null) {
                 phoneColumn.setVisible(!narrow);
             }
             compact.setVisible(narrow);
             winLoss.setHeader(narrow ? Tr.t("V / Î") : Tr.t("Victorii / Înfrângeri"));
+            winLoss.setWidth(narrow ? "5.5rem" : "11rem");
+            rating.setWidth(narrow ? "5rem" : "5.5rem");
+            // pe telefon locurile apar sub nume (doar cele obținute), ca să încapă totul fără derulare laterală
+            podiumColumns.forEach(c -> c.setVisible(!narrow));
             grid.recalculateColumnWidths();
         });
     }
@@ -230,37 +221,57 @@ public class PlayersView extends VerticalLayout implements HasDynamicTitle {
         Span name = new Span(player.getDisplayName());
         name.getStyle().set("font-weight", "500");
 
-        StringBuilder details = new StringBuilder(player.getPlayStyle().getLabel());
-        if (player.getPlayHand() != null) {
-            details.append(" · ").append(player.getPlayHand().getLabel());
+        name.getStyle().set("white-space", "normal").set("line-height", "1.25").set("display", "block");
+        Podium podium = podiums.getOrDefault(player.getId(), Podium.NONE);
+        StringBuilder places = new StringBuilder();
+        appendPlace(places, "🥇", podium.first());
+        appendPlace(places, "🥈", podium.second());
+        appendPlace(places, "🥉", podium.third());
+        appendPlace(places, "F2", podium.final2());
+        Div text = new Div(name);
+        if (!places.isEmpty()) {
+            Span line = new Span(places.toString());
+            line.getStyle()
+                    .set("display", "block")
+                    .set("font-size", "var(--lumo-font-size-s)")
+                    .set("color", "var(--lumo-secondary-text-color)");
+            text.add(line);
         }
-        if (player.getCity() != null) {
-            details.append(" · ").append(player.getCity());
-        }
-        Span secondary = secondaryText(details.toString());
-        VerticalLayout cell = new VerticalLayout(name, secondary);
-        if (admin && player.getPhone() != null) {
-            cell.add(secondaryText(player.getPhone()));
-        }
-        cell.setPadding(false);
-        cell.setSpacing(false);
-        cell.getStyle().set("line-height", "1.3").set("white-space", "normal");
         HorizontalLayout row = new HorizontalLayout(
-                PlayerAvatar.of(player, photoVersions.get(player.getId()), "2.25rem"), cell);
+                PlayerAvatar.of(player, photoVersions.get(player.getId()), "2rem"), text);
         row.setAlignItems(FlexComponent.Alignment.CENTER);
         return row;
     }
 
-    private static String handLabel(Player player) {
-        return player.getPlayHand() != null ? player.getPlayHand().getLabel() : "—";
+    private static void appendPlace(StringBuilder places, String label, int count) {
+        if (count > 0) {
+            places.append(places.isEmpty() ? "" : "  ").append(label).append(" ").append(count);
+        }
     }
 
-    private static Span secondaryText(String text) {
-        Span span = new Span(text);
-        span.getStyle()
-                .set("font-size", "var(--lumo-font-size-s)")
-                .set("color", "var(--lumo-secondary-text-color)");
-        return span;
+    /** O coloană cu numărul de locuri 1, 2, 3 sau de Finale 2 câștigate; 0 apare estompat. */
+    private Grid.Column<RankedPlayer> podiumColumn(String header, String description,
+                                                   java.util.function.ToIntFunction<Podium> value) {
+        java.util.function.ToIntFunction<RankedPlayer> of =
+                rp -> value.applyAsInt(podiums.getOrDefault(rp.player().getId(), Podium.NONE));
+        Span title = new Span(header);
+        title.setTitle(description);
+        title.getElement().setAttribute("aria-label", description);
+        return grid.addComponentColumn(rp -> {
+                    int n = of.applyAsInt(rp);
+                    Span cell = new Span(String.valueOf(n));
+                    if (n == 0) {
+                        cell.getStyle().set("color", "var(--lumo-disabled-text-color)");
+                    } else {
+                        cell.getStyle().set("font-weight", "600");
+                    }
+                    return cell;
+                })
+                .setHeader(title)
+                .setWidth("3.5rem").setFlexGrow(0)
+                .setTextAlign(ColumnTextAlign.CENTER)
+                .setSortable(true)
+                .setComparator(Comparator.comparingInt(of));
     }
 
     private Component createActions(RankedPlayer rankedPlayer) {
@@ -313,6 +324,7 @@ public class PlayersView extends VerticalLayout implements HasDynamicTitle {
     private void refresh() {
         players = playerService.findRanked();
         photoVersions = photoService.versions();
+        podiums = tournamentService.podiums();
         applyFilter();
     }
 
@@ -333,9 +345,6 @@ public class PlayersView extends VerticalLayout implements HasDynamicTitle {
                 || (player.getCity() != null && player.getCity().toLowerCase(Locale.ROOT).contains(term));
     }
 
-    private static Component playStyleBadge(PlayStyle style) {
-        return Badges.badge(style.getLabel(), style == PlayStyle.ATTACK ? Badges.Tone.ERROR : Badges.Tone.PRIMARY);
-    }
 
     private static String valueOrDash(String value) {
         return value == null || value.isBlank() ? "—" : value;
