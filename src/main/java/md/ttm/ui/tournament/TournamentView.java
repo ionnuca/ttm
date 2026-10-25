@@ -451,8 +451,9 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         if (details.canStartFinals()) {
             add(createStartFinalsCard(details));
         }
-        if (details.knockout() != null) {
-            add(knockoutSection(details));
+        List<KnockoutView> brackets = details.knockouts();
+        for (int i = 0; i < brackets.size(); i++) {
+            add(knockoutSection(details, brackets.get(i), i + 1, brackets.size()));
         }
         if (!details.finals().isEmpty()) {
             add(stageTitle(TournamentStage.FINALS, details.finals()));
@@ -597,7 +598,7 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
                 .set("background", "var(--lumo-success-color-10pct)");
         boolean knockout = details.tournament().isKnockoutFormat();
         Span text = new Span(knockout
-                ? Tr.t("Etapa 1 s-a terminat. Alegeți câți jucători din fiecare grupă intră în tabloul eliminatoriu și tipul tabloului.")
+                ? Tr.t("Etapa 1 s-a terminat. Alegeți câți jucători din fiecare grupă intră în Tabloul 1 (ceilalți joacă Tabloul 2) și tipul tablourilor.")
                 : Tr.t("Etapa 1 s-a terminat. Alegeți câți jucători din fiecare grupă trec în Finala 1; ceilalți joacă în Finala 2."));
         Button start = new Button(Tr.t("Începe etapa 2"), VaadinIcon.PLAY.create(), e -> {
             if (knockout) {
@@ -628,13 +629,12 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
     // Tabloul eliminatoriu („Grupe + eliminare”)
     // ------------------------------------------------------------------
 
-    private Component knockoutSection(TournamentDetails details) {
-        KnockoutView view = details.knockout();
+    private Component knockoutSection(TournamentDetails details, KnockoutView view, int number, int count) {
         Bracket.State state = view.state();
         VerticalLayout section = new VerticalLayout();
         section.setPadding(false);
 
-        H3 title = new H3(TournamentStage.KNOCKOUT.getLabel());
+        H3 title = new H3(count > 1 ? Tr.t("Etapa 2 — Tabloul {0}", number) : TournamentStage.KNOCKOUT.getLabel());
         title.getStyle().set("margin-bottom", "0");
         long played = view.matches().values().stream().filter(TournamentMatch::isPlayed).count();
         Span progress = new Span(Tr.t("Meciuri jucate: {0} din {1}", played, view.matches().size()));
@@ -644,6 +644,11 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         heading.setAlignItems(FlexComponent.Alignment.BASELINE);
         heading.getStyle().set("flex-wrap", "wrap").set("margin-top", "var(--lumo-space-l)");
         section.add(heading);
+        if (count > 1) {
+            section.add(hint(number == 1
+                    ? Tr.t("Jucătorii calificați din grupe joacă pentru locurile 1, 2 și 3.")
+                    : Tr.t("Ceilalți jucători din grupe joacă pentru câștigătorul părții a doua.")));
+        }
 
         if (!state.placings().isEmpty()) {
             section.add(knockoutStandings(view));

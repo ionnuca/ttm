@@ -35,6 +35,10 @@ public final class TournamentLabels {
         if (finalPlace.matches()) {
             return Tr.t("Finala {0} · locul {1}", finalPlace.group(1), finalPlace.group(2));
         }
+        java.util.regex.Matcher bracketPlace = java.util.regex.Pattern.compile("Tabloul (\\d+) · locul (\\d+)").matcher(stored);
+        if (bracketPlace.matches()) {
+            return Tr.t("Tabloul {0} · locul {1}", bracketPlace.group(1), bracketPlace.group(2));
+        }
         java.util.regex.Matcher place = java.util.regex.Pattern.compile("Locul (\\d+)").matcher(stored);
         if (place.matches()) {
             return Tr.t("Locul {0}", place.group(1));
@@ -52,6 +56,9 @@ public final class TournamentLabels {
         }
         if (stored.startsWith("Finala ")) {
             return Tr.t("Finala {0}", stored.substring("Finala ".length()));
+        }
+        if (stored.startsWith("Tabloul ")) {
+            return Tr.t("Tabloul {0}", stored.substring("Tabloul ".length()));
         }
         if (stored.equals("Tablou eliminatoriu")) {
             return Tr.t("Tablou eliminatoriu");

@@ -72,12 +72,16 @@ public final class Bracket {
     }
 
     /**
-     * @param seeds   jucătorii, în ordinea de calificare (primul = cel mai bine clasat), minimum 2
+     * @param seeds   jucătorii, în ordinea de calificare (primul = cel mai bine clasat), minimum 1
      * @param winners câștigătorul fiecărui meci jucat, după cheie
      */
     public static State compute(KnockoutType type, List<Long> seeds, Map<String, Long> winners) {
-        if (seeds.size() < 2) {
-            throw new IllegalArgumentException("Tabloul are nevoie de cel puțin 2 jucători");
+        if (seeds.isEmpty()) {
+            throw new IllegalArgumentException("Tabloul are nevoie de cel puțin un jucător");
+        }
+        if (seeds.size() == 1) {
+            // un singur jucător (de exemplu în Tabloul 2): câștigă fără meciuri
+            return new State(type, 1, List.of(), List.of(new Placing(seeds.get(0), 1)), true);
         }
         int size = 1;
         while (size < seeds.size()) {

@@ -68,8 +68,9 @@ Etapa 1 este ca la „Grupe + finale” (tragere la sorți pe urne, Round Robin 
    - **Olimpic cu ramura de jos**: finala tabloului principal decide locurile 1–2. Cine pierde înainte de finală trece în ramura de jos (eliminare simplă), a cărei finală decide locurile 3–4; învinșii din ramura de jos împart locurile următoare, pe tururi.
 2. **Așezarea în tablou:** după locul din grupă (câștigătorii de grupă întâi), apoi ratingul la începerea turneului; pozițiile standard (1–8, 4–5, 2–7, 3–6 …) fac ca primii favoriți să se întâlnească cât mai târziu. Tabloul are mărimea puterii lui 2 imediat superioare; locurile libere (*bye*) le revin celor mai bine clasați, care trec direct în turul următor.
 3. **Meciurile** se creează pe măsură ce se știu jucătorii (coloana `tournament_match.bracket_slot`: `W<tur>-<n>` tabloul principal, `L<tur>-<n>` ramura de jos, `P3` meciul pentru locul 3). Motorul tabloului (`Bracket`) e pur: din jucători și câștigătorii fiecărui slot recalculează tot tabloul și locurile. La corectarea unui rezultat, meciurile următoare nejucate se refac; dacă un meci următor are deja rezultat, corectura e refuzată.
-4. **Premii (turneu comercial):** suma acumulată se împarte (100% / 60–40% / 50–30–20%) după locurile din tablou; la un loc împărțit premiile se adună și se împart egal.
-5. Turneul se încheie automat când tabloul are câștigător; ratingul Elo se calculează pe toate meciurile din ambele etape.
+4. **Tabloul 2:** jucătorii necalificați joacă un al doilea tablou, de același tip (grupa de tip `KNOCKOUT` cu poziția 2), pentru câștigătorul părții a doua. Un singur jucător rămas îl câștigă fără meciuri; dacă toți intră în Tabloul 1, nu există.
+5. **Premii (turneu comercial):** câștigătorul Tabloului 2 primește cât taxa de participare; restul se împarte (100% / 60–40% / 50–30–20%) după locurile din Tabloul 1 (fără Tabloul 2, toată suma). La un loc împărțit premiile se adună și se împart egal.
+6. Turneul se încheie automat când toate tablourile au câștigător; ratingul Elo se calculează pe toate meciurile din ambele etape.
 
 ### Ratingul (Elo)
 

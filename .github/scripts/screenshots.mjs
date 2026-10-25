@@ -364,15 +364,17 @@ await check('admin: încheierea manuală a turneului', async () => {
 await check('admin: „Grupe + eliminare” — tabloul cu ramura de jos', async () => {
   await page.goto(`${BASE}/turnee`);
   await page.getByText('Cupa eliminatorie').first().click();
-  await expectText(page, 'intră în tabloul eliminatoriu');
+  await expectText(page, 'intră în Tabloul 1');
   await page.getByRole('button', { name: 'Începe etapa 2' }).click();
-  await expectText(page, 'Calificați din fiecare grupă în tabloul eliminatoriu');
+  await expectText(page, 'Calificați din fiecare grupă în Tabloul 1');
   await page.getByRole('dialog').getByText('Olimpic cu ramura de jos: învinșii joacă în ramura de jos pentru locul 3').click();
-  await expectText(page, 'În tablou intră 4 jucători');
+  await expectText(page, 'În Tabloul 1 intră 4 jucători');
+  await expectText(page, 'Ceilalți 4 jucători joacă Tabloul 2');
   await expectText(page, 'finala ramurii de jos decide locurile 3 și 4');
   await shot(page, '38-admin-incepe-tablou');
   await page.getByRole('dialog').getByRole('button', { name: 'Începe etapa 2' }).click();
-  await expectText(page, 'Etapa 2 — Tablou eliminatoriu');
+  await expectText(page, 'Etapa 2 — Tabloul 1');
+  await expectText(page, 'Etapa 2 — Tabloul 2');
   await expectText(page, 'Tabloul principal');
   await expectText(page, 'Ramura de jos (pentru locul 3)');
   await expectText(page, 'Finala ramurii de jos (locul 3)');
@@ -577,8 +579,8 @@ await check('telefon: turneu cu finale', async () => {
 await check('telefon: tablou eliminatoriu', async () => {
   await page.goto(`${BASE}/turnee`);
   await page.getByText('Cupa eliminatorie').first().click();
-  await expectText(page, 'Etapa 2 — Tablou eliminatoriu');
-  await page.getByText('Tabloul principal').scrollIntoViewIfNeeded();
+  await expectText(page, 'Etapa 2 — Tabloul 1');
+  await page.getByText('Tabloul principal').first().scrollIntoViewIfNeeded();
   await shot(page, '40-telefon-tablou');
 });
 await check('telefon: admin', async () => {

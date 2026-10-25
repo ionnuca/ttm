@@ -34,7 +34,7 @@ class StartKnockoutDialog extends Dialog {
         setWidth("min(95vw, 36rem)");
 
         int smallest = groups.stream().mapToInt(g -> g.members().size()).min().orElse(2);
-        qualifiers.setLabel(Tr.t("Calificați din fiecare grupă în tabloul eliminatoriu"));
+        qualifiers.setLabel(Tr.t("Calificați din fiecare grupă în Tabloul 1"));
         qualifiers.setItems(IntStream.rangeClosed(1, smallest).boxed().toList());
         qualifiers.setItemLabelGenerator(n -> n == 1 ? Tr.t("Primul din fiecare grupă") : Tr.t("Primii {0} din fiecare grupă", n));
         qualifiers.setValue(groups.size() == 1 ? Math.min(4, smallest) : Math.min(2, smallest));
@@ -78,10 +78,17 @@ class StartKnockoutDialog extends Dialog {
             size *= 2;
         }
         long byes = size - count;
-        String text = Tr.t("În tablou intră {0} jucători, așezați după locul din grupă (întâi câștigătorii de grupă), apoi după rating.", count);
+        long total = groups.stream().mapToLong(g -> g.members().size()).sum();
+        long others = total - count;
+        String text = Tr.t("În Tabloul 1 intră {0} jucători, așezați după locul din grupă (întâi câștigătorii de grupă), apoi după rating.", count);
         if (byes > 0) {
             text += " " + Tr.t("Tabloul are {0} locuri: cei mai bine clasați {1} trec direct în turul 2.", size, byes);
         }
+        text += " " + (others == 0
+                ? Tr.t("Toți jucătorii intră în Tabloul 1.")
+                : others == 1
+                ? Tr.t("Singurul jucător rămas câștigă Tabloul 2 fără meciuri.")
+                : Tr.t("Ceilalți {0} jucători joacă Tabloul 2, organizat la fel, pentru câștigătorul părții a doua.", others));
         text += " " + (type.getValue() == KnockoutType.SINGLE
                 ? Tr.t("Cine pierde iese din turneu. Finala decide locurile 1 și 2, iar cei învinși în semifinale joacă meciul pentru locul 3.")
                 : Tr.t("Finala tabloului principal decide locurile 1 și 2. Cine pierde înainte de finală trece în ramura de jos, unde cine pierde iese; finala ramurii de jos decide locurile 3 și 4."));
