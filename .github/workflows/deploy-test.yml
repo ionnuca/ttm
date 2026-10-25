@@ -90,7 +90,20 @@ jobs:
           $SSH "cd /opt/ttm-test && chmod +x test-refresh.sh && docker compose pull -q && docker compose up -d; rc=\$?; docker logout ghcr.io; exit \$rc"
           $SSH "docker image prune -f > /dev/null"
           # adresa de test nu mai cere utilizator și parolă (protecția Caddy, pusă de versiunile vechi ale test-setup.sh)
-          $SSH 'f=/opt/ttm/sites/test.caddy; if grep -q basic_auth "$f" 2>/dev/null; then sed -i "/basic_auth {/,/}/d" "$f" && cd /opt/ttm && docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile && echo "Protecția cu parolă a fost scoasă"; fi'
+          $SSH 'bash -s' <<'REMOTE'
+          f=/opt/ttm/sites/test.caddy
+          if [ ! -e "$f" ]; then echo "::warning::$f nu există"; exit 0; fi
+          if [ ! -r "$f" ] || [ ! -w /opt/ttm/sites ]; then echo "::warning::$(id -un) nu poate modifica $f ($(ls -ld /opt/ttm/sites "$f" | tr '\n' ' '))"; exit 0; fi
+          if grep -q basic_auth "$f"; then
+            sed -i "/basic_auth {/,/}/d" "$f"
+            echo "::notice::Protecția cu parolă a fost scoasă din $f"
+          fi
+          caddy=$(docker ps -q --filter label=com.docker.compose.service=caddy | head -1)
+          if [ -z "$caddy" ]; then echo "::warning::containerul Caddy nu a fost găsit"; exit 0; fi
+          if docker exec "$caddy" caddy reload --config /etc/caddy/Caddyfile 2>&1 | tail -3; then
+            echo "::notice::Caddy reîncărcat; $(grep -c basic_auth "$f" || true) blocuri basic_auth în $f"
+          fi
+          REMOTE
           for i in $(seq 1 60); do
             if $SSH "cd /opt/ttm-test && docker compose logs app-test 2>&1 | grep -q 'Started TtmApplication'"; then
               echo "### Aplicația de test a pornit (${SHA:0:7})" >> "$GITHUB_STEP_SUMMARY"
