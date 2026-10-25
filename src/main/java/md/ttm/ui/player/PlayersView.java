@@ -163,7 +163,7 @@ public class PlayersView extends VerticalLayout implements HasDynamicTitle {
                 podiumColumn("🥇", Tr.t("Locul 1 în turnee"), Podium::first),
                 podiumColumn("🥈", Tr.t("Locul 2 în turnee"), Podium::second),
                 podiumColumn("🥉", Tr.t("Locul 3 în turnee"), Podium::third),
-                podiumColumn("F2", Tr.t("Câștigător al Finalei 2"), Podium::final2));
+                podiumColumn("F2", Tr.t("Câștigător al Finalei 2 sau al Tabloului 2"), Podium::final2));
 
         Grid.Column<RankedPlayer> phone = null;
         Grid.Column<RankedPlayer> actions = null;

@@ -121,6 +121,14 @@ class BracketTest {
     }
 
     @Test
+    void unSingurJucator_castigaFaraMeciuri() {
+        Bracket.State state = Bracket.compute(KnockoutType.DOUBLE, List.of(7L), Map.of());
+        assertThat(state.complete()).isTrue();
+        assertThat(state.matches()).isEmpty();
+        assertThat(state.placings()).containsExactly(new Bracket.Placing(7, 1));
+    }
+
+    @Test
     void doiJucatori() {
         Map<String, Long> winners = new HashMap<>(Map.of("W1-1", 2L));
         for (KnockoutType type : KnockoutType.values()) {
