@@ -40,7 +40,7 @@ public record TournamentDetails(
         List<md.ttm.model.tournament.TournamentTiebreak> tiebreaks,
         List<StandingsCalculator.Pairing> pendingTiebreaks,
         List<TournamentParticipant> pendingRequests,
-        KnockoutView knockout) {
+        List<KnockoutView> knockouts) {
 
     public List<GroupView> groupStage() {
         return groups.stream().filter(g -> !g.group().isFinal()).toList();
