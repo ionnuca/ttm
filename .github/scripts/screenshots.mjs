@@ -380,6 +380,18 @@ await check('admin: „Grupe + eliminare” — tabloul cu ramura de jos', async
   await expectText(page, 'Finala ramurii de jos (locul 3)');
   await expectText(page, 'Semifinale');
   await shot(page, '39-admin-tablou-eliminatoriu');
+  // tabloul desenat: meciurile se deschid cu un clic
+  if (await page.locator('.ttm-bracket').count() < 2) throw new Error('lipsește tabloul desenat');
+  await page.locator('.ttm-bracket-match.clickable').first().click();
+  await expectText(page, 'Rezultatul meciului');
+  await shot(page, '39b-admin-tablou-clic-meci');
+  await page.getByRole('dialog').getByRole('button', { name: 'Anulează' }).click();
+  await page.getByText('Listă de meciuri').click();
+  await settle(page);
+  if (await page.locator('.ttm-bracket').count() > 0) throw new Error('tabloul desenat nu trebuia să apară în modul listă');
+  await shot(page, '39c-admin-tablou-lista');
+  await page.getByText('Tablou grafic').click();
+  await settle(page);
 });
 await check('admin: setări și backup', async () => {
   await page.goto(`${BASE}/setari`);

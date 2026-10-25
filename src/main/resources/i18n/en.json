@@ -464,5 +464,7 @@
   "Tabloul {0} · locul {1}": "Bracket {0} · place {1}",
   "Toți jucătorii intră în Tabloul 1.": "All players enter Bracket 1.",
   "În Tabloul 1 intră {0} jucători, așezați după locul din grupă (întâi câștigătorii de grupă), apoi după rating.": "{0} players enter Bracket 1, seeded by group place (group winners first), then by rating.",
-  "„{0}”: înscrierea se închide. Se formează {1} grupe din {2} jucători și se generează {3} meciuri pentru etapa 1. După grupe, primii din fiecare grupă joacă Tabloul 1, ceilalți Tabloul 2 (olimpic sau cu ramura de jos, la alegere).": "\"{0}\": registration closes. {1} groups are formed from {2} players and {3} matches are generated for stage 1. After the groups, the top players of each group play Bracket 1, the others Bracket 2 (single elimination or with a lower bracket, your choice)."
+  "„{0}”: înscrierea se închide. Se formează {1} grupe din {2} jucători și se generează {3} meciuri pentru etapa 1. După grupe, primii din fiecare grupă joacă Tabloul 1, ceilalți Tabloul 2 (olimpic sau cu ramura de jos, la alegere).": "\"{0}\": registration closes. {1} groups are formed from {2} players and {3} matches are generated for stage 1. After the groups, the top players of each group play Bracket 1, the others Bracket 2 (single elimination or with a lower bracket, your choice).",
+  "Tablou grafic": "Bracket view",
+  "Listă de meciuri": "Match list"
 }
