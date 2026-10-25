@@ -8,9 +8,9 @@
 # Ce face:
 #   - /opt/ttm-test: docker-compose.yml, .env (parola bazei, preluată din producție), test-refresh.sh
 #   - copiază datele din producție în baza ttm_test
-#   - adresa de test în Caddy (/opt/ttm/sites/test.caddy), protejată cu utilizator și parolă
+#   - adresa de test în Caddy (/opt/ttm/sites/test.caddy); accesul e ca în producție, cu conturile aplicației
 # Aplicația de test se instalează și se actualizează apoi automat, după fiecare commit pe develop.
-# Poate fi rulat din nou (de exemplu pentru altă parolă).
+# Poate fi rulat din nou (de exemplu pentru altă adresă).
 # =====================================================================
 set -euo pipefail
 
@@ -45,25 +45,13 @@ umask 022
 chown -R "$DEPLOY_USER:$DEPLOY_USER" "$TEST"
 chmod 600 "$TEST/.env"
 
-step "Adresa și parola aplicației de test"
+step "Adresa aplicației de test"
 read -rp "Adresa de test [test.tabletennis.omagiu.md]: " DOMAIN
 DOMAIN=${DOMAIN:-test.tabletennis.omagiu.md}
-read -rp "Utilizatorul pentru acces [ion]: " AUTH_USER
-AUTH_USER=${AUTH_USER:-ion}
-while true; do
-  read -rsp "Parola pentru acces (minimum 8 caractere): " AUTH_PASS; echo
-  read -rsp "Repetați parola: " AUTH_PASS2; echo
-  [[ ${#AUTH_PASS} -ge 8 && "$AUTH_PASS" == "$AUTH_PASS2" ]] && break
-  echo "Parolele nu coincid sau sunt prea scurte. Încercați din nou."
-done
 cd "$PROD"
-HASH=$(docker compose exec -T caddy caddy hash-password --plaintext "$AUTH_PASS" | tr -d '\r')
 cat > "$PROD/sites/test.caddy" <<CADDY
 # Aplicația de test (versiunea din develop), creată de test-setup.sh
 $DOMAIN {
-	basic_auth {
-		$AUTH_USER $HASH
-	}
 	encode zstd gzip
 	reverse_proxy app-test:8080
 }
@@ -78,7 +66,7 @@ docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile
 
 echo
 echo "=============================================================="
-echo " Gata. Adresa de test: https://$DOMAIN  (utilizator: $AUTH_USER)"
+echo " Gata. Adresa de test: https://$DOMAIN"
 echo " Aplicația de test se instalează automat la următorul commit pe develop."
 echo " Datele din producție, copiate din nou oricând:  $TEST/test-refresh.sh"
 echo "=============================================================="
