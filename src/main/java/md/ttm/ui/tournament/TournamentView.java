@@ -25,6 +25,10 @@ import com.vaadin.flow.router.HasUrlParameter;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouterLink;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
+import com.vaadin.flow.server.VaadinSession;
+import com.vaadin.flow.component.tabs.Tab;
+import com.vaadin.flow.component.tabs.Tabs;
+import com.vaadin.flow.component.tabs.TabsVariant;
 import md.ttm.common.BusinessException;
 import md.ttm.model.player.Player;
 import md.ttm.model.tournament.Tournament;
@@ -452,6 +456,9 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
             add(createStartFinalsCard(details));
         }
         List<KnockoutView> brackets = details.knockouts();
+        if (!brackets.isEmpty()) {
+            add(BracketDiagram.styles(), bracketModeSwitch());
+        }
         for (int i = 0; i < brackets.size(); i++) {
             add(knockoutSection(details, brackets.get(i), i + 1, brackets.size()));
         }
@@ -673,6 +680,11 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
                 partTitle.getStyle().set("margin", "var(--lumo-space-s) 0 0");
                 section.add(partTitle);
             }
+            if (!bracketAsList()) {
+                section.add(BracketDiagram.of(view, part, own, editable ? m -> openResultDialog(details, m) : null,
+                        m -> roundLabel(m, state.type()), matchRows));
+                continue;
+            }
             Div grid = new Div();
             grid.getStyle()
                     .set("display", "grid")
@@ -693,6 +705,28 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
             section.add(grid);
         }
         return section;
+    }
+
+    private static final String BRACKET_AS_LIST = "ttm.tablou.lista";
+
+    /** Tabloul se arată ca listă de meciuri pe tururi (altfel desenat); alegerea se păstrează în sesiune. */
+    private static boolean bracketAsList() {
+        VaadinSession session = VaadinSession.getCurrent();
+        return session != null && Boolean.TRUE.equals(session.getAttribute(BRACKET_AS_LIST));
+    }
+
+    private Component bracketModeSwitch() {
+        Tab drawn = new Tab(VaadinIcon.SITEMAP.create(), new Span(Tr.t("Tablou grafic")));
+        Tab list = new Tab(VaadinIcon.LIST.create(), new Span(Tr.t("Listă de meciuri")));
+        Tabs tabs = new Tabs(drawn, list);
+        tabs.addThemeVariants(TabsVariant.LUMO_SMALL);
+        tabs.setSelectedTab(bracketAsList() ? list : drawn);
+        tabs.addSelectedChangeListener(e -> {
+            VaadinSession.getCurrent().setAttribute(BRACKET_AS_LIST, e.getSelectedTab() == list);
+            refresh();
+        });
+        tabs.getStyle().set("margin-top", "var(--lumo-space-m)");
+        return tabs;
     }
 
     /** Meciurile fără niciun jucător real (două locuri libere) sau cu o trecere directă încă necunoscută nu se arată. */
