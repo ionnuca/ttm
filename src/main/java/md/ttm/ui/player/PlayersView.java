@@ -200,11 +200,9 @@ public class PlayersView extends VerticalLayout implements HasDynamicTitle {
             compact.setVisible(narrow);
             winLoss.setHeader(narrow ? Tr.t("V / Î") : Tr.t("Victorii / Înfrângeri"));
             winLoss.setWidth(narrow ? "5.5rem" : "11rem");
-            rating.setWidth(narrow ? "4rem" : "5.5rem");
-            podiumColumns.forEach(c -> c.setWidth(narrow ? "2.75rem" : "3.5rem"));
-            // pe telefon coloanele nu încap toate: locul și numele rămân fixe, restul se derulează lateral
-            rank.setFrozen(narrow);
-            compact.setFrozen(narrow);
+            rating.setWidth(narrow ? "5rem" : "5.5rem");
+            // pe telefon locurile apar sub nume (doar cele obținute), ca să încapă totul fără derulare laterală
+            podiumColumns.forEach(c -> c.setVisible(!narrow));
             grid.recalculateColumnWidths();
         });
     }
@@ -223,11 +221,32 @@ public class PlayersView extends VerticalLayout implements HasDynamicTitle {
         Span name = new Span(player.getDisplayName());
         name.getStyle().set("font-weight", "500");
 
-        name.getStyle().set("white-space", "normal").set("line-height", "1.25");
+        name.getStyle().set("white-space", "normal").set("line-height", "1.25").set("display", "block");
+        Podium podium = podiums.getOrDefault(player.getId(), Podium.NONE);
+        StringBuilder places = new StringBuilder();
+        appendPlace(places, "🥇", podium.first());
+        appendPlace(places, "🥈", podium.second());
+        appendPlace(places, "🥉", podium.third());
+        appendPlace(places, "F2", podium.final2());
+        Div text = new Div(name);
+        if (!places.isEmpty()) {
+            Span line = new Span(places.toString());
+            line.getStyle()
+                    .set("display", "block")
+                    .set("font-size", "var(--lumo-font-size-s)")
+                    .set("color", "var(--lumo-secondary-text-color)");
+            text.add(line);
+        }
         HorizontalLayout row = new HorizontalLayout(
-                PlayerAvatar.of(player, photoVersions.get(player.getId()), "2rem"), name);
+                PlayerAvatar.of(player, photoVersions.get(player.getId()), "2rem"), text);
         row.setAlignItems(FlexComponent.Alignment.CENTER);
         return row;
+    }
+
+    private static void appendPlace(StringBuilder places, String label, int count) {
+        if (count > 0) {
+            places.append(places.isEmpty() ? "" : "  ").append(label).append(" ").append(count);
+        }
     }
 
     /** O coloană cu numărul de locuri 1, 2, 3 sau de Finale 2 câștigate; 0 apare estompat. */
