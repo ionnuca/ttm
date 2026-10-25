@@ -122,6 +122,51 @@ public class TournamentService {
                 .toList();
     }
 
+    /**
+     * Locurile 1, 2, 3 (și câștigarea Finalei 2) ale fiecărui jucător în turneele încheiate, după id-ul jucătorului.
+     * Locurile împărțite se numără pentru fiecare jucător de pe ele.
+     */
+    @Transactional(readOnly = true)
+    public Map<Long, Podium> podiums() {
+        Map<Long, int[]> counts = new HashMap<>();
+        for (Tournament tournament : tournamentRepository.findByStatusOrderByTournamentDateAscIdAsc(TournamentStatus.FINISHED)) {
+            TournamentDetails details = details(tournament);
+            Map<Long, Long> playerOf = new HashMap<>();
+            details.participants().forEach(p -> playerOf.put(p.getId(), p.getPlayer().getId()));
+            java.util.function.BiConsumer<Long, Integer> count = (participantId, index) -> {
+                Long playerId = playerOf.get(participantId);
+                if (playerId != null) {
+                    counts.computeIfAbsent(playerId, k -> new int[4])[index]++;
+                }
+            };
+            if (tournament.isKnockoutFormat()) {
+                if (details.knockout() != null) {
+                    details.knockout().state().placings().stream()
+                            .filter(p -> p.place() <= 3)
+                            .forEach(p -> count.accept(p.participantId(), p.place() - 1));
+                }
+            } else if (tournament.isGroupsFormat()) {
+                if (!details.finals().isEmpty()) {
+                    details.finals().get(0).standings().stream()
+                            .filter(r -> r.place() <= 3)
+                            .forEach(r -> count.accept(r.id(), r.place() - 1));
+                }
+                if (details.finals().size() > 1) {
+                    details.finals().get(1).standings().stream()
+                            .filter(r -> r.place() == 1)
+                            .forEach(r -> count.accept(r.id(), 3));
+                }
+            } else {
+                details.standings().stream()
+                        .filter(r -> r.place() <= 3)
+                        .forEach(r -> count.accept(r.id(), r.place() - 1));
+            }
+        }
+        Map<Long, Podium> result = new HashMap<>();
+        counts.forEach((playerId, c) -> result.put(playerId, new Podium(c[0], c[1], c[2], c[3])));
+        return result;
+    }
+
     public Optional<TournamentDetails> findDetails(Long tournamentId) {
         return tournamentRepository.findById(tournamentId).map(this::details);
     }
