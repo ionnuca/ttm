@@ -269,7 +269,7 @@ Copiile de rezervă stau pe același server. Pentru siguranță, descărcați pe
 
 ### Aplicația de test (test.tabletennis.omagiu.md)
 
-Pe același server rulează și versiunea din `develop`, la o adresă separată, protejată cu utilizator și parolă:
+Pe același server rulează și versiunea din `develop`, la o adresă separată. Accesul e ca în producție: paginile publice sunt deschise, iar autentificarea se face cu conturile aplicației (copiate din producție).
 
 - containerul `app-test` (`/opt/ttm-test`), cu memoria limitată (Java 288 MB, container 640 MB), ca să nu ia din memoria producției;
 - baza `ttm_test` din același PostgreSQL, o **copie a datelor din producție**; producția nu este atinsă;

@@ -116,6 +116,9 @@ await check('guest: lista jucătorilor', async () => {
   if (!(await page.locator('link[rel="icon"][href*="favicon.svg"]').count())) throw new Error('lipsește <link rel="icon"> spre favicon.svg');
   await expectNoText(page, 'Telefon');
   await expectNoText(page, 'Adaugă jucător');
+  await expectText(page, '🥇');
+  await expectText(page, 'F2');
+  await expectNoText(page, 'Stil de joc');
   await shot(page, '01-guest-jucatori');
 });
 await check('guest: pagina jucătorului (detalii, statistici, meciuri)', async () => {
@@ -548,6 +551,14 @@ page = await ctx.newPage();
 await check('telefon: guest', async () => {
   await page.goto(`${BASE}/jucatori`);
   await expectText(page, 'Clasament jucători');
+  // coloana „V / Î” încape întreagă (fără „…”)
+  const cut = await page.evaluate(() => {
+    const grid = document.querySelector('vaadin-grid');
+    return [...grid.querySelectorAll('vaadin-grid-cell-content')]
+      .filter(c => /^\d+ \/ \d+$/.test(c.textContent.trim()))
+      .filter(c => c.scrollWidth > c.clientWidth + 1).map(c => c.textContent.trim());
+  });
+  if (cut.length) throw new Error('victorii/înfrângeri tăiate: ' + cut.slice(0, 3).join(', '));
   await shot(page, '12-telefon-guest-jucatori');
 });
 await check('telefon: turneu', async () => {
