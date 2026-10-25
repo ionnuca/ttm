@@ -30,8 +30,8 @@ final class BracketDiagram {
                            -webkit-overflow-scrolling: touch; }
             .ttm-bracket-col { display: flex; flex-direction: column; flex: 0 0 auto; width: 13.5rem; }
             .ttm-bracket-head { font-size: var(--lumo-font-size-s); font-weight: 600; color: var(--lumo-secondary-text-color);
-                                text-align: center; padding: 0 1rem var(--lumo-space-xs); white-space: nowrap;
-                                overflow: hidden; text-overflow: ellipsis; }
+                                text-align: center; padding: 0 1rem var(--lumo-space-xs); line-height: 1.25;
+                                min-height: 2.5em; display: flex; align-items: flex-end; justify-content: center; }
             .ttm-bracket-slots { display: flex; flex-direction: column; height: var(--ttm-bracket-height); }
             .ttm-bracket-slot { flex: 1 1 0; display: flex; align-items: center; position: relative; padding: 0.3rem 1rem; }
             .ttm-bracket-slot.in::before { content: ''; position: absolute; left: 0; top: 50%; width: 1rem;

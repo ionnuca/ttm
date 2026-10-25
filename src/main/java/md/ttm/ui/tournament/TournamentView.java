@@ -646,8 +646,9 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         long played = view.matches().values().stream().filter(TournamentMatch::isPlayed).count();
         Span progress = new Span(Tr.t("Meciuri jucate: {0} din {1}", played, view.matches().size()));
         progress.getStyle().set("color", "var(--lumo-secondary-text-color)");
-        HorizontalLayout heading = new HorizontalLayout(title, progress,
-                Badges.badge(details.tournament().getKnockoutType().getLabel(), Badges.Tone.CONTRAST));
+        Span typeBadge = Badges.badge(details.tournament().getKnockoutType().getLabel(), Badges.Tone.CONTRAST);
+        typeBadge.getStyle().set("white-space", "normal").set("max-width", "100%");
+        HorizontalLayout heading = new HorizontalLayout(title, progress, typeBadge);
         heading.setAlignItems(FlexComponent.Alignment.BASELINE);
         heading.getStyle().set("flex-wrap", "wrap").set("margin-top", "var(--lumo-space-l)");
         section.add(heading);
