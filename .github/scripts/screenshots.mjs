@@ -94,7 +94,9 @@ await check('guest: pagina principală = turneele', async () => {
   await page.goto(`${BASE}/`);
   await expectText(page, 'Turneul de duminică');
   await shot(page, '00a-guest-acasa-turnee');
-  await page.goto(`${BASE}/meciuri`);
+  // meciurile sunt în meniu, la /meciuri
+  await page.getByRole('link', { name: 'Meciuri' }).first().click();
+  await page.waitForURL(/\/meciuri$/, { timeout: 10000 });
   await expectText(page, 'ultimele');
   await expectText(page, 'Cupa de vară');
   await shot(page, '00-guest-acasa-meciuri');
