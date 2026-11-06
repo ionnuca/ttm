@@ -112,6 +112,29 @@ class TournamentServiceIT {
 
     @Test
     @WithMockUser(username = "admin", roles = "ADMIN")
+    void organizatorulInscrieMaiMultiJucatoriDeodata() {
+        Tournament tournament = tournamentService.create(form("Înscriere multiplă"));
+        Player a = player("Ana", "Ciobanu", 1200);
+        Player b = player("Ion", "Popescu", 1500);
+        Player c = player("Mihai", "Rusu", 1300);
+
+        assertThat(tournamentService.addParticipants(tournament.getId(), List.of(a.getId(), b.getId(), a.getId())))
+                .isEqualTo(2);
+        assertThat(tournamentService.findDetails(tournament.getId()).orElseThrow().participants())
+                .extracting(p -> p.getPlayer().getFirstName())
+                .containsExactlyInAnyOrder("Ana", "Ion");
+        assertThat(tournamentService.findPlayersNotRegistered(tournament.getId()))
+                .extracting(Player::getFirstName).contains("Mihai").doesNotContain("Ana", "Ion");
+
+        assertThatThrownBy(() -> tournamentService.addParticipants(tournament.getId(), List.of()))
+                .isInstanceOf(BusinessException.class);
+        assertThatThrownBy(() -> tournamentService.addParticipants(tournament.getId(), List.of(c.getId(), b.getId())))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("deja înscris");
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = "ADMIN")
     void stergereaRezultatuluiRedeschideTurneulIncheiat() {
         Tournament tournament = tournamentService.create(form("Turneu scurt"));
         Player a = player("Ana", "Ciobanu", 1200);
