@@ -538,17 +538,19 @@ await check('manager: notificarea cererii și confirmarea înscrierii', async ()
   await expectNoText(page, 'Cereri de înscriere');
 });
 await check('manager: înscrierea mai multor jucători deodată', async () => {
-  const box = page.locator('vaadin-multi-select-combo-box');
-  await box.locator('input').click();
-  const items = page.locator('vaadin-multi-select-combo-box-item');
-  await items.first().waitFor({ timeout: 10000 });
-  await items.nth(0).click();
-  await items.nth(1).click();
-  await page.keyboard.press('Escape');
-  await page.getByRole('button', { name: 'Adaugă 2 jucători' }).click();
+  await page.getByRole('button', { name: 'Adaugă jucători' }).click();
+  const dialog = page.getByRole('dialog');
+  await expectText(page, 'jucători neînscriși · după rating');
+  await expectText(page, 'Turneul va avea 5 participanți');
+  const rows = dialog.locator('.ttm-add-player');
+  await rows.nth(0).click();
+  await rows.nth(1).click();
+  await expectText(page, '2 jucători selectați');
+  await expectText(page, 'Turneul va avea 7 participanți');
+  await shot(page, '35b-manager-adauga-jucatori');
+  await dialog.getByRole('button', { name: 'Adaugă 2 jucători' }).click();
   await expectText(page, 'Au fost înscriși 2 jucători');
   await expectText(page, 'Participanți înscriși (7)');
-  await shot(page, '35b-manager-inscriere-multipla');
 });
 await check('utilizator: vede notificarea confirmării', async () => {
   const c = await browser.newContext(desktop);
@@ -605,6 +607,18 @@ await check('telefon: turneu cu finale', async () => {
   await page.getByText('Liga de iarnă').first().click();
   await expectText(page, 'Finala 1');
   await shot(page, '32-telefon-finale');
+});
+await check('telefon: adăugarea jucătorilor', async () => {
+  const pc = await browser.newContext(phone);
+  const pp = await pc.newPage();
+  await login(pp, 'manager', 'manager123');
+  await pp.goto(`${BASE}/turnee`);
+  await pp.getByText('Turneul de duminică').first().click();
+  await pp.getByRole('button', { name: 'Adaugă jucători' }).click();
+  await pp.getByRole('dialog').locator('.ttm-add-player').first().click();
+  await expectText(pp, '1 jucător selectat');
+  await shot(pp, '35c-telefon-adauga-jucatori');
+  await pc.close();
 });
 await check('telefon: tablou eliminatoriu', async () => {
   await page.goto(`${BASE}/turnee`);
