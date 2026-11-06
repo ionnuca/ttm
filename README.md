@@ -12,7 +12,7 @@ Aplicație web (instalabilă și pe telefon, ca PWA) pentru gestionarea jucător
 |---|:---:|:---:|:---:|:---:|
 | Clasamentul jucătorilor (`/jucatori`; ordonat după rating, căutare, sortare) | ✅ | ✅ | ✅ | ✅ |
 | Pagina jucătorului (click în clasament sau în meciuri): date, echipament, statistici (meciuri, victorii, procent, seturi, turnee, cel mai bun rating), evoluția ratingului, toate meciurile lui | ✅ | ✅ | ✅ | ✅ |
-| Pagina principală – „Meciuri”: ultimele 200 de meciuri cu rezultat, în carduri de scor, cu căutare după jucător sau turneu (pictograma și titlul aplicației duc aici) | ✅ | ✅ | ✅ | ✅ |
+| Pagina principală – „Turnee” (pictograma și titlul aplicației duc aici); „Meciuri”: ultimele 200 de meciuri cu rezultat, în carduri de scor, cu căutare după jucător sau turneu | ✅ | ✅ | ✅ | ✅ |
 | „Ghid de utilizare” (`/ajutor`): roluri, organizarea unui turneu, formate, punctele și departajarea în grupă, premii, formula ratingului | ✅ | ✅ | ✅ | ✅ |
 | Limba interfeței: română, rusă sau engleză (comutatorul RO / RU / EN din bara de sus; pentru cei cu cont se salvează în cont, și din „Profilul meu”) | ✅ | ✅ | ✅ | ✅ |
 | Poza de profil (din „Profilul meu”; decupată pătrat și micșorată automat) | – | ✅ propria | ✅ propria | ✅ oricui |

@@ -12,7 +12,6 @@ import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.value.ValueChangeMode;
 import com.vaadin.flow.router.HasDynamicTitle;
 import com.vaadin.flow.router.Route;
-import com.vaadin.flow.router.RouteAlias;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
 import md.ttm.service.match.MatchService;
 import md.ttm.service.match.MatchSummary;
@@ -24,8 +23,7 @@ import java.util.Map;
 import java.util.Locale;
 
 /** Ultimele meciuri cu rezultat, din toate turneele, cu căutare după jucător sau turneu. */
-@Route(value = "", layout = MainLayout.class)
-@RouteAlias(value = "meciuri", layout = MainLayout.class)
+@Route(value = "meciuri", layout = MainLayout.class)
 @AnonymousAllowed
 public class MatchesView extends VerticalLayout implements HasDynamicTitle {
 
