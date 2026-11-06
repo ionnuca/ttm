@@ -103,7 +103,7 @@ await check('guest: pagina principală = turneele', async () => {
   await page.goto(`${BASE}/jucatori`);
   await page.getByRole('link', { name: 'TTM – pagina principală' }).click();
   await page.waitForURL(`${BASE}/`, { timeout: 10000 });
-  await expectText(page, 'ultimele');
+  await expectText(page, 'Turneul de duminică');
 });
 await check('guest: ghidul de utilizare', async () => {
   await page.goto(`${BASE}/`);
