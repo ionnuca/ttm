@@ -12,7 +12,7 @@ Aplicație web (instalabilă și pe telefon, ca PWA) pentru gestionarea jucător
 |---|:---:|:---:|:---:|:---:|
 | Clasamentul jucătorilor (`/jucatori`; ordonat după rating, căutare, sortare) | ✅ | ✅ | ✅ | ✅ |
 | Pagina jucătorului (click în clasament sau în meciuri): date, echipament, statistici (meciuri, victorii, procent, seturi, turnee, cel mai bun rating), evoluția ratingului, toate meciurile lui | ✅ | ✅ | ✅ | ✅ |
-| Pagina principală – „Meciuri”: ultimele 200 de meciuri cu rezultat, în carduri de scor, cu căutare după jucător sau turneu (pictograma și titlul aplicației duc aici) | ✅ | ✅ | ✅ | ✅ |
+| Pagina principală – „Turnee” (pictograma și titlul aplicației duc aici); „Meciuri”: ultimele 200 de meciuri cu rezultat, în carduri de scor, cu căutare după jucător sau turneu | ✅ | ✅ | ✅ | ✅ |
 | „Ghid de utilizare” (`/ajutor`): roluri, organizarea unui turneu, formate, punctele și departajarea în grupă, premii, formula ratingului | ✅ | ✅ | ✅ | ✅ |
 | Limba interfeței: română, rusă sau engleză (comutatorul RO / RU / EN din bara de sus; pentru cei cu cont se salvează în cont, și din „Profilul meu”) | ✅ | ✅ | ✅ | ✅ |
 | Poza de profil (din „Profilul meu”; decupată pătrat și micșorată automat) | – | ✅ propria | ✅ propria | ✅ oricui |
@@ -58,6 +58,19 @@ Tipul se alege la „Începe turneul”, împreună cu **numărul de grupe** (mi
 3. **Etapa 2 — Finale.** Ambele finale se joacă Round Robin. Jucătorii care s-au întâlnit deja în aceeași grupă **nu mai joacă** între ei: rezultatul din etapa 1 se preia în tabelul finalei (fiecare meci contează o singură dată la rating). După pornirea etapei 2, rezultatele din grupe nu mai pot fi modificate, pentru că au stabilit calificarea.
 4. **Premii (turneu comercial):** câștigătorul Finalei 2 primește obligatoriu cât **taxa de participare**; restul sumei acumulate se împarte între premiații Finalei 1, ca la turneul comercial obișnuit (100% / 60–40% / 50–30–20%). De aceea un turneu comercial cu două etape se poate încheia manual doar după „Începe etapa 2”; dacă o finală se încheie fără toate meciurile, premiații se stabilesc din clasamentul ei de până atunci, iar fără niciun meci jucat, după ordinea de calificare (locul în grupă, apoi ratingul).
 5. Turneul se încheie după ultimul rezultat din finale; ratingul Elo se calculează pe toate meciurile din ambele etape.
+
+### Turnee „Grupe + eliminare”
+
+Etapa 1 este ca la „Grupe + finale” (tragere la sorți pe urne, Round Robin în fiecare grupă), dar numărul de grupe poate fi și **1** (toți joacă cu toți).
+
+1. **Începe etapa 2** (organizatorul, după ultimul rezultat din grupe și după seturile de departajare): se alege câți jucători din fiecare grupă intră în tablou (1 … mărimea celei mai mici grupe) și tipul tabloului:
+   - **Olimpic** (eliminare simplă): cine pierde iese; finala decide locurile 1–2, învinșii din semifinale joacă meciul pentru locul 3 (cheia `P3`); învinșii din turele anterioare împart locul (sferturi → locul 5 …).
+   - **Olimpic cu ramura de jos**: finala tabloului principal decide locurile 1–2. Cine pierde înainte de finală trece în ramura de jos (eliminare simplă), a cărei finală decide locurile 3–4; învinșii din ramura de jos împart locurile următoare, pe tururi.
+2. **Așezarea în tablou:** după locul din grupă (câștigătorii de grupă întâi), apoi ratingul la începerea turneului; pozițiile standard (1–8, 4–5, 2–7, 3–6 …) fac ca primii favoriți să se întâlnească cât mai târziu. Tabloul are mărimea puterii lui 2 imediat superioare; locurile libere (*bye*) le revin celor mai bine clasați, care trec direct în turul următor.
+3. **Meciurile** se creează pe măsură ce se știu jucătorii (coloana `tournament_match.bracket_slot`: `W<tur>-<n>` tabloul principal, `L<tur>-<n>` ramura de jos, `P3` meciul pentru locul 3). Motorul tabloului (`Bracket`) e pur: din jucători și câștigătorii fiecărui slot recalculează tot tabloul și locurile. La corectarea unui rezultat, meciurile următoare nejucate se refac; dacă un meci următor are deja rezultat, corectura e refuzată.
+4. **Tabloul 2:** jucătorii necalificați joacă un al doilea tablou, de același tip (grupa de tip `KNOCKOUT` cu poziția 2), pentru câștigătorul părții a doua. Un singur jucător rămas îl câștigă fără meciuri; dacă toți intră în Tabloul 1, nu există.
+5. **Premii (turneu comercial):** câștigătorul Tabloului 2 primește cât taxa de participare; restul se împarte (100% / 60–40% / 50–30–20%) după locurile din Tabloul 1 (fără Tabloul 2, toată suma). La un loc împărțit premiile se adună și se împart egal.
+6. Turneul se încheie automat când toate tablourile au câștigător; ratingul Elo se calculează pe toate meciurile din ambele etape.
 
 ### Ratingul (Elo)
 
@@ -146,7 +159,7 @@ psql -U postgres -f database/create_database.sql
 
 ## Baza de date
 
-- **Scripturile de creare a tabelelor:** `src/main/resources/db/migration/` (`V1__jucatori_si_utilizatori.sql`, `V2__jucator_mana_si_echipament.sql`, `V3__turnee.sql`, `V4__rating_elo.sql`, `V5__grupe_si_finale.sql`, `V6__rol_manager_turnee.sql`, `V7__poze_jucatori.sql`, `V8__poze_marime_mare.sql`, `V9__limba_utilizator.sql`, `V10__seturi_departajare.sql`, `V11__confirmare_inscriere_notificari.sql`, `V12__inscriere_fara_confirmare.sql`). Le aplică automat **Flyway** la pornirea aplicației, în ordinea versiunilor; nu e nevoie să le rulați manual.
+- **Scripturile de creare a tabelelor:** `src/main/resources/db/migration/` (`V1__jucatori_si_utilizatori.sql`, `V2__jucator_mana_si_echipament.sql`, `V3__turnee.sql`, `V4__rating_elo.sql`, `V5__grupe_si_finale.sql`, `V6__rol_manager_turnee.sql`, `V7__poze_jucatori.sql`, `V8__poze_marime_mare.sql`, `V9__limba_utilizator.sql`, `V10__seturi_departajare.sql`, `V11__confirmare_inscriere_notificari.sql`, `V12__inscriere_fara_confirmare.sql`, `V13__grupe_si_eliminare.sql`). Le aplică automat **Flyway** la pornirea aplicației, în ordinea versiunilor; nu e nevoie să le rulați manual.
 - **Modificări de schemă:** nu se editează niciodată un script deja aplicat. Se adaugă unul nou: `V2__descriere.sql`, `V3__...` etc.
 - **Crearea bazei de date și a utilizatorului:** `database/create_database.sql` (fără Docker) sau automat de `docker-compose.yml`.
 - **Baza pentru teste:** `ttm_test`, creată de `database/init/01-create-test-db.sql` la prima pornire a containerului.
@@ -257,7 +270,7 @@ Copiile de rezervă stau pe același server. Pentru siguranță, descărcați pe
 
 ### Aplicația de test (test.tabletennis.omagiu.md)
 
-Pe același server rulează și versiunea din `develop`, la o adresă separată, protejată cu utilizator și parolă:
+Pe același server rulează și versiunea din `develop`, la o adresă separată. Accesul e ca în producție: paginile publice sunt deschise, iar autentificarea se face cu conturile aplicației (copiate din producție).
 
 - containerul `app-test` (`/opt/ttm-test`), cu memoria limitată (Java 288 MB, container 640 MB), ca să nu ia din memoria producției;
 - baza `ttm_test` din același PostgreSQL, o **copie a datelor din producție**; producția nu este atinsă;

@@ -13,6 +13,7 @@ import md.ttm.model.tournament.TournamentGroupMember;
 import md.ttm.model.tournament.TournamentParticipant;
 import md.ttm.model.tournament.TournamentStage;
 import md.ttm.model.tournament.TournamentStatus;
+import md.ttm.model.tournament.KnockoutType;
 import md.ttm.model.tournament.ParticipantStatus;
 import md.ttm.model.notification.NotificationType;
 import md.ttm.service.notification.NotificationService;
@@ -43,6 +44,8 @@ import java.util.random.RandomGenerator;
 import java.security.SecureRandom;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -119,6 +122,57 @@ public class TournamentService {
         return tournamentRepository.findAllByOrderByTournamentDateDescIdDesc().stream()
                 .map(t -> new TournamentSummary(t, counts.getOrDefault(t.getId(), 0L), pending.getOrDefault(t.getId(), 0L)))
                 .toList();
+    }
+
+    /**
+     * Locurile 1, 2, 3 (și câștigarea Finalei 2) ale fiecărui jucător în turneele încheiate, după id-ul jucătorului.
+     * Locurile împărțite se numără pentru fiecare jucător de pe ele.
+     */
+    @Transactional(readOnly = true)
+    public Map<Long, Podium> podiums() {
+        Map<Long, int[]> counts = new HashMap<>();
+        for (Tournament tournament : tournamentRepository.findByStatusOrderByTournamentDateAscIdAsc(TournamentStatus.FINISHED)) {
+            TournamentDetails details = details(tournament);
+            Map<Long, Long> playerOf = new HashMap<>();
+            details.participants().forEach(p -> playerOf.put(p.getId(), p.getPlayer().getId()));
+            java.util.function.BiConsumer<Long, Integer> count = (participantId, index) -> {
+                Long playerId = playerOf.get(participantId);
+                if (playerId != null) {
+                    counts.computeIfAbsent(playerId, k -> new int[4])[index]++;
+                }
+            };
+            if (tournament.isKnockoutFormat()) {
+                List<KnockoutView> brackets = details.knockouts();
+                if (!brackets.isEmpty()) {
+                    brackets.get(0).state().placings().stream()
+                            .filter(p -> p.place() <= 3)
+                            .forEach(p -> count.accept(p.participantId(), p.place() - 1));
+                }
+                if (brackets.size() > 1) {
+                    brackets.get(1).state().placings().stream()
+                            .filter(p -> p.place() == 1)
+                            .forEach(p -> count.accept(p.participantId(), 3));
+                }
+            } else if (tournament.isGroupsFormat()) {
+                if (!details.finals().isEmpty()) {
+                    details.finals().get(0).standings().stream()
+                            .filter(r -> r.place() <= 3)
+                            .forEach(r -> count.accept(r.id(), r.place() - 1));
+                }
+                if (details.finals().size() > 1) {
+                    details.finals().get(1).standings().stream()
+                            .filter(r -> r.place() == 1)
+                            .forEach(r -> count.accept(r.id(), 3));
+                }
+            } else {
+                details.standings().stream()
+                        .filter(r -> r.place() <= 3)
+                        .forEach(r -> count.accept(r.id(), r.place() - 1));
+            }
+        }
+        Map<Long, Podium> result = new HashMap<>();
+        counts.forEach((playerId, c) -> result.put(playerId, new Podium(c[0], c[1], c[2], c[3])));
+        return result;
     }
 
     public Optional<TournamentDetails> findDetails(Long tournamentId) {
@@ -254,6 +308,19 @@ public class TournamentService {
             return request.get();
         }
         return register(tournament, player, ParticipantStatus.CONFIRMED);
+    }
+
+    /** Organizatorul înscrie deodată mai mulți jucători; dacă unul nu poate fi înscris, nu se înscrie niciunul. */
+    @PreAuthorize("hasAnyRole('ADMIN', 'TOURNAMENT_MANAGER')")
+    @Transactional
+    public int addParticipants(Long tournamentId, Collection<Long> playerIds) {
+        if (playerIds == null || playerIds.isEmpty()) {
+            throw new BusinessException("Alegeți cel puțin un jucător");
+        }
+        for (Long playerId : new LinkedHashSet<>(playerIds)) {
+            addParticipant(tournamentId, playerId);
+        }
+        return new LinkedHashSet<>(playerIds).size();
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'TOURNAMENT_MANAGER')")
@@ -396,6 +463,9 @@ public class TournamentService {
                 || tournament.getStage() != TournamentStage.GROUPS) {
             throw new BusinessException("Etapa 2 se poate începe doar după etapa grupelor");
         }
+        if (tournament.isKnockoutFormat()) {
+            throw new BusinessException("La acest turneu etapa 2 este un tablou eliminatoriu");
+        }
         List<TournamentParticipant> participants = new ArrayList<>(participantRepository.findByTournamentIdWithPlayer(tournamentId));
         List<TournamentMatch> matches = matchRepository.findByTournamentIdWithParticipants(tournamentId);
         List<GroupView> groups = groupViews(tournament, matches, tiebreakRepository.findByTournamentIdWithParticipants(tournamentId));
@@ -441,6 +511,203 @@ public class TournamentService {
             finish(tournament);
             ratingService.recalculateAll();
         }
+    }
+
+    /**
+     * Etapa 2 la „Grupe + eliminare”: primii {@code qualifiers} din fiecare grupă intră în tabloul eliminatoriu,
+     * așezați după locul din grupă (întâi câștigătorii de grupă), apoi după rating. Meciurile tabloului se creează
+     * pe măsură ce se știu jucătorii lor.
+     */
+    @PreAuthorize("hasAnyRole('ADMIN', 'TOURNAMENT_MANAGER')")
+    @Transactional
+    public void startKnockout(Long tournamentId, int qualifiers, KnockoutType type) {
+        Tournament tournament = requireTournament(tournamentId);
+        if (!tournament.isKnockoutFormat() || tournament.getStatus() != TournamentStatus.IN_PROGRESS
+                || tournament.getStage() != TournamentStage.GROUPS) {
+            throw new BusinessException("Etapa 2 se poate începe doar după etapa grupelor");
+        }
+        if (type == null) {
+            throw new BusinessException("Alegeți tipul tabloului eliminatoriu");
+        }
+        List<TournamentParticipant> participants = new ArrayList<>(participantRepository.findByTournamentIdWithPlayer(tournamentId));
+        List<TournamentMatch> matches = matchRepository.findByTournamentIdWithParticipants(tournamentId);
+        List<GroupView> groups = groupViews(tournament, matches, tiebreakRepository.findByTournamentIdWithParticipants(tournamentId));
+        long unplayed = groups.stream().mapToLong(g -> g.matches().size() - g.playedMatches()).sum();
+        if (unplayed > 0) {
+            throw new BusinessException("Etapa 1 nu s-a terminat: mai sunt {0} meciuri fără rezultat", unplayed);
+        }
+        long tiebreaks = groups.stream().mapToLong(g -> g.pendingTiebreaks().size()).sum();
+        if (tiebreaks > 0) {
+            throw new BusinessException("Etapa 1 nu s-a terminat: mai sunt {0} seturi de departajare de jucat", tiebreaks);
+        }
+        int smallest = groups.stream().mapToInt(g -> g.members().size()).min().orElse(0);
+        if (qualifiers < 1 || qualifiers > smallest) {
+            throw new BusinessException("Din fiecare grupă se pot califica între 1 și {0} jucători", smallest);
+        }
+        Map<Long, Integer> placeOf = new HashMap<>();
+        for (GroupView g : groups) {
+            g.standings().forEach(row -> placeOf.put(row.id(), row.place()));
+        }
+        Comparator<TournamentParticipant> order = Comparator
+                .comparingInt((TournamentParticipant p) -> placeOf.getOrDefault(p.getId(), Integer.MAX_VALUE))
+                .thenComparingInt(p -> -p.getSeedRating())
+                .thenComparingInt(TournamentParticipant::getSeed);
+        List<TournamentParticipant> qualified = participants.stream()
+                .filter(p -> placeOf.getOrDefault(p.getId(), Integer.MAX_VALUE) <= qualifiers)
+                .sorted(order)
+                .toList();
+        if (qualified.size() < 2) {
+            throw new BusinessException("În tabloul eliminatoriu sunt necesari cel puțin 2 jucători");
+        }
+        // ceilalți joacă Tabloul 2 (la fel organizat), pentru câștigătorul părții a doua
+        List<TournamentParticipant> others = participants.stream()
+                .filter(p -> !qualified.contains(p))
+                .sorted(order)
+                .toList();
+        createBracket(tournament, 1, others.isEmpty() ? "Tablou eliminatoriu" : "Tabloul 1", qualified);
+        if (!others.isEmpty()) {
+            createBracket(tournament, 2, "Tabloul 2", others);
+        }
+        tournament.setStage(TournamentStage.KNOCKOUT);
+        tournament.setQualifiersPerGroup(qualifiers);
+        tournament.setKnockoutType(type);
+        tournamentRepository.saveAndFlush(tournament);
+        syncBracket(tournament);
+    }
+
+    private void createBracket(Tournament tournament, int position, String name, List<TournamentParticipant> members) {
+        TournamentGroup bracket = groupRepository.save(
+                new TournamentGroup(tournament, TournamentStage.KNOCKOUT, position, name));
+        for (int i = 0; i < members.size(); i++) {
+            memberRepository.save(new TournamentGroupMember(bracket, members.get(i), i + 1));
+        }
+    }
+
+    /**
+     * Pune meciurile tabloului eliminatoriu în acord cu rezultatele: creează meciurile ai căror jucători s-au aflat
+     * și le șterge pe cele care nu mai sunt valabile (după corectarea unui rezultat). Un meci următor care are deja
+     * rezultat nu se șterge: corectura e refuzată.
+     */
+    private List<KnockoutView> syncBracket(Tournament tournament) {
+        List<KnockoutView> views = knockoutViews(tournament);
+        for (KnockoutView view : views) {
+            syncBracket(tournament, view);
+        }
+        matchRepository.flush();
+        return views;
+    }
+
+    private void syncBracket(Tournament tournament, KnockoutView view) {
+        Map<String, long[]> playable = Bracket.playable(view.state());
+        Map<String, TournamentMatch> kept = new HashMap<>();
+        for (TournamentMatch row : view.matches().values()) {
+            long[] pair = playable.get(row.getBracketSlot());
+            boolean valid = pair != null && row.getParticipantA().getId() == pair[0] && row.getParticipantB().getId() == pair[1];
+            if (valid) {
+                kept.put(row.getBracketSlot(), row);
+            } else if (row.isPlayed()) {
+                throw new BusinessException("Rezultatul nu se mai poate schimba: meciurile următoare din tablou au deja rezultat. Ștergeți întâi rezultatele lor.");
+            } else {
+                matchRepository.delete(row);
+            }
+        }
+        List<Bracket.Match> all = view.state().matches();
+        for (int i = 0; i < all.size(); i++) {
+            Bracket.Match m = all.get(i);
+            if (m.playable() && !kept.containsKey(m.key())) {
+                TournamentMatch match = new TournamentMatch(tournament, view.group(), i + 1,
+                        view.participant(m.a()), view.participant(m.b()));
+                match.setBracketSlot(m.key());
+                matchRepository.save(match);
+            }
+        }
+    }
+
+    /**
+     * Verifică, înainte de a modifica meciul, că noul câștigător (sau {@code null}, la ștergerea rezultatului) nu
+     * schimbă jucătorii unui meci următor din tablou care are deja rezultat.
+     */
+    private void requireBracketChangeAllowed(TournamentMatch match, Long newWinner) {
+        if (match.getGroup() == null || !match.getGroup().isKnockout() || match.getBracketSlot() == null) {
+            return;
+        }
+        KnockoutView view = knockoutViews(match.getTournament()).stream()
+                .filter(v -> v.group().getId().equals(match.getGroup().getId()))
+                .findFirst().orElse(null);
+        if (view == null) {
+            return;
+        }
+        Map<String, Long> winners = new HashMap<>();
+        view.matches().forEach((slot, row) -> {
+            if (row.isPlayed()) {
+                winners.put(slot, row.getWinner().getId());
+            }
+        });
+        if (newWinner == null) {
+            winners.remove(match.getBracketSlot());
+        } else {
+            winners.put(match.getBracketSlot(), newWinner);
+        }
+        Map<String, long[]> playable = Bracket.playable(Bracket.compute(match.getTournament().getKnockoutType(),
+                view.members().stream().map(TournamentParticipant::getId).toList(), winners));
+        for (TournamentMatch row : view.matches().values()) {
+            if (!row.isPlayed() || row.getBracketSlot().equals(match.getBracketSlot())) {
+                continue;
+            }
+            long[] pair = playable.get(row.getBracketSlot());
+            if (pair == null || row.getParticipantA().getId() != pair[0] || row.getParticipantB().getId() != pair[1]) {
+                throw new BusinessException("Rezultatul nu se mai poate schimba: meciurile următoare din tablou au deja rezultat. Ștergeți întâi rezultatele lor.");
+            }
+        }
+    }
+
+    /** Un rezultat corectat într-un turneu încheiat a redeschis tabloul (de exemplu, e nevoie de meciul decisiv). */
+    private void reopenIfBracketIncomplete(Tournament tournament, List<KnockoutView> views) {
+        boolean incomplete = views.stream().anyMatch(v -> !v.state().complete());
+        if (incomplete && tournament.getStatus() == TournamentStatus.FINISHED) {
+            tournament.setStatus(TournamentStatus.IN_PROGRESS);
+            tournament.setFinishedAt(null);
+            tournamentRepository.saveAndFlush(tournament);
+            ratingService.recalculateAll();
+        }
+    }
+
+    /** Tablourile eliminatorii (Tabloul 1 și, dacă există, Tabloul 2) calculate din baza de date; goală dacă nu există încă. */
+    private List<KnockoutView> knockoutViews(Tournament tournament) {
+        if (!tournament.isKnockoutFormat() || tournament.getKnockoutType() == null) {
+            return List.of();
+        }
+        List<TournamentGroup> groups = groupRepository.findByTournamentIdOrderByStageAscPositionAsc(tournament.getId()).stream()
+                .filter(TournamentGroup::isKnockout)
+                .sorted(Comparator.comparingInt(TournamentGroup::getPosition))
+                .toList();
+        if (groups.isEmpty()) {
+            return List.of();
+        }
+        List<TournamentGroupMember> allMembers = memberRepository.findByTournamentIdWithParticipants(tournament.getId());
+        List<TournamentMatch> allMatches = matchRepository.findByTournamentIdWithParticipants(tournament.getId());
+        List<KnockoutView> views = new ArrayList<>();
+        for (TournamentGroup group : groups) {
+            List<TournamentParticipant> members = allMembers.stream()
+                    .filter(m -> m.getGroup().getId().equals(group.getId()))
+                    .sorted(Comparator.comparingInt(TournamentGroupMember::getSeed))
+                    .map(TournamentGroupMember::getParticipant)
+                    .toList();
+            Map<String, TournamentMatch> rows = new java.util.LinkedHashMap<>();
+            Map<String, Long> winners = new HashMap<>();
+            for (TournamentMatch m : allMatches) {
+                if (m.getGroup() != null && m.getGroup().getId().equals(group.getId()) && m.getBracketSlot() != null) {
+                    rows.put(m.getBracketSlot(), m);
+                    if (m.isPlayed()) {
+                        winners.put(m.getBracketSlot(), m.getWinner().getId());
+                    }
+                }
+            }
+            Bracket.State state = Bracket.compute(tournament.getKnockoutType(),
+                    members.stream().map(TournamentParticipant::getId).toList(), winners);
+            views.add(new KnockoutView(group, members, rows, state));
+        }
+        return views;
     }
 
     private List<TournamentMatch> createFinal(Tournament tournament, int position, String name,
@@ -502,7 +769,7 @@ public class TournamentService {
     /** După începerea etapei 2, rezultatele din grupe nu se mai pot schimba (au decis calificarea). */
     private static void requireEditableStage(TournamentMatch match) {
         TournamentGroup group = match.getGroup();
-        if (group != null && !group.isFinal() && match.getTournament().getStage() == TournamentStage.FINALS) {
+        if (group != null && group.isGroupStage() && match.getTournament().getStage() != TournamentStage.GROUPS) {
             throw new BusinessException("Rezultatele etapei 1 nu mai pot fi modificate după începerea etapei 2");
         }
     }
@@ -537,9 +804,11 @@ public class TournamentService {
             if (!valid) {
                 throw new BusinessException("Scor invalid: câștigătorul trebuie să aibă {0} seturi, iar adversarul mai puține", setsToWin);
             }
+            TournamentParticipant winner = a > b ? match.getParticipantA() : match.getParticipantB();
+            requireBracketChangeAllowed(match, winner.getId());
             match.setSetsA(a);
             match.setSetsB(b);
-            match.setWinner(a > b ? match.getParticipantA() : match.getParticipantB());
+            match.setWinner(winner);
         } else {
             Long winnerId = result.walkoverWinner();
             TournamentParticipant winner;
@@ -550,6 +819,7 @@ public class TournamentService {
             } else {
                 throw new BusinessException("Alegeți jucătorul care câștigă tehnic");
             }
+            requireBracketChangeAllowed(match, winner.getId());
             match.setSetsA(null);
             match.setSetsB(null);
             match.setWinner(winner);
@@ -560,6 +830,9 @@ public class TournamentService {
         matchRepository.saveAndFlush(match);
         // un rezultat nou schimbă egalitățile: seturile de departajare ale tabelului nu mai sunt valabile
         deleteTiebreaks(tournament.getId(), match.getGroup());
+        if (match.getGroup() != null && match.getGroup().isKnockout()) {
+            reopenIfBracketIncomplete(tournament, syncBracket(tournament));
+        }
 
         finishIfComplete(tournament);
         // turneu încheiat acum sau rezultat corectat într-un turneu încheiat: ratingul se recalculează
@@ -585,7 +858,7 @@ public class TournamentService {
             group = groupRepository.findById(groupId)
                     .filter(g -> g.getTournament().getId().equals(tournamentId))
                     .orElseThrow(() -> new BusinessException("Grupa nu mai există"));
-            if (!group.isFinal() && tournament.getStage() == TournamentStage.FINALS) {
+            if (group.isGroupStage() && tournament.getStage() != TournamentStage.GROUPS) {
                 throw new BusinessException("Rezultatele etapei 1 nu mai pot fi modificate după începerea etapei 2");
             }
         }
@@ -639,7 +912,12 @@ public class TournamentService {
 
     /** Ultima etapă e completă (meciuri și seturi de departajare): turneul se încheie automat. */
     private void finishIfComplete(Tournament tournament) {
-        boolean lastStage = !tournament.isGroupsFormat() || tournament.getStage() == TournamentStage.FINALS;
+        boolean lastStage = !tournament.isGroupsFormat() || tournament.getStage() == TournamentStage.FINALS
+                || tournament.getStage() == TournamentStage.KNOCKOUT;
+        if (tournament.getStage() == TournamentStage.KNOCKOUT) {
+            List<KnockoutView> brackets = knockoutViews(tournament);
+            lastStage = !brackets.isEmpty() && brackets.stream().allMatch(b -> b.state().complete());
+        }
         if (tournament.getStatus() == TournamentStatus.IN_PROGRESS && lastStage
                 && matchRepository.countByTournamentIdAndOutcomeIsNull(tournament.getId()) == 0
                 && pendingTiebreaks(tournament, tiebreakRepository.findByTournamentIdWithParticipants(tournament.getId())).isEmpty()) {
@@ -681,10 +959,14 @@ public class TournamentService {
         TournamentMatch match = matchRepository.findByIdWithParticipants(matchId)
                 .orElseThrow(() -> new BusinessException("Meciul nu mai există"));
         requireEditableStage(match);
+        requireBracketChangeAllowed(match, null);
         match.clearResult();
-        matchRepository.save(match);
+        matchRepository.saveAndFlush(match);
         deleteTiebreaks(match.getTournament().getId(), match.getGroup());
         Tournament tournament = match.getTournament();
+        if (match.getGroup() != null && match.getGroup().isKnockout()) {
+            syncBracket(tournament);
+        }
         if (tournament.getStatus() == TournamentStatus.FINISHED) {
             tournament.setStatus(TournamentStatus.IN_PROGRESS);
             tournament.setFinishedAt(null);
@@ -734,15 +1016,20 @@ public class TournamentService {
                 ? standings(tournament, participants, matches, tiebreaks)
                 : new StandingsCalculator.Table(List.of(), List.of());
         List<StandingsCalculator.Row> standings = table.rows();
+        List<KnockoutView> knockouts = tournament.getStage() == TournamentStage.KNOCKOUT ? knockoutViews(tournament) : List.of();
 
         BigDecimal pool = null;
         List<PrizePlace> prizes = List.of();
         PrizeDistribution distribution = tournament.getPrizeDistribution();
         if (distribution != null && tournament.getEntryFee() != null) {
             pool = tournament.getEntryFee().multiply(BigDecimal.valueOf(participants.size()));
-            prizes = tournament.isGroupsFormat()
-                    ? groupPrizes(tournament, distribution, pool, groups)
-                    : prizes(tournament, distribution, pool, participants, standings);
+            if (tournament.isKnockoutFormat()) {
+                prizes = knockoutPrizes(tournament, distribution, pool, knockouts);
+            } else if (tournament.isGroupsFormat()) {
+                prizes = groupPrizes(tournament, distribution, pool, groups);
+            } else {
+                prizes = prizes(tournament, distribution, pool, participants, standings);
+            }
         }
 
         Optional<Player> currentPlayer = currentPlayer();
@@ -768,7 +1055,51 @@ public class TournamentService {
         return new TournamentDetails(tournament, participants, matches, standings, pool, prizes, own,
                 manager, canSelfRegister, canRecord, ratingChanges, groups,
                 tournament.isGroupsFormat() ? List.of() : tiebreaks, table.tiebreaks(),
-                manager ? pending : List.of());
+                manager ? pending : List.of(), knockouts);
+    }
+
+    /**
+     * Premiile la „Grupe + eliminare”, ca la „Grupe + finale”: câștigătorul Tabloului 2 primește cât taxa de
+     * participare, iar restul sumei se împarte (100% / 60-40% / 50-30-20%) după locurile din Tabloul 1. Dacă toți
+     * jucătorii au intrat într-un singur tablou, se împarte toată suma. La locurile împărțite premiile se adună
+     * și se împart egal.
+     */
+    private static List<PrizePlace> knockoutPrizes(Tournament tournament, PrizeDistribution distribution,
+                                                   BigDecimal pool, List<KnockoutView> brackets) {
+        boolean finished = tournament.getStatus() == TournamentStatus.FINISHED;
+        boolean secondBracket = brackets.isEmpty() || brackets.size() > 1; // înainte de etapa 2 se presupune Tabloul 2
+        BigDecimal fee = tournament.getEntryFee();
+        BigDecimal toSplit = secondBracket ? pool.subtract(fee).max(BigDecimal.ZERO) : pool;
+        Map<Integer, List<String>> byPlace = finished && !brackets.isEmpty() ? namesByPlace(brackets.get(0)) : Map.of();
+        List<BigDecimal> amounts = distribution.split(toSplit);
+        List<Integer> percentages = distribution.percentages();
+        List<PrizePlace> prizes = new ArrayList<>();
+        for (int i = 0; i < amounts.size(); i++) {
+            int place = i + 1;
+            List<String> winners = byPlace.entrySet().stream()
+                    .filter(e -> place >= e.getKey() && place < e.getKey() + e.getValue().size())
+                    .findFirst().map(Map.Entry::getValue).orElse(List.of());
+            prizes.add(new PrizePlace(place, secondBracket ? "Tabloul 1 · locul " + place : "Locul " + place,
+                    percentages.get(i), amounts.get(i),
+                    winners.isEmpty() ? null : String.join(", ", winners), winners.size() > 1));
+        }
+        if (secondBracket) {
+            List<String> winners = finished && brackets.size() > 1
+                    ? namesByPlace(brackets.get(1)).getOrDefault(1, List.of())
+                    : List.of();
+            prizes.add(new PrizePlace(1, "Tabloul 2 · locul 1", null, fee.setScale(2, RoundingMode.HALF_UP),
+                    winners.isEmpty() ? null : String.join(", ", winners), winners.size() > 1));
+        }
+        return prizes;
+    }
+
+    private static Map<Integer, List<String>> namesByPlace(KnockoutView bracket) {
+        Map<Integer, List<String>> byPlace = new java.util.TreeMap<>();
+        for (Bracket.Placing placing : bracket.state().placings()) {
+            TournamentParticipant p = bracket.participant(placing.participantId());
+            byPlace.computeIfAbsent(placing.place(), k -> new ArrayList<>()).add(p.getPlayer().getDisplayName());
+        }
+        return byPlace;
     }
 
     private static StandingsCalculator.Table standings(Tournament tournament,
@@ -837,6 +1168,7 @@ public class TournamentService {
     private List<GroupView> groupViews(Tournament tournament, List<TournamentMatch> matches,
                                        List<TournamentTiebreak> tiebreaks) {
         List<TournamentGroup> groups = new ArrayList<>(groupRepository.findByTournamentIdOrderByStageAscPositionAsc(tournament.getId()));
+        groups.removeIf(TournamentGroup::isKnockout);
         groups.sort(Comparator.comparing((TournamentGroup g) -> g.getStage().ordinal())
                 .thenComparingInt(TournamentGroup::getPosition));
         Map<Long, List<TournamentGroupMember>> membersByGroup = new HashMap<>();
@@ -979,10 +1311,11 @@ public class TournamentService {
             throw new BusinessException("Numărul de seturi trebuie să fie 3, 5 sau 7");
         }
         Integer groupCount = null;
-        if (settings.getFormat() == TournamentFormat.GROUPS_FINALS) {
+        if (settings.getFormat() == TournamentFormat.GROUPS_FINALS || settings.getFormat() == TournamentFormat.GROUPS_KNOCKOUT) {
             groupCount = settings.getGroupCount();
-            if (groupCount == null || groupCount < 2) {
-                throw new BusinessException("Alegeți cel puțin 2 grupe");
+            int minimum = settings.getFormat() == TournamentFormat.GROUPS_KNOCKOUT ? 1 : 2;
+            if (groupCount == null || groupCount < minimum) {
+                throw new BusinessException(minimum == 1 ? "Alegeți cel puțin o grupă" : "Alegeți cel puțin 2 grupe");
             }
             if (participants < groupCount * 2) {
                 throw new BusinessException("Pentru {0} grupe sunt necesari cel puțin {1} participanți (minimum 2 în fiecare grupă)", groupCount, groupCount * 2);

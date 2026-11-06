@@ -35,7 +35,7 @@ import java.util.List;
  * <p>
  * Creează și conturi de test: utilizator {@code jucator} / {@code jucator123} și
  * managerul de turnee {@code manager} / {@code manager123},
- * plus patru turnee: unul încheiat, unul în desfășurare, unul „Grupe + finale” cu etapa 1 jucată
+ * plus turnee: unul încheiat, unul în desfășurare, unul „Grupe + finale” și unul „Grupe + eliminare” cu etapa 1 jucată
  * și unul cu înscrierea deschisă.
  */
 @Component
@@ -168,6 +168,16 @@ public class DemoDataInitializer implements ApplicationRunner {
             }
 
             playTiebreaks(winterId);
+
+            // Turneu „Grupe + eliminare”: 8 jucători în 2 grupe, etapa 1 încheiată, gata pentru tabloul eliminatoriu
+            Long knockoutId = tournamentService.create(
+                    new TournamentForm("Cupa eliminatorie", LocalDate.now())).getId();
+            players.stream().limit(8).forEach(p -> tournamentService.addParticipant(knockoutId, p.getId()));
+            tournamentService.start(knockoutId, TournamentSettings.groupsKnockout(5, 2));
+            for (TournamentMatch match : tournamentService.findDetails(knockoutId).orElseThrow().matches()) {
+                boolean aStronger = match.getParticipantA().getSeed() < match.getParticipantB().getSeed();
+                tournamentService.recordResult(match.getId(), aStronger ? MatchResultForm.sets(3, 1) : MatchResultForm.sets(2, 3));
+            }
 
             // Turneu comercial cu egalitate totală (cerc 3:0): așteaptă seturile de departajare
             Long tieId = tournamentService.create(

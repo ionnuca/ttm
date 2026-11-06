@@ -39,6 +39,14 @@ public class TournamentSettings {
         return settings;
     }
 
+    /** „Grupe + eliminare”: grupele etapei 1 (minimum una); tabloul se alege la începerea etapei 2. */
+    public static TournamentSettings groupsKnockout(int bestOf, int groupCount) {
+        TournamentSettings settings = roundRobin(bestOf);
+        settings.setFormat(TournamentFormat.GROUPS_KNOCKOUT);
+        settings.setGroupCount(groupCount);
+        return settings;
+    }
+
     public Integer getGroupCount() {
         return groupCount;
     }

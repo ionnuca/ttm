@@ -90,15 +90,20 @@ let page = await ctx.newPage();
   await probe.close();
 }
 
-await check('guest: pagina principală = meciurile', async () => {
+await check('guest: pagina principală = turneele', async () => {
   await page.goto(`${BASE}/`);
+  await expectText(page, 'Turneul de duminică');
+  await shot(page, '00a-guest-acasa-turnee');
+  // meciurile sunt în meniu, la /meciuri
+  await page.getByRole('link', { name: 'Meciuri' }).first().click();
+  await page.waitForURL(/\/meciuri$/, { timeout: 10000 });
   await expectText(page, 'ultimele');
   await expectText(page, 'Cupa de vară');
   await shot(page, '00-guest-acasa-meciuri');
   await page.goto(`${BASE}/jucatori`);
   await page.getByRole('link', { name: 'TTM – pagina principală' }).click();
   await page.waitForURL(`${BASE}/`, { timeout: 10000 });
-  await expectText(page, 'ultimele');
+  await expectText(page, 'Turneul de duminică');
 });
 await check('guest: ghidul de utilizare', async () => {
   await page.goto(`${BASE}/`);
@@ -116,6 +121,9 @@ await check('guest: lista jucătorilor', async () => {
   if (!(await page.locator('link[rel="icon"][href*="favicon.svg"]').count())) throw new Error('lipsește <link rel="icon"> spre favicon.svg');
   await expectNoText(page, 'Telefon');
   await expectNoText(page, 'Adaugă jucător');
+  await expectText(page, '🥇');
+  await expectText(page, 'F2');
+  await expectNoText(page, 'Stil de joc');
   await shot(page, '01-guest-jucatori');
 });
 await check('guest: pagina jucătorului (detalii, statistici, meciuri)', async () => {
@@ -358,6 +366,38 @@ await check('admin: încheierea manuală a turneului', async () => {
   await expectText(page, 'nejucat');
   await shot(page, '37-admin-turneu-incheiat-manual');
 });
+await check('admin: „Grupe + eliminare” — tabloul cu ramura de jos', async () => {
+  await page.goto(`${BASE}/turnee`);
+  await page.getByText('Cupa eliminatorie').first().click();
+  await expectText(page, 'intră în Tabloul 1');
+  await page.getByRole('button', { name: 'Începe etapa 2' }).click();
+  await expectText(page, 'Calificați din fiecare grupă în Tabloul 1');
+  await page.getByRole('dialog').getByText('Olimpic cu ramura de jos: învinșii joacă în ramura de jos pentru locul 3').click();
+  await expectText(page, 'În Tabloul 1 intră 4 jucători');
+  await expectText(page, 'Ceilalți 4 jucători joacă Tabloul 2');
+  await expectText(page, 'finala ramurii de jos decide locurile 3 și 4');
+  await shot(page, '38-admin-incepe-tablou');
+  await page.getByRole('dialog').getByRole('button', { name: 'Începe etapa 2' }).click();
+  await expectText(page, 'Etapa 2 — Tabloul 1');
+  await expectText(page, 'Etapa 2 — Tabloul 2');
+  await expectText(page, 'Tabloul principal');
+  await expectText(page, 'Ramura de jos (pentru locul 3)');
+  await expectText(page, 'Finala ramurii de jos (locul 3)');
+  await expectText(page, 'Semifinale');
+  await shot(page, '39-admin-tablou-eliminatoriu');
+  // tabloul desenat: meciurile se deschid cu un clic
+  if (await page.locator('.ttm-bracket').count() < 2) throw new Error('lipsește tabloul desenat');
+  await page.locator('.ttm-bracket-match.clickable').first().click();
+  await expectText(page, 'Rezultatul meciului');
+  await shot(page, '39b-admin-tablou-clic-meci');
+  await page.getByRole('dialog').getByRole('button', { name: 'Anulează' }).click();
+  await page.getByText('Listă de meciuri').click();
+  await settle(page);
+  if (await page.locator('.ttm-bracket').count() > 0) throw new Error('tabloul desenat nu trebuia să apară în modul listă');
+  await shot(page, '39c-admin-tablou-lista');
+  await page.getByText('Tablou grafic').click();
+  await settle(page);
+});
 await check('admin: setări și backup', async () => {
   await page.goto(`${BASE}/setari`);
   await expectText(page, 'Backup bază de date');
@@ -491,11 +531,24 @@ await check('manager: notificarea cererii și confirmarea înscrierii', async ()
   await page.getByRole('dialog').waitFor({ state: 'detached', timeout: 10000 });
   await expectText(page, 'Cereri de înscriere (1)');
   await expectText(page, 'Începe turneul');
-  await expectText(page, 'Adaugă un jucător');
+  await expectText(page, 'Adaugă jucători');
   await shot(page, '35-manager-turneu-inscriere');
   await page.getByRole('button', { name: 'Confirmă' }).click();
   await expectText(page, 'Participanți înscriși (5)');
   await expectNoText(page, 'Cereri de înscriere');
+});
+await check('manager: înscrierea mai multor jucători deodată', async () => {
+  const box = page.locator('vaadin-multi-select-combo-box');
+  await box.locator('input').click();
+  const items = page.locator('vaadin-multi-select-combo-box-item');
+  await items.first().waitFor({ timeout: 10000 });
+  await items.nth(0).click();
+  await items.nth(1).click();
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Adaugă 2 jucători' }).click();
+  await expectText(page, 'Au fost înscriși 2 jucători');
+  await expectText(page, 'Participanți înscriși (7)');
+  await shot(page, '35b-manager-inscriere-multipla');
 });
 await check('utilizator: vede notificarea confirmării', async () => {
   const c = await browser.newContext(desktop);
@@ -530,6 +583,15 @@ page = await ctx.newPage();
 await check('telefon: guest', async () => {
   await page.goto(`${BASE}/jucatori`);
   await expectText(page, 'Clasament jucători');
+  // coloana „V / Î” încape întreagă (fără „…”)
+  const cut = await page.evaluate(() => {
+    const grid = document.querySelector('vaadin-grid');
+    return [...grid.querySelectorAll('vaadin-grid-cell-content')]
+      .filter(c => /^\d+ \/ \d+$/.test(c.textContent.trim()))
+      .filter(c => c.scrollWidth > c.clientWidth + 1).map(c => c.textContent.trim());
+  });
+  if (cut.length) throw new Error('victorii/înfrângeri tăiate: ' + cut.slice(0, 3).join(', '));
+  await expectText(page, '🥇 1');
   await shot(page, '12-telefon-guest-jucatori');
 });
 await check('telefon: turneu', async () => {
@@ -543,6 +605,13 @@ await check('telefon: turneu cu finale', async () => {
   await page.getByText('Liga de iarnă').first().click();
   await expectText(page, 'Finala 1');
   await shot(page, '32-telefon-finale');
+});
+await check('telefon: tablou eliminatoriu', async () => {
+  await page.goto(`${BASE}/turnee`);
+  await page.getByText('Cupa eliminatorie').first().click();
+  await expectText(page, 'Etapa 2 — Tabloul 1');
+  await page.getByText('Tabloul principal').first().scrollIntoViewIfNeeded();
+  await shot(page, '40-telefon-tablou');
 });
 await check('telefon: admin', async () => {
   await login(page, 'admin', 'admin12345');
@@ -577,7 +646,7 @@ await check('telefon: după salvarea scorului pagina rămâne la meci', async ()
   await page.screenshot({ path: `${OUT}/18-telefon-dupa-scor.png` });
 });
 await check('telefon: meciuri', async () => {
-  await page.goto(`${BASE}/`);
+  await page.goto(`${BASE}/meciuri`);
   await expectText(page, 'ultimele');
   await shot(page, '16-telefon-meciuri');
 });
@@ -600,7 +669,7 @@ async function chooseLanguage(page, code) {
 ctx = await browser.newContext(desktop);
 page = await ctx.newPage();
 await check('limba: vizitatorul trece pe rusă', async () => {
-  await page.goto(`${BASE}/`);
+  await page.goto(`${BASE}/meciuri`);
   await expectText(page, 'ultimele');
   await chooseLanguage(page, 'RU');
   await expectText(page, 'последние');
@@ -639,10 +708,10 @@ await check('limba: utilizatorul o salvează în cont', async () => {
   // alt browser, fără cookie: după autentificare limba vine din cont
   ctx = await browser.newContext(desktop);
   page = await ctx.newPage();
-  await page.goto(`${BASE}/`);
+  await page.goto(`${BASE}/meciuri`);
   await expectText(page, 'ultimele');
   await login(page, 'jucator', 'jucator123');
-  await page.goto(`${BASE}/`);
+  await page.goto(`${BASE}/meciuri`);
   await expectText(page, 'latest');
   await chooseLanguage(page, 'RO');
   await expectText(page, 'ultimele');

@@ -1,6 +1,6 @@
 <h2>User guide</h2>
 <p>TTM keeps track of table tennis players, tournaments, matches and each player's rating.
-The home page shows the latest matches; the overall rankings are under <b>Players</b>.</p>
+The home page is the <b>Tournaments</b> list; the latest matches are under <b>Matches</b>, and the overall rankings are under <b>Players</b>: rating, wins/losses and how many times each player finished 1st 🥇, 2nd 🥈 and 3rd 🥉 in finished tournaments (in “Groups + finals”, in Final 1), plus Final 2 wins (F2).</p>
 
 <h3>1. Accounts and roles</h3>
 <table>
@@ -18,7 +18,7 @@ The home page shows the latest matches; the overall rankings are under <b>Player
   <li><b>Registration.</b> Players with an account press “Sign up for it” on the tournament page: this sends a <b>registration request</b>, which waits for an organiser (administrator or tournament manager) to confirm it. Organisers get a notification and, on the tournament page under “Registration requests”, press <b>Confirm</b> or <b>Reject</b>. The player sees the answer in the <b>notifications</b> (the bell in the top bar). The administrator can mark a user “Registers for tournaments without confirmation” (under <b>Users</b>): their registration is confirmed automatically. The organiser can also add or remove anyone directly; requests still unconfirmed are cancelled when the tournament starts.</li>
   <li><b>Starting.</b> “Start tournament” closes registration. At that point you choose:
     <ul>
-      <li>the type: <b>Round robin</b> or <b>Groups + finals</b> (with the number of groups);</li>
+      <li>the type: <b>Round robin</b>, <b>Groups + finals</b> or <b>Groups + knockout</b> (with the number of groups);</li>
       <li>the number of sets: best of 3, 5 or 7 (first to win 2, 3 or 4 sets);</li>
       <li>optionally, a <b>commercial tournament</b>: the entry fee and the number of winners.</li>
     </ul>
@@ -48,6 +48,21 @@ The home page shows the latest matches; the overall rankings are under <b>Player
       Both finals are played round robin, but players who already met in the group do not play again: the stage 1 result is carried over.
       Once stage 2 has started, the group results can no longer be changed.</li>
 </ol>
+
+<p><b>Groups + knockout</b> – stage 1 is the same (groups drawn from pots, round robin), but here you can also choose <b>a single group</b> (everyone plays everyone).
+Stage 2 is played in <b>knockout brackets</b>:</p>
+<ul>
+  <li>after the groups, the organiser presses “Start stage 2” and chooses how many players from each group enter <b>Bracket 1</b> and the bracket type.
+      The other players play <b>Bracket 2</b>, organised the same way, for the winner of the second part (like Final 2 in “Groups + finals”).
+      If only one player is left, they win Bracket 2 without matches; if everyone enters Bracket 1, there is no Bracket 2;</li>
+  <li>players are seeded by group place (group winners first), then by rating; the best-placed players meet as late as possible.
+      If their number is not a power of 2 (4, 8, 16…), the best-placed get a <b>bye</b> to round 2;</li>
+  <li><b>Single elimination</b>: whoever loses is out. The final decides 1st and 2nd place; the semi-final losers play the <b>third-place match</b>. The quarter-final losers share 5th place, and so on;</li>
+  <li><b>With a lower bracket</b>: the main bracket final decides 1st and 2nd place. Whoever loses before the final moves to the <b>lower bracket</b>, where a loss means you are out;
+      the <b>lower bracket final</b> decides 3rd and 4th place;</li>
+  <li>bracket matches appear as soon as their players are known. A result can be corrected only while the next match its winner (or loser) reached has no result;</li>
+  <li>once stage 2 has started, the group results can no longer be changed. In a commercial tournament the Bracket 2 winner receives the entry fee and the rest of the pool follows the Bracket 1 places (without Bracket 2, the whole pool). The tournament ends when both brackets have a winner.</li>
+</ul>
 
 <h3>4. Points and group standings</h3>
 <table>
@@ -113,7 +128,7 @@ That is why a correction in an older tournament is also reflected in the tournam
 
 <h3>7. Matches, players and profile</h3>
 <ul>
-  <li><b>Matches</b> (home page): the latest matches with a result, searchable by player or tournament. Next to the name is the rating change, once the tournament has finished.</li>
+  <li><b>Matches</b>: the latest matches with a result, searchable by player or tournament. Next to the name is the rating change, once the tournament has finished.</li>
   <li><b>Player page</b> (press a name): the ranking position, statistics (matches, wins, percentage, sets, tournaments, best rating), equipment, rating history and all their matches.</li>
   <li><b>My profile</b>: personal details, playing hand, equipment, password, photo and language. The photo is cropped square for lists and can be viewed larger by pressing it.</li>
   <li><b>Language</b>: Romanian, Russian or English, from the <b>RO / RU / EN</b> switcher in the top bar. For users with an account the chosen language is saved and used every time they sign in.</li>

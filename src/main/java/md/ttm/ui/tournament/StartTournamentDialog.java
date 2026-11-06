@@ -56,7 +56,7 @@ class StartTournamentDialog extends Dialog {
         format.setLabel(Tr.t("Tipul turneului"));
         format.setItems(TournamentFormat.values());
         format.setItemLabelGenerator(TournamentFormat::getLabel);
-        groupCount.setMin(2);
+        groupCount.setMin(1);
         groupCount.setMax(Math.max(2, participants / 2));
         groupCount.setStepButtonsVisible(true);
         groupCount.setValueChangeMode(ValueChangeMode.EAGER);
@@ -75,7 +75,7 @@ class StartTournamentDialog extends Dialog {
         binder.forField(format).asRequired(Tr.t("Alegeți tipul turneului"))
                 .bind(TournamentSettings::getFormat, TournamentSettings::setFormat);
         binder.forField(groupCount)
-                .withValidator(v -> !isGroups() || (v != null && v >= 2 && participants >= v * 2),
+                .withValidator(v -> !isGroups() || validGroups(),
                         Tr.t("Cel puțin 2 grupe, cu minimum 2 jucători în fiecare"))
                 .bind(TournamentSettings::getGroupCount, TournamentSettings::setGroupCount);
         binder.forField(bestOf).asRequired(Tr.t("Alegeți numărul de seturi"))
@@ -148,12 +148,17 @@ class StartTournamentDialog extends Dialog {
     }
 
     private boolean isGroups() {
-        return format.getValue() == TournamentFormat.GROUPS_FINALS;
+        return format.getValue() == TournamentFormat.GROUPS_FINALS || isKnockout();
+    }
+
+    private boolean isKnockout() {
+        return format.getValue() == TournamentFormat.GROUPS_KNOCKOUT;
     }
 
     private boolean validGroups() {
         Integer g = groupCount.getValue();
-        return g != null && g >= 2 && participants >= g * 2;
+        int minimum = isKnockout() ? 1 : 2;
+        return g != null && g >= minimum && participants >= g * 2;
     }
 
     /** Actualizează pe loc descrierea grupelor, a meciurilor și a premiilor. */
@@ -164,8 +169,11 @@ class StartTournamentDialog extends Dialog {
                 int matches = sizes.stream().mapToInt(n -> n * (n - 1) / 2).sum();
                 groupCount.setHelperText(Tr.t("Jucători pe grupă: {0} (pe urne după rating, tragere la sorți)",
                         sizes.stream().map(String::valueOf).collect(Collectors.joining(", "))));
-                summary.setText(Tr.t("„{0}”: înscrierea se închide. Se formează {1} grupe din {2} jucători și se generează {3} meciuri pentru etapa 1. După grupe, primii din fiecare grupă joacă în Finala 1, ceilalți în Finala 2.",
-                        tournamentName, sizes.size(), participants, matches));
+                summary.setText(isKnockout()
+                        ? Tr.t("„{0}”: înscrierea se închide. Se formează {1} grupe din {2} jucători și se generează {3} meciuri pentru etapa 1. După grupe, primii din fiecare grupă joacă Tabloul 1, ceilalți Tabloul 2 (olimpic sau cu ramura de jos, la alegere).",
+                                tournamentName, sizes.size(), participants, matches)
+                        : Tr.t("„{0}”: înscrierea se închide. Se formează {1} grupe din {2} jucători și se generează {3} meciuri pentru etapa 1. După grupe, primii din fiecare grupă joacă în Finala 1, ceilalți în Finala 2.",
+                                tournamentName, sizes.size(), participants, matches));
             } else {
                 groupCount.setHelperText(Tr.t("Cel puțin 2 jucători în fiecare grupă"));
                 summary.setText("");
@@ -179,14 +187,22 @@ class StartTournamentDialog extends Dialog {
         updatePrizePreview();
     }
 
+    private static String place(String part, int number, int place) {
+        return part.equals("Tabloul") ? Tr.t("Tabloul {0} · locul {1}", number, place) : Tr.t("Finala {0} · locul {1}", number, place);
+    }
+
     /** Suma acumulată și premiile pentru configurarea aleasă. */
     private void updatePrizePreview() {
         BigDecimal fee = entryFee.getValue();
         boolean groups = isGroups();
-        winners.setLabel(groups ? Tr.t("Premiați din Finala 1") : Tr.t("Numărul de câștigători"));
+        String first = isKnockout() ? "Tabloul" : "Finala";
+        winners.setLabel(groups ? (isKnockout() ? Tr.t("Premiați din Tabloul 1") : Tr.t("Premiați din Finala 1"))
+                : Tr.t("Numărul de câștigători"));
         if (!commercial.getValue() || fee == null || fee.signum() <= 0 || winners.getValue() == null) {
             prizePreview.setText(Tr.t("Suma acumulată = taxa × {0} participanți.", participants)
-                    + (groups ? " " + Tr.t("Câștigătorul Finalei 2 primește cât taxa de participare; restul se împarte între premiații Finalei 1.") : ""));
+                    + (groups ? " " + (isKnockout()
+                    ? Tr.t("Câștigătorul Tabloului 2 primește cât taxa de participare; restul se împarte între premiații Tabloului 1.")
+                    : Tr.t("Câștigătorul Finalei 2 primește cât taxa de participare; restul se împarte între premiații Finalei 1.")) : ""));
             return;
         }
         BigDecimal pool = fee.multiply(BigDecimal.valueOf(participants));
@@ -194,11 +210,11 @@ class StartTournamentDialog extends Dialog {
         List<BigDecimal> amounts = PrizeDistribution.forWinners(winners.getValue()).split(toSplit);
         List<String> places = new ArrayList<>();
         for (int i = 0; i < amounts.size(); i++) {
-            places.add((groups ? Tr.t("Finala {0} · locul {1}", 1, i + 1) : Tr.t("locul {0}", i + 1))
+            places.add((groups ? place(first, 1, i + 1) : Tr.t("locul {0}", i + 1))
                     + ": " + TournamentLabels.money(amounts.get(i)));
         }
         if (groups) {
-            places.add(Tr.t("Finala {0} · locul {1}", 2, 1) + ": " + TournamentLabels.money(fee));
+            places.add(place(first, 2, 1) + ": " + TournamentLabels.money(fee));
         }
         prizePreview.setText(Tr.t("Suma acumulată: {0} ({1} participanți) — {2}.",
                 TournamentLabels.money(pool), participants, String.join(", ", places)));

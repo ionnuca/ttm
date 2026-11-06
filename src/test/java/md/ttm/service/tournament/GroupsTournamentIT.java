@@ -17,6 +17,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -136,6 +137,16 @@ class GroupsTournamentIT {
                 .containsExactly(new BigDecimal("400.00"), new BigDecimal("300.00"), new BigDecimal("100.00"));
         assertThat(done.prizes()).extracting(PrizePlace::winnerName)
                 .containsExactly("Test P1", "Test P2", "Test P5");
+
+        // locurile din Finala 1 și câștigătorul Finalei 2, pentru lista jucătorilor
+        Map<String, Podium> podiums = new java.util.HashMap<>();
+        done.participants().forEach(p -> podiums.put(p.getPlayer().getFirstName(),
+                tournamentService.podiums().getOrDefault(p.getPlayer().getId(), Podium.NONE)));
+        assertThat(podiums.get("P1")).isEqualTo(new Podium(1, 0, 0, 0));
+        assertThat(podiums.get("P2")).isEqualTo(new Podium(0, 1, 0, 0));
+        assertThat(podiums.get("P3")).isEqualTo(new Podium(0, 0, 1, 0));
+        assertThat(podiums.get("P5")).isEqualTo(new Podium(0, 0, 0, 1));
+        assertThat(podiums.get("P6")).isEqualTo(Podium.NONE);
     }
 
     @Test
