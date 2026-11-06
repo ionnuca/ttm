@@ -73,7 +73,7 @@ public class MainLayout extends AppLayout {
 
     /** Titlul din bara de sus; duce la pagina principală (meciurile). */
     private static Component createTitle() {
-        RouterLink title = new RouterLink(Tr.t("Tenis de masă"), MatchesView.class);
+        RouterLink title = new RouterLink(Tr.t("Tenis de masă"), TournamentsView.class);
         title.getStyle()
                 .set("font-size", "var(--lumo-font-size-l)")
                 .set("font-weight", "600")
@@ -93,7 +93,7 @@ public class MainLayout extends AppLayout {
                 .set("font-size", "var(--lumo-font-size-xl)")
                 .set("font-weight", "700")
                 .set("color", "var(--lumo-primary-text-color)");
-        RouterLink logo = new RouterLink(MatchesView.class);
+        RouterLink logo = new RouterLink(TournamentsView.class);
         logo.add(icon, name);
         logo.getElement().setAttribute("aria-label", Tr.t("TTM – pagina principală"));
         logo.getStyle()
@@ -123,9 +123,9 @@ public class MainLayout extends AppLayout {
 
     private static SideNav createNavigation() {
         SideNav nav = new SideNav();
+        nav.addItem(new SideNavItem(Tr.t("Turnee"), TournamentsView.class, VaadinIcon.FLAG_CHECKERED.create()));
         nav.addItem(new SideNavItem(Tr.t("Meciuri"), MatchesView.class, VaadinIcon.LIST_UL.create()));
         nav.addItem(new SideNavItem(Tr.t("Jucători"), PlayersView.class, VaadinIcon.TROPHY.create()));
-        nav.addItem(new SideNavItem(Tr.t("Turnee"), TournamentsView.class, VaadinIcon.FLAG_CHECKERED.create()));
         if (SecurityUtils.isAuthenticated()) {
             nav.addItem(new SideNavItem(Tr.t("Profilul meu"), ProfileView.class, VaadinIcon.USER.create()));
         }

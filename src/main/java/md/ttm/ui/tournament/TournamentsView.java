@@ -15,6 +15,7 @@ import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.HasDynamicTitle;
 import com.vaadin.flow.router.Route;
+import com.vaadin.flow.router.RouteAlias;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
 import md.ttm.model.tournament.Tournament;
 import md.ttm.security.SecurityUtils;
@@ -29,7 +30,8 @@ import java.util.Comparator;
 /**
  * Lista turneelor. Administratorul și managerul de turnee pot crea un turneu nou; click pe un turneu deschide pagina lui.
  */
-@Route(value = "turnee", layout = MainLayout.class)
+@Route(value = "", layout = MainLayout.class)
+@RouteAlias(value = "turnee", layout = MainLayout.class)
 @AnonymousAllowed
 public class TournamentsView extends VerticalLayout implements HasDynamicTitle {
 
