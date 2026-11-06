@@ -90,15 +90,20 @@ let page = await ctx.newPage();
   await probe.close();
 }
 
-await check('guest: pagina principală = meciurile', async () => {
+await check('guest: pagina principală = turneele', async () => {
   await page.goto(`${BASE}/`);
+  await expectText(page, 'Turneul de duminică');
+  await shot(page, '00a-guest-acasa-turnee');
+  // meciurile sunt în meniu, la /meciuri
+  await page.getByRole('link', { name: 'Meciuri' }).first().click();
+  await page.waitForURL(/\/meciuri$/, { timeout: 10000 });
   await expectText(page, 'ultimele');
   await expectText(page, 'Cupa de vară');
   await shot(page, '00-guest-acasa-meciuri');
   await page.goto(`${BASE}/jucatori`);
   await page.getByRole('link', { name: 'TTM – pagina principală' }).click();
   await page.waitForURL(`${BASE}/`, { timeout: 10000 });
-  await expectText(page, 'ultimele');
+  await expectText(page, 'Turneul de duminică');
 });
 await check('guest: ghidul de utilizare', async () => {
   await page.goto(`${BASE}/`);
@@ -641,7 +646,7 @@ await check('telefon: după salvarea scorului pagina rămâne la meci', async ()
   await page.screenshot({ path: `${OUT}/18-telefon-dupa-scor.png` });
 });
 await check('telefon: meciuri', async () => {
-  await page.goto(`${BASE}/`);
+  await page.goto(`${BASE}/meciuri`);
   await expectText(page, 'ultimele');
   await shot(page, '16-telefon-meciuri');
 });
@@ -664,7 +669,7 @@ async function chooseLanguage(page, code) {
 ctx = await browser.newContext(desktop);
 page = await ctx.newPage();
 await check('limba: vizitatorul trece pe rusă', async () => {
-  await page.goto(`${BASE}/`);
+  await page.goto(`${BASE}/meciuri`);
   await expectText(page, 'ultimele');
   await chooseLanguage(page, 'RU');
   await expectText(page, 'последние');
@@ -703,10 +708,10 @@ await check('limba: utilizatorul o salvează în cont', async () => {
   // alt browser, fără cookie: după autentificare limba vine din cont
   ctx = await browser.newContext(desktop);
   page = await ctx.newPage();
-  await page.goto(`${BASE}/`);
+  await page.goto(`${BASE}/meciuri`);
   await expectText(page, 'ultimele');
   await login(page, 'jucator', 'jucator123');
-  await page.goto(`${BASE}/`);
+  await page.goto(`${BASE}/meciuri`);
   await expectText(page, 'latest');
   await chooseLanguage(page, 'RO');
   await expectText(page, 'ultimele');
