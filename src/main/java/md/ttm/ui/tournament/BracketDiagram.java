@@ -54,6 +54,11 @@ final class BracketDiagram {
             .ttm-bracket-line.winner { font-weight: 600; }
             .ttm-bracket-line.loser, .ttm-bracket-line.unknown { color: var(--lumo-secondary-text-color); }
             .ttm-bracket-line.bye { color: var(--lumo-tertiary-text-color); font-style: italic; }
+            @media (max-width: 600px) {
+              .ttm-bracket-col { width: 10.75rem; }
+              .ttm-bracket-slot { padding: 0.3rem 0.6rem; }
+              .ttm-bracket-slot.in::before, .ttm-bracket-slot.out::after { width: 0.6rem; }
+            }
             </style>
             """;
 

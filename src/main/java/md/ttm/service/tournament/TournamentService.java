@@ -44,6 +44,8 @@ import java.util.random.RandomGenerator;
 import java.security.SecureRandom;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -306,6 +308,19 @@ public class TournamentService {
             return request.get();
         }
         return register(tournament, player, ParticipantStatus.CONFIRMED);
+    }
+
+    /** Organizatorul înscrie deodată mai mulți jucători; dacă unul nu poate fi înscris, nu se înscrie niciunul. */
+    @PreAuthorize("hasAnyRole('ADMIN', 'TOURNAMENT_MANAGER')")
+    @Transactional
+    public int addParticipants(Long tournamentId, Collection<Long> playerIds) {
+        if (playerIds == null || playerIds.isEmpty()) {
+            throw new BusinessException("Alegeți cel puțin un jucător");
+        }
+        for (Long playerId : new LinkedHashSet<>(playerIds)) {
+            addParticipant(tournamentId, playerId);
+        }
+        return new LinkedHashSet<>(playerIds).size();
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'TOURNAMENT_MANAGER')")

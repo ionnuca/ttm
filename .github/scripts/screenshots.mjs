@@ -526,11 +526,24 @@ await check('manager: notificarea cererii și confirmarea înscrierii', async ()
   await page.getByRole('dialog').waitFor({ state: 'detached', timeout: 10000 });
   await expectText(page, 'Cereri de înscriere (1)');
   await expectText(page, 'Începe turneul');
-  await expectText(page, 'Adaugă un jucător');
+  await expectText(page, 'Adaugă jucători');
   await shot(page, '35-manager-turneu-inscriere');
   await page.getByRole('button', { name: 'Confirmă' }).click();
   await expectText(page, 'Participanți înscriși (5)');
   await expectNoText(page, 'Cereri de înscriere');
+});
+await check('manager: înscrierea mai multor jucători deodată', async () => {
+  const box = page.locator('vaadin-multi-select-combo-box');
+  await box.locator('input').click();
+  const items = page.locator('vaadin-multi-select-combo-box-item');
+  await items.first().waitFor({ timeout: 10000 });
+  await items.nth(0).click();
+  await items.nth(1).click();
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Adaugă 2 jucători' }).click();
+  await expectText(page, 'Au fost înscriși 2 jucători');
+  await expectText(page, 'Participanți înscriși (7)');
+  await shot(page, '35b-manager-inscriere-multipla');
 });
 await check('utilizator: vede notificarea confirmării', async () => {
   const c = await browser.newContext(desktop);
