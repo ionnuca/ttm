@@ -4,7 +4,7 @@ import md.ttm.i18n.Tr;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
-import com.vaadin.flow.component.combobox.ComboBox;
+import com.vaadin.flow.component.combobox.MultiSelectComboBox;
 import com.vaadin.flow.component.confirmdialog.ConfirmDialog;
 import com.vaadin.flow.component.grid.ColumnTextAlign;
 import com.vaadin.flow.component.grid.Grid;
@@ -54,6 +54,7 @@ import md.ttm.ui.player.RatingHistoryList;
 import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
@@ -282,21 +283,33 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
             actions.add(leave);
         }
         if (details.manager()) {
-            ComboBox<Player> player = new ComboBox<>(Tr.t("Adaugă un jucător"));
-            player.setItems(tournamentService.findPlayersNotRegistered(tournamentId));
-            player.setItemLabelGenerator(p -> p.getDisplayName() + " (" + p.getRating() + ")");
-            player.setPlaceholder(Tr.t("Alegeți jucătorul"));
-            player.setWidth("min(100%, 20rem)");
-            Button add = new Button(Tr.t("Adaugă"), e -> {
-                if (player.getValue() == null) {
-                    player.setInvalid(true);
-                    player.setErrorMessage(Tr.t("Alegeți un jucător"));
+            MultiSelectComboBox<Player> players = new MultiSelectComboBox<>(Tr.t("Adaugă jucători"));
+            players.setItems(tournamentService.findPlayersNotRegistered(tournamentId));
+            players.setItemLabelGenerator(p -> p.getDisplayName() + " (" + p.getRating() + ")");
+            players.setPlaceholder(Tr.t("Alegeți unul sau mai mulți jucători"));
+            players.setSelectedItemsOnTop(true);
+            players.setClearButtonVisible(true);
+            players.setWidth("min(100%, 26rem)");
+            Button add = new Button(Tr.t("Adaugă"), VaadinIcon.PLUS.create(), e -> {
+                Set<Player> selected = players.getSelectedItems();
+                if (selected.isEmpty()) {
+                    players.setInvalid(true);
+                    players.setErrorMessage(Tr.t("Alegeți cel puțin un jucător"));
                     return;
                 }
-                run(() -> tournamentService.addParticipant(tournamentId, player.getValue().getId()),
-                        Tr.t("{0} a fost înscris", player.getValue().getDisplayName()));
+                List<Long> ids = selected.stream().map(Player::getId).toList();
+                run(() -> tournamentService.addParticipants(tournamentId, ids),
+                        selected.size() == 1
+                                ? Tr.t("{0} a fost înscris", selected.iterator().next().getDisplayName())
+                                : Tr.t("Au fost înscriși {0} jucători", selected.size()));
             });
-            actions.add(player, add);
+            players.addSelectionListener(e -> {
+                players.setInvalid(false);
+                int n = e.getAllSelectedItems().size();
+                add.setText(n > 1 ? Tr.t("Adaugă {0} jucători", n) : Tr.t("Adaugă"));
+            });
+            actions.add(players, add);
+            actions.setAlignItems(FlexComponent.Alignment.BASELINE);
 
             Div spacer = new Div();
             spacer.getStyle().set("flex-grow", "1");
