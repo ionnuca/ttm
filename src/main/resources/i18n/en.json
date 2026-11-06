@@ -471,5 +471,16 @@
   "Alegeți unul sau mai mulți jucători": "Choose one or more players",
   "Alegeți cel puțin un jucător": "Choose at least one player",
   "Au fost înscriși {0} jucători": "{0} players registered",
-  "Adaugă {0} jucători": "Add {0} players"
+  "Adaugă {0} jucători": "Add {0} players",
+  "Niciun jucător găsit": "No players found",
+  "{0} · {1} înscriși": "{0} · {1} registered",
+  "Caută jucători": "Search players",
+  "{0} jucători neînscriși · după rating": "{0} players not registered · by rating",
+  "Deselectează tot": "Deselect all",
+  "Selectează tot": "Select all",
+  "Niciun jucător selectat": "No players selected",
+  "1 jucător selectat": "1 player selected",
+  "{0} jucători selectați": "{0} players selected",
+  "Turneul va avea {0} participanți": "The tournament will have {0} participants",
+  "Jucătorul a fost înscris": "The player has been registered"
 }

@@ -4,7 +4,7 @@ import md.ttm.i18n.Tr;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
-import com.vaadin.flow.component.combobox.MultiSelectComboBox;
+import md.ttm.service.player.PlayerPhotoService;
 import com.vaadin.flow.component.confirmdialog.ConfirmDialog;
 import com.vaadin.flow.component.grid.ColumnTextAlign;
 import com.vaadin.flow.component.grid.Grid;
@@ -30,7 +30,6 @@ import com.vaadin.flow.component.tabs.Tab;
 import com.vaadin.flow.component.tabs.Tabs;
 import com.vaadin.flow.component.tabs.TabsVariant;
 import md.ttm.common.BusinessException;
-import md.ttm.model.player.Player;
 import md.ttm.model.tournament.Tournament;
 import md.ttm.model.tournament.TournamentMatch;
 import md.ttm.model.tournament.TournamentParticipant;
@@ -54,7 +53,6 @@ import md.ttm.ui.player.RatingHistoryList;
 import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
@@ -71,11 +69,13 @@ import java.util.stream.Collectors;
 public class TournamentView extends VerticalLayout implements HasUrlParameter<Long>, HasDynamicTitle {
 
     private final TournamentService tournamentService;
+    private final PlayerPhotoService photoService;
     private Long tournamentId;
     private String title = "Turneu | TTM";
 
-    public TournamentView(TournamentService tournamentService) {
+    public TournamentView(TournamentService tournamentService, PlayerPhotoService photoService) {
         this.tournamentService = tournamentService;
+        this.photoService = photoService;
         setMaxWidth("80rem");
         setWidthFull();
     }
@@ -283,33 +283,17 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
             actions.add(leave);
         }
         if (details.manager()) {
-            MultiSelectComboBox<Player> players = new MultiSelectComboBox<>(Tr.t("Adaugă jucători"));
-            players.setItems(tournamentService.findPlayersNotRegistered(tournamentId));
-            players.setItemLabelGenerator(p -> p.getDisplayName() + " (" + p.getRating() + ")");
-            players.setPlaceholder(Tr.t("Alegeți unul sau mai mulți jucători"));
-            players.setSelectedItemsOnTop(true);
-            players.setClearButtonVisible(true);
-            players.setWidth("min(100%, 26rem)");
-            Button add = new Button(Tr.t("Adaugă"), VaadinIcon.PLUS.create(), e -> {
-                Set<Player> selected = players.getSelectedItems();
-                if (selected.isEmpty()) {
-                    players.setInvalid(true);
-                    players.setErrorMessage(Tr.t("Alegeți cel puțin un jucător"));
-                    return;
-                }
-                List<Long> ids = selected.stream().map(Player::getId).toList();
-                run(() -> tournamentService.addParticipants(tournamentId, ids),
-                        selected.size() == 1
-                                ? Tr.t("{0} a fost înscris", selected.iterator().next().getDisplayName())
-                                : Tr.t("Au fost înscriși {0} jucători", selected.size()));
-            });
-            players.addSelectionListener(e -> {
-                players.setInvalid(false);
-                int n = e.getAllSelectedItems().size();
-                add.setText(n > 1 ? Tr.t("Adaugă {0} jucători", n) : Tr.t("Adaugă"));
-            });
-            actions.add(players, add);
-            actions.setAlignItems(FlexComponent.Alignment.BASELINE);
+            Button addPlayers = new Button(Tr.t("Adaugă jucători"), VaadinIcon.PLUS.create(), e ->
+                    new AddPlayersDialog(details.tournament().getName(), details.participants().size(),
+                            tournamentService.findPlayersNotRegistered(tournamentId), photoService.versions(), ids -> {
+                                tournamentService.addParticipants(tournamentId, ids);
+                                Notifications.success(ids.size() == 1
+                                        ? Tr.t("Jucătorul a fost înscris")
+                                        : Tr.t("Au fost înscriși {0} jucători", ids.size()));
+                                refresh();
+                            }).open());
+            addPlayers.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+            actions.add(addPlayers);
 
             Div spacer = new Div();
             spacer.getStyle().set("flex-grow", "1");
