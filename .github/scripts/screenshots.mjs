@@ -110,7 +110,7 @@ await check('guest: pagina principală = turneele', async () => {
   await page.getByRole('link', { name: 'Meciuri' }).first().click();
   await page.waitForURL(/\/meciuri$/, { timeout: 10000 });
   await expectText(page, 'Meciuri');
-  await expectText(page, 'Cupa de vară');
+  await expectText(page, '1–20 din');
   await shot(page, '00-guest-acasa-meciuri');
   await page.goto(`${BASE}/jucatori`);
   await page.getByRole('link', { name: 'TTM – pagina principală' }).click();
@@ -152,6 +152,7 @@ await check('guest: pagina jucătorului (detalii, statistici, meciuri)', async (
 await check('guest: meciurile', async () => {
   await page.goto(`${BASE}/meciuri`);
   await expectText(page, 'Meciuri');
+  await page.locator('input[placeholder="Caută după jucător sau turneu"]').fill('Cupa de vară');
   await expectText(page, 'Cupa de vară');
   await shot(page, '15-guest-meciuri');
   await page.locator('input[placeholder="Caută după jucător sau turneu"]').fill('Sârbu');
@@ -687,7 +688,8 @@ await check('telefon: după salvarea scorului pagina rămâne la meci', async ()
 });
 await check('telefon: meciuri', async () => {
   await page.goto(`${BASE}/meciuri`);
-  await expectText(page, 'Meciuri');
+  await page.getByRole('heading', { name: 'Meciuri' }).waitFor({ timeout: 10000 });
+  await page.locator('.ttm-pager').scrollIntoViewIfNeeded();
   await shot(page, '16-telefon-meciuri');
 });
 await check('telefon: admin utilizatori', async () => {
