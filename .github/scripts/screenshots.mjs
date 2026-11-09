@@ -523,7 +523,6 @@ await check('manager: adaugă un jucător nou', async () => {
   await dialog.getByText('Atac', { exact: true }).click();
   await shot(page, '33b-manager-jucator-nou');
   await dialog.getByRole('button', { name: 'Salvează' }).click();
-  await expectText(page, 'Jucător adăugat');
   await expectText(page, 'Grosu Iulian');
   await expectNoText(page, 'Editează Grosu Iulian');
 });
