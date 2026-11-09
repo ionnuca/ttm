@@ -17,7 +17,8 @@ Aplicație web (instalabilă și pe telefon, ca PWA) pentru gestionarea jucător
 | Limba interfeței: română, rusă sau engleză (comutatorul RO / RU / EN din bara de sus; pentru cei cu cont se salvează în cont, și din „Profilul meu”) | ✅ | ✅ | ✅ | ✅ |
 | Poza de profil (din „Profilul meu”; decupată pătrat și micșorată automat) | – | ✅ propria | ✅ propria | ✅ oricui |
 | Coloana „Telefon” în clasament | – | – | – | ✅ |
-| Adăugare / editare / ștergere jucători | – | – | – | ✅ |
+| Adăugare jucători noi | – | – | ✅ | ✅ |
+| Editare / ștergere jucători | – | – | – | ✅ |
 | Cont nou (înregistrare simplă: nume, prenume, utilizator, parolă) | ✅ | – | – | – |
 | „Profilul meu”: poza, date personale, stil și mână de joc, oraș, telefon, echipament, schimbarea parolei (administratorul își stabilește aici și ratingul inițial) | – | ✅ | ✅ | ✅ |
 | „Utilizatori”: lista completă, adăugare, editare (rol, blocare, parolă), ștergere | – | – | – | ✅ |

@@ -76,6 +76,22 @@ public class PlayerService {
         return saved;
     }
 
+    /**
+     * Adaugă un jucător nou (administrator sau manager de turnee). Jucătorii existenți îi editează doar administratorul.
+     */
+    @PreAuthorize("hasAnyRole('ADMIN', 'TOURNAMENT_MANAGER')")
+    @Transactional
+    public Player create(Player player) {
+        if (player.getId() != null) {
+            throw new BusinessException("Jucătorul există deja");
+        }
+        normalize(player);
+        player.setRating(player.getInitialRating());
+        Player saved = playerRepository.saveAndFlush(player);
+        ratingService.recalculateAll();
+        return saved;
+    }
+
     /** Șterge un jucător și contul de utilizator asociat, dacă există (administrator). */
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
