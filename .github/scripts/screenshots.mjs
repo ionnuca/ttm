@@ -509,8 +509,22 @@ await check('manager: fără Utilizatori și fără telefoane', async () => {
   await expectText(page, 'Manager de turnee');
   await expectNoText(page, 'Utilizatori');
   await expectNoText(page, 'Telefon');
-  await expectNoText(page, 'Adaugă jucător');
   await shot(page, '33-manager-jucatori');
+});
+await check('manager: adaugă un jucător nou', async () => {
+  await page.getByRole('button', { name: 'Adaugă jucător' }).click();
+  await expectText(page, 'Jucător nou');
+  const dialog = page.getByRole('dialog');
+  if (await dialog.getByLabel('Telefon').count() > 0 && await dialog.getByLabel('Telefon').isVisible()) {
+    throw new Error('managerul nu trebuie să vadă câmpul Telefon');
+  }
+  await dialog.getByLabel('Nume', { exact: true }).fill('Grosu');
+  await dialog.getByLabel('Prenume').fill('Iulian');
+  await dialog.getByText('Atac', { exact: true }).click();
+  await shot(page, '33b-manager-jucator-nou');
+  await dialog.getByRole('button', { name: 'Salvează' }).click();
+  await expectText(page, 'Grosu Iulian');
+  await expectNoText(page, 'Editează Grosu Iulian');
 });
 await check('manager: poate crea turnee', async () => {
   await page.goto(`${BASE}/turnee`);

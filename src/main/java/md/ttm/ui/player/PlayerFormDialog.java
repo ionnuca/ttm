@@ -1,6 +1,7 @@
 package md.ttm.ui.player;
 
 import md.ttm.i18n.Tr;
+import md.ttm.security.SecurityUtils;
 import md.ttm.model.player.PlayStyle;
 import md.ttm.model.player.Player;
 import md.ttm.ui.components.DialogButtons;
@@ -42,6 +43,8 @@ public class PlayerFormDialog extends Dialog {
         playStyle.setItems(PlayStyle.values());
         playStyle.setItemLabelGenerator(PlayStyle::getLabel);
         phone.setPlaceholder("+373 ...");
+        // telefoanele le vede doar administratorul
+        phone.setVisible(SecurityUtils.isAdmin());
         initialRating.setMin(0);
         initialRating.setMax(5000);
         initialRating.setStepButtonsVisible(true);
