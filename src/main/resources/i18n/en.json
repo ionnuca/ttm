@@ -482,5 +482,6 @@
   "1 jucător selectat": "1 player selected",
   "{0} jucători selectați": "{0} players selected",
   "Turneul va avea {0} participanți": "The tournament will have {0} participants",
-  "Jucătorul a fost înscris": "The player has been registered"
+  "Jucătorul a fost înscris": "The player has been registered",
+  "Jucătorul există deja": "The player already exists"
 }

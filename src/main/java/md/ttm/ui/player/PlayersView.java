@@ -108,7 +108,7 @@ public class PlayersView extends VerticalLayout implements HasDynamicTitle {
         toolbar.setAlignItems(FlexComponent.Alignment.CENTER);
         toolbar.getStyle().set("flex-wrap", "wrap");
 
-        if (admin) {
+        if (SecurityUtils.canManageTournaments()) {
             Button add = new Button(Tr.t("Adaugă jucător"), VaadinIcon.PLUS.create(), e -> openEditor(new Player()));
             add.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
             toolbar.add(add);
@@ -295,7 +295,11 @@ public class PlayersView extends VerticalLayout implements HasDynamicTitle {
     private void openEditor(Player player) {
         Runnable onDelete = player.getId() == null ? null : () -> confirmDelete(player);
         new PlayerFormDialog(player, edited -> {
-            playerService.save(edited);
+            if (edited.getId() == null) {
+                playerService.create(edited);
+            } else {
+                playerService.save(edited);
+            }
             Notifications.success(player.getId() == null ? Tr.t("Jucător adăugat") : Tr.t("Modificări salvate"));
             refresh();
         }, onDelete).open();
