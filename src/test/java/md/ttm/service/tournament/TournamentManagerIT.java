@@ -57,8 +57,14 @@ class TournamentManagerIT {
 
     @Test
     @WithMockUser(username = "manager", roles = "TOURNAMENT_MANAGER")
-    void managerulNuAdministreazaJucatoriiSiUtilizatorii() {
-        assertThatThrownBy(() -> playerService.save(new Player("Nou", "Jucător")))
+    void managerulAdaugaJucatoriDarNuIiEditeazaSiNuAdministreazaUtilizatorii() {
+        Player created = playerService.create(new Player("Nou", "Jucător"));
+        assertThat(created.getId()).isNotNull();
+        assertThat(created.getRating()).isEqualTo(Player.DEFAULT_RATING);
+        created.setCity("Bălți");
+        assertThatThrownBy(() -> playerService.save(created))
+                .isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(() -> playerService.delete(created.getId()))
                 .isInstanceOf(AccessDeniedException.class);
         assertThatThrownBy(() -> userService.findAll())
                 .isInstanceOf(AccessDeniedException.class);

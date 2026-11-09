@@ -482,5 +482,6 @@
   "1 jucător selectat": "Выбран 1 игрок",
   "{0} jucători selectați": "Выбрано игроков: {0}",
   "Turneul va avea {0} participanți": "В турнире будет участников: {0}",
-  "Jucătorul a fost înscris": "Игрок зарегистрирован"
+  "Jucătorul a fost înscris": "Игрок зарегистрирован",
+  "Jucătorul există deja": "Игрок уже существует"
 }
