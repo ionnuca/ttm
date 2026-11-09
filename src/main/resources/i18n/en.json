@@ -483,5 +483,11 @@
   "{0} jucători selectați": "{0} players selected",
   "Turneul va avea {0} participanți": "The tournament will have {0} participants",
   "Jucătorul a fost înscris": "The player has been registered",
-  "Jucătorul există deja": "The player already exists"
+  "Jucătorul există deja": "The player already exists",
+  "Pagina anterioară": "Previous page",
+  "Pagina următoare": "Next page",
+  "Pagina {0}": "Page {0}",
+  "{0}–{1} din {2}": "{0}–{1} of {2}",
+  "{0} meciuri": "{0} matches",
+  "{0} din {1} meciuri": "{0} of {1} matches"
 }

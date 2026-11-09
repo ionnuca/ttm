@@ -10,7 +10,9 @@ import md.ttm.ui.components.PlayerAvatar;
 import md.ttm.service.player.RankedPlayer;
 import md.ttm.service.tournament.Podium;
 import md.ttm.service.tournament.TournamentService;
+import md.ttm.ui.components.GridPager;
 import md.ttm.ui.components.Notifications;
+import md.ttm.ui.components.Pager;
 import md.ttm.ui.components.Responsive;
 import md.ttm.ui.layout.MainLayout;
 import com.vaadin.flow.component.Component;
@@ -29,6 +31,8 @@ import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.value.ValueChangeMode;
+import com.vaadin.flow.router.BeforeEnterEvent;
+import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.HasDynamicTitle;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
@@ -47,7 +51,7 @@ import java.util.Map;
  */
 @Route(value = "jucatori", layout = MainLayout.class)
 @AnonymousAllowed
-public class PlayersView extends VerticalLayout implements HasDynamicTitle {
+public class PlayersView extends VerticalLayout implements HasDynamicTitle, BeforeEnterObserver {
 
     @Override
     public String getPageTitle() {
@@ -58,6 +62,9 @@ public class PlayersView extends VerticalLayout implements HasDynamicTitle {
     private final PlayerService playerService;
     private final boolean admin;
     private final Grid<RankedPlayer> grid = new Grid<>();
+    private final Pager pager = new Pager(PAGE_SIZE);
+    private final GridPager<RankedPlayer> paging = new GridPager<>(grid, pager);
+    static final int PAGE_SIZE = 25;
     private final TextField search = new TextField();
     private final Span counter = new Span();
     private final Span tapHint = new Span(Tr.t("Apăsați pe un jucător pentru detalii, statistici și meciuri."));
@@ -74,13 +81,18 @@ public class PlayersView extends VerticalLayout implements HasDynamicTitle {
         this.tournamentService = tournamentService;
         this.admin = SecurityUtils.isAdmin();
 
-        setSizeFull();
+        setWidthFull();
         setPadding(true);
         tapHint.getStyle()
                 .set("font-size", "var(--lumo-font-size-s)")
                 .set("color", "var(--lumo-secondary-text-color)");
-        add(createHeader(), createToolbar(), tapHint, grid);
+        add(createHeader(), createToolbar(), tapHint, grid, pager);
         configureGrid();
+    }
+
+    @Override
+    public void beforeEnter(BeforeEnterEvent event) {
+        pager.bindToUrl(event);
         refresh();
     }
 
@@ -100,7 +112,7 @@ public class PlayersView extends VerticalLayout implements HasDynamicTitle {
         search.setPrefixComponent(VaadinIcon.SEARCH.create());
         search.setClearButtonVisible(true);
         search.setValueChangeMode(ValueChangeMode.LAZY);
-        search.addValueChangeListener(e -> applyFilter());
+        search.addValueChangeListener(e -> applyFilter(true));
         search.setWidth("min(100%, 22rem)");
 
         HorizontalLayout toolbar = new HorizontalLayout(search);
@@ -117,7 +129,7 @@ public class PlayersView extends VerticalLayout implements HasDynamicTitle {
     }
 
     private void configureGrid() {
-        grid.setSizeFull();
+        grid.setWidthFull();
         grid.addThemeVariants(GridVariant.LUMO_ROW_STRIPES, GridVariant.LUMO_COMPACT);
 
         Grid.Column<RankedPlayer> rank = grid.addColumn(RankedPlayer::rank)
@@ -329,15 +341,15 @@ public class PlayersView extends VerticalLayout implements HasDynamicTitle {
         players = playerService.findRanked();
         photoVersions = photoService.versions();
         podiums = tournamentService.podiums();
-        applyFilter();
+        applyFilter(false);
     }
 
-    private void applyFilter() {
+    private void applyFilter(boolean firstPage) {
         String term = search.getValue() == null ? "" : search.getValue().trim().toLowerCase(Locale.ROOT);
         List<RankedPlayer> filtered = term.isEmpty()
                 ? players
                 : players.stream().filter(rp -> matches(rp.player(), term)).toList();
-        grid.setItems(filtered);
+        paging.setItems(filtered, firstPage);
         counter.setText(filtered.size() == players.size()
                 ? Tr.t("{0} jucători", players.size())
                 : Tr.t("{0} din {1} jucători", filtered.size(), players.size()));
