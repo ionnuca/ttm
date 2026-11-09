@@ -14,6 +14,8 @@ import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.HasDynamicTitle;
+import com.vaadin.flow.router.BeforeEnterEvent;
+import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouteAlias;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
@@ -21,7 +23,9 @@ import md.ttm.model.tournament.Tournament;
 import md.ttm.security.SecurityUtils;
 import md.ttm.service.tournament.TournamentService;
 import md.ttm.service.tournament.TournamentSummary;
+import md.ttm.ui.components.GridPager;
 import md.ttm.ui.components.Notifications;
+import md.ttm.ui.components.Pager;
 import md.ttm.ui.components.Responsive;
 import md.ttm.ui.layout.MainLayout;
 
@@ -33,7 +37,7 @@ import java.util.Comparator;
 @Route(value = "", layout = MainLayout.class)
 @RouteAlias(value = "turnee", layout = MainLayout.class)
 @AnonymousAllowed
-public class TournamentsView extends VerticalLayout implements HasDynamicTitle {
+public class TournamentsView extends VerticalLayout implements HasDynamicTitle, BeforeEnterObserver {
 
     @Override
     public String getPageTitle() {
@@ -43,19 +47,27 @@ public class TournamentsView extends VerticalLayout implements HasDynamicTitle {
 
     private final TournamentService tournamentService;
     private final Grid<TournamentSummary> grid = new Grid<>();
+    private final Pager pager = new Pager(PAGE_SIZE);
+    private final GridPager<TournamentSummary> paging = new GridPager<>(grid, pager);
+    static final int PAGE_SIZE = 15;
     private final Span counter = new Span();
 
     public TournamentsView(TournamentService tournamentService) {
         this.tournamentService = tournamentService;
-        setSizeFull();
+        setWidthFull();
         add(createHeader());
         if (SecurityUtils.canManageTournaments()) {
             Button create = new Button(Tr.t("Turneu nou"), VaadinIcon.PLUS.create(), e -> openCreateDialog());
             create.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
             add(create);
         }
-        add(grid);
+        add(grid, pager);
         configureGrid();
+    }
+
+    @Override
+    public void beforeEnter(BeforeEnterEvent event) {
+        pager.bindToUrl(event);
         refresh();
     }
 
@@ -71,7 +83,7 @@ public class TournamentsView extends VerticalLayout implements HasDynamicTitle {
     }
 
     private void configureGrid() {
-        grid.setSizeFull();
+        grid.setWidthFull();
         grid.addThemeVariants(GridVariant.LUMO_ROW_STRIPES);
 
         Grid.Column<TournamentSummary> date = grid.addColumn(s -> TournamentLabels.shortDate(s.tournament().getTournamentDate()))
@@ -162,7 +174,7 @@ public class TournamentsView extends VerticalLayout implements HasDynamicTitle {
 
     private void refresh() {
         var tournaments = tournamentService.findAll();
-        grid.setItems(tournaments);
+        paging.setItems(tournaments, false);
         counter.setText(tournaments.size() == 1 ? Tr.t("1 turneu") : Tr.t("{0} turnee", tournaments.size()));
     }
 }
