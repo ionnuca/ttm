@@ -489,5 +489,9 @@
   "Pagina {0}": "Page {0}",
   "{0}–{1} din {2}": "{0}–{1} of {2}",
   "{0} meciuri": "{0} matches",
-  "{0} din {1} meciuri": "{0} of {1} matches"
+  "{0} din {1} meciuri": "{0} of {1} matches",
+  "Rezultatele din grupe au stabilit calificarea. Le puteți corecta, dar etapa 2 se va construi din nou.": "The group results decided qualification. You can correct them, but stage 2 will be rebuilt.",
+  "Etapa 2 va fi construită din nou": "Stage 2 will be rebuilt",
+  "Corectarea unui rezultat din grupe poate schimba calificarea. După salvare, meciurile din etapa 2 se șterg (rezultate înregistrate: {0}), iar etapa 2 se construiește din nou cu aceleași setări. Dacă etapa 1 nu mai e completă, turneul revine la etapa grupelor.": "Correcting a group result can change who qualifies. After saving, the stage 2 matches are deleted ({0} results recorded) and stage 2 is rebuilt with the same settings. If stage 1 is no longer complete, the tournament goes back to the group stage.",
+  "Continuă": "Continue"
 }
