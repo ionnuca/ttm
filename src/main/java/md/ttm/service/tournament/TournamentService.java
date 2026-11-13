@@ -766,11 +766,68 @@ public class TournamentService {
         tournamentRepository.saveAndFlush(tournament);
     }
 
-    /** După începerea etapei 2, rezultatele din grupe nu se mai pot schimba (au decis calificarea). */
+    /**
+     * După începerea etapei 2, rezultatele din grupe (care au decis calificarea) le mai poate corecta doar
+     * organizatorul; etapa 2 se construiește atunci din nou ({@link #rebuildStage2}).
+     */
     private static void requireEditableStage(TournamentMatch match) {
-        TournamentGroup group = match.getGroup();
-        if (group != null && group.isGroupStage() && match.getTournament().getStage() != TournamentStage.GROUPS) {
+        requireEditableStage(match.getTournament(), match.getGroup());
+    }
+
+    private static void requireEditableStage(Tournament tournament, TournamentGroup group) {
+        if (afterGroupStage(tournament, group) && !SecurityUtils.canManageTournaments()) {
             throw new BusinessException("Rezultatele etapei 1 nu mai pot fi modificate după începerea etapei 2");
+        }
+    }
+
+    /** Un rezultat din grupe, într-un turneu care a trecut deja la etapa 2. */
+    private static boolean afterGroupStage(Tournament tournament, TournamentGroup group) {
+        return group != null && group.isGroupStage() && tournament.getStage() != TournamentStage.GROUPS;
+    }
+
+    /**
+     * Etapa 2 se construiește din nou după corectarea unui rezultat din grupe: meciurile ei (cu rezultate cu tot),
+     * seturile de departajare și grupele ei se șterg. Dacă etapa 1 e completă, etapa 2 pornește din nou cu aceleași
+     * setări (câți se califică, tipul tabloului); altfel turneul revine la etapa grupelor.
+     */
+    private void rebuildStage2(Tournament tournament) {
+        TournamentStage previous = tournament.getStage();
+        Integer qualifiers = tournament.getQualifiersPerGroup();
+        KnockoutType type = tournament.getKnockoutType();
+        Long id = tournament.getId();
+        List<TournamentGroup> stage2 = groupRepository.findByTournamentIdOrderByStageAscPositionAsc(id).stream()
+                .filter(g -> !g.isGroupStage())
+                .toList();
+        java.util.Set<Long> stage2Ids = stage2.stream().map(TournamentGroup::getId).collect(java.util.stream.Collectors.toSet());
+        matchRepository.deleteAll(matchRepository.findByTournamentIdWithParticipants(id).stream()
+                .filter(m -> m.getGroup() != null && stage2Ids.contains(m.getGroup().getId()))
+                .toList());
+        matchRepository.flush();
+        tiebreakRepository.deleteAll(tiebreakRepository.findByTournamentIdWithParticipants(id).stream()
+                .filter(t -> t.groupId() != null && stage2Ids.contains(t.groupId()))
+                .toList());
+        tiebreakRepository.flush();
+        memberRepository.deleteAll(memberRepository.findByTournamentIdWithParticipants(id).stream()
+                .filter(m -> stage2Ids.contains(m.getGroup().getId()))
+                .toList());
+        memberRepository.flush();
+        groupRepository.deleteAll(stage2);
+        groupRepository.flush();
+
+        tournament.setStage(TournamentStage.GROUPS);
+        tournament.setStatus(TournamentStatus.IN_PROGRESS);
+        tournament.setFinishedAt(null);
+        tournamentRepository.saveAndFlush(tournament);
+
+        List<GroupView> groups = groupViews(tournament, matchRepository.findByTournamentIdWithParticipants(id),
+                tiebreakRepository.findByTournamentIdWithParticipants(id));
+        boolean complete = groups.stream().allMatch(g -> g.playedMatches() == g.matches().size() && g.pendingTiebreaks().isEmpty());
+        if (complete && qualifiers != null) {
+            if (previous == TournamentStage.KNOCKOUT && type != null) {
+                startKnockout(id, qualifiers, type);
+            } else if (previous == TournamentStage.FINALS) {
+                startFinals(id, qualifiers);
+            }
         }
     }
 
@@ -791,6 +848,7 @@ public class TournamentService {
         Tournament tournament = match.getTournament();
         requireCanRecord(tournament);
         requireEditableStage(match);
+        boolean wasFinished = tournament.getStatus() == TournamentStatus.FINISHED;
 
         if (result == null || result.outcome() == null) {
             throw new BusinessException("Alegeți tipul rezultatului");
@@ -830,13 +888,15 @@ public class TournamentService {
         matchRepository.saveAndFlush(match);
         // un rezultat nou schimbă egalitățile: seturile de departajare ale tabelului nu mai sunt valabile
         deleteTiebreaks(tournament.getId(), match.getGroup());
-        if (match.getGroup() != null && match.getGroup().isKnockout()) {
+        if (afterGroupStage(tournament, match.getGroup())) {
+            rebuildStage2(tournament);
+        } else if (match.getGroup() != null && match.getGroup().isKnockout()) {
             reopenIfBracketIncomplete(tournament, syncBracket(tournament));
         }
 
         finishIfComplete(tournament);
-        // turneu încheiat acum sau rezultat corectat într-un turneu încheiat: ratingul se recalculează
-        if (tournament.getStatus() == TournamentStatus.FINISHED) {
+        // turneu încheiat acum, redeschis sau rezultat corectat într-un turneu încheiat: ratingul se recalculează
+        if (wasFinished || tournament.getStatus() == TournamentStatus.FINISHED) {
             ratingService.recalculateAll();
         }
         return match;
@@ -858,9 +918,7 @@ public class TournamentService {
             group = groupRepository.findById(groupId)
                     .filter(g -> g.getTournament().getId().equals(tournamentId))
                     .orElseThrow(() -> new BusinessException("Grupa nu mai există"));
-            if (group.isGroupStage() && tournament.getStage() != TournamentStage.GROUPS) {
-                throw new BusinessException("Rezultatele etapei 1 nu mai pot fi modificate după începerea etapei 2");
-            }
+            requireEditableStage(tournament, group);
         }
         List<TournamentTiebreak> all = tiebreakRepository.findByTournamentIdWithParticipants(tournamentId);
         TournamentTiebreak tiebreak = all.stream()
@@ -892,6 +950,12 @@ public class TournamentService {
         tiebreak.setRecordedAt(Instant.now());
         tiebreakRepository.saveAndFlush(tiebreak);
         boolean wasFinished = tournament.getStatus() == TournamentStatus.FINISHED;
+        if (afterGroupStage(tournament, group)) {
+            rebuildStage2(tournament);
+            if (wasFinished) {
+                ratingService.recalculateAll();
+            }
+        }
         finishIfComplete(tournament);
         if (!wasFinished && tournament.getStatus() == TournamentStatus.FINISHED) {
             // turneul s-a încheiat acum: meciurile lui intră în rating
@@ -964,6 +1028,14 @@ public class TournamentService {
         matchRepository.saveAndFlush(match);
         deleteTiebreaks(match.getTournament().getId(), match.getGroup());
         Tournament tournament = match.getTournament();
+        if (afterGroupStage(tournament, match.getGroup())) {
+            boolean wasFinished = tournament.getStatus() == TournamentStatus.FINISHED;
+            rebuildStage2(tournament);
+            if (wasFinished) {
+                ratingService.recalculateAll();
+            }
+            return;
+        }
         if (match.getGroup() != null && match.getGroup().isKnockout()) {
             syncBracket(tournament);
         }

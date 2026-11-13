@@ -366,8 +366,14 @@ await check('admin: finalele după începerea etapei 2', async () => {
   await expectText(page, 'Finala 1');
   await expectText(page, 'Finala 2');
   await expectText(page, 'meciuri sunt preluate din etapa 1');
-  await expectText(page, 'nu mai pot fi modificate');
+  await expectText(page, 'etapa 2 se va construi din nou');
   await shot(page, '31-admin-finale');
+});
+await check('admin: corectarea unui meci din grupe după etapa 2', async () => {
+  await page.getByRole('button', { name: /^Modifică rezultatul/ }).first().click();
+  await expectText(page, 'Etapa 2 va fi construită din nou');
+  await shot(page, '31b-admin-corectare-grupe-dupa-etapa-2');
+  await page.getByRole('button', { name: 'Anulează' }).click();
 });
 await check('admin: încheierea manuală a turneului', async () => {
   await page.getByRole('button', { name: 'Încheie turneul' }).click();
