@@ -324,11 +324,11 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         grid.setAllRowsVisible(true);
         List<TournamentParticipant> participants = details.participants();
         grid.addColumn(p -> participants.indexOf(p) + 1)
-                .setHeader("#").setWidth("3.5rem").setFlexGrow(0).setTextAlign(ColumnTextAlign.END);
-        grid.addColumn(p -> p.getPlayer().getDisplayName()).setHeader(Tr.t("Nume Prenume")).setFlexGrow(2);
+                .setHeader("#").setWidth("3rem").setFlexGrow(0).setTextAlign(ColumnTextAlign.END);
+        // fără oraș: pe telefon numele trebuie să încapă întreg
+        grid.addColumn(p -> p.getPlayer().getDisplayName()).setHeader(Tr.t("Nume Prenume")).setFlexGrow(1);
         grid.addColumn(p -> p.getPlayer().getRating()).setHeader(Tr.t("Rating"))
-                .setAutoWidth(true).setFlexGrow(0).setTextAlign(ColumnTextAlign.END);
-        grid.addColumn(p -> p.getPlayer().getCity() != null ? p.getPlayer().getCity() : "—").setHeader(Tr.t("Oraș"));
+                .setWidth("5rem").setFlexGrow(0).setTextAlign(ColumnTextAlign.END);
         if (details.manager()) {
             grid.addComponentColumn(p -> {
                 Button remove = new Button(VaadinIcon.CLOSE_SMALL.create(), e -> run(
