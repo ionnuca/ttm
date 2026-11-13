@@ -199,6 +199,14 @@ class KnockoutTournamentIT {
         win(id, "W1-1", "P1");
         assertThat(details(id).knockouts().get(0).matches().get("W1-1").isPlayed()).isTrue();
 
+        // corectură care nu schimbă clasamentul: tabloul se refac, dar finala jucată (aceeași pereche) rămâne
+        TournamentMatch p1p3 = groupMatch(id, "P1", "P3");
+        boolean p1First = p1p3.getParticipantA().getPlayer().getFirstName().equals("P1");
+        tournamentService.recordResult(p1p3.getId(), p1First ? MatchResultForm.sets(3, 2) : MatchResultForm.sets(2, 3));
+        TournamentMatch kept = details(id).knockouts().get(0).matches().get("W1-1");
+        assertThat(kept.isPlayed()).isTrue();
+        assertThat(kept.getWinner().getPlayer().getFirstName()).isEqualTo("P1");
+
         // P2 câștigă acum meciul din grupă cu P1: P2 devine primul, tabloul se refac
         TournamentMatch groupMatch = groupMatch(id, "P1", "P2");
         boolean p1IsA = groupMatch.getParticipantA().getPlayer().getFirstName().equals("P1");
@@ -223,7 +231,7 @@ class KnockoutTournamentIT {
     }
 
     @Test
-    void corectareaUneiGrupeDupaFinale_refaceFinaleleSiRedeschideTurneul() {
+    void corectareaUneiGrupeDupaFinale_pastreazaRezultateleFinalelorNeschimbate() {
         Long id = tournamentWith(8);
         tournamentService.start(id, TournamentSettings.groups(5, 2));
         playGroupFavourites(id);
@@ -242,14 +250,15 @@ class KnockoutTournamentIT {
         boolean aWon = groupMatch.getWinner().getId().equals(groupMatch.getParticipantA().getId());
         tournamentService.recordResult(groupMatch.getId(), aWon ? MatchResultForm.sets(3, 2) : MatchResultForm.sets(2, 3));
 
+        // același câștigător: calificarea nu se schimbă, toate rezultatele finalelor se păstrează
         TournamentDetails rebuilt = details(id);
         assertThat(rebuilt.tournament().getStage()).isEqualTo(TournamentStage.FINALS);
-        assertThat(rebuilt.tournament().getStatus()).isEqualTo(TournamentStatus.IN_PROGRESS);
         assertThat(rebuilt.tournament().getQualifiersPerGroup()).isEqualTo(2);
+        assertThat(rebuilt.finals()).hasSize(2);
         assertThat(rebuilt.matches().stream()
                 .filter(m -> m.getGroup() != null && !m.getGroup().isGroupStage())
-                .noneMatch(TournamentMatch::isPlayed)).isTrue();
-        assertThat(rebuilt.finals()).hasSize(2);
+                .allMatch(TournamentMatch::isPlayed)).isTrue();
+        assertThat(rebuilt.tournament().getStatus()).isEqualTo(TournamentStatus.FINISHED);
     }
 
     private TournamentMatch groupMatch(Long id, String x, String y) {
