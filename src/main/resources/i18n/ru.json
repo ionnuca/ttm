@@ -492,6 +492,8 @@
   "{0} din {1} meciuri": "{0} из {1} матчей",
   "Rezultatele din grupe au stabilit calificarea. Le puteți corecta, dar etapa 2 se va construi din nou.": "Результаты групп определили выход в следующий этап. Их можно исправить, но этап 2 будет построен заново.",
   "Etapa 2 va fi construită din nou": "Этап 2 будет построен заново",
-  "Corectarea unui rezultat din grupe poate schimba calificarea. După salvare, meciurile din etapa 2 se șterg (rezultate înregistrate: {0}), iar etapa 2 se construiește din nou cu aceleași setări. Dacă etapa 1 nu mai e completă, turneul revine la etapa grupelor.": "Исправление результата в группе может изменить выход в следующий этап. После сохранения матчи этапа 2 удаляются (записанных результатов: {0}), а этап 2 строится заново с теми же настройками. Если этап 1 больше не завершён, турнир возвращается к групповому этапу.",
-  "Continuă": "Продолжить"
+  "Continuă": "Продолжить",
+  "Corectarea unui rezultat din grupe poate schimba calificarea. După salvare, etapa 2 se construiește din nou cu aceleași setări. Din cele {0} rezultate înregistrate în etapa 2 se păstrează cele ale meciurilor care rămân aceleași (aceiași jucători în aceeași finală, respectiv pe aceeași poziție în tablou); celelalte se șterg. Dacă etapa 1 nu mai e completă, turneul revine la etapa grupelor.": "Исправление результата в группе может изменить выход в следующий этап. После сохранения этап 2 строится заново с теми же настройками. Из {0} записанных результатов этапа 2 сохраняются результаты матчей, которые остаются теми же (те же игроки в том же финале или на той же позиции в сетке); остальные удаляются. Если этап 1 больше не завершён, турнир возвращается к групповому этапу.",
+  "Etapa 1 nu mai e completă: turneul a revenit la etapa grupelor": "Этап 1 больше не завершён: турнир вернулся к групповому этапу",
+  "Etapa 2 a fost construită din nou: {0} rezultate păstrate, {1} șterse": "Этап 2 построен заново: сохранено результатов — {0}, удалено — {1}"
 }
