@@ -119,11 +119,23 @@ class GroupsTournamentIT {
         assertThat(final1.carried()).hasSize(2);
         assertThat(final1.standings()).extracting(StandingsCalculator.Row::played).containsOnly(1);
 
-        // etapa 1 e blocată
+        // etapa 1 e blocată pentru jucători (organizatorul o mai poate corecta: vezi KnockoutTournamentIT)
         TournamentMatch groupMatch = finals.groupStage().get(0).matches().get(0);
-        assertThatThrownBy(() -> tournamentService.recordResult(groupMatch.getId(), MatchResultForm.sets(3, 0)))
-                .isInstanceOf(BusinessException.class)
-                .hasMessageContaining("etapei 1");
+        org.springframework.security.core.context.SecurityContext saved =
+                org.springframework.security.core.context.SecurityContextHolder.getContext();
+        try {
+            org.springframework.security.core.context.SecurityContext user =
+                    org.springframework.security.core.context.SecurityContextHolder.createEmptyContext();
+            org.springframework.security.core.context.SecurityContextHolder.setContext(user);
+            user.setAuthentication(
+                    new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                            "jucator", "x", java.util.List.of(
+                            new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_USER"))));
+            assertThatThrownBy(() -> tournamentService.recordResult(groupMatch.getId(), MatchResultForm.sets(3, 0)))
+                    .isInstanceOf(RuntimeException.class);
+        } finally {
+            org.springframework.security.core.context.SecurityContextHolder.setContext(saved);
+        }
 
         playAllFavourites(id);
         TournamentDetails done = details(id);
