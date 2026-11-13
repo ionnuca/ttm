@@ -189,6 +189,80 @@ class KnockoutTournamentIT {
         assertThat(details(id).tournament().getStatus()).isEqualTo(TournamentStatus.FINISHED);
     }
 
+    @Test
+    void corectareaUneiGrupeDupaEtapa2_construiesteTablourileDinNou() {
+        Long id = tournamentWith(4);
+        tournamentService.start(id, TournamentSettings.groupsKnockout(5, 1));
+        playGroupFavourites(id);
+        tournamentService.startKnockout(id, 2, KnockoutType.SINGLE);
+        assertThat(pair(details(id).knockouts().get(0), "W1-1")).isEqualTo("P1-P2");
+        win(id, "W1-1", "P1");
+        assertThat(details(id).knockouts().get(0).matches().get("W1-1").isPlayed()).isTrue();
+
+        // P2 câștigă acum meciul din grupă cu P1: P2 devine primul, tabloul se refac
+        TournamentMatch groupMatch = groupMatch(id, "P1", "P2");
+        boolean p1IsA = groupMatch.getParticipantA().getPlayer().getFirstName().equals("P1");
+        tournamentService.recordResult(groupMatch.getId(), p1IsA ? MatchResultForm.sets(1, 3) : MatchResultForm.sets(3, 1));
+
+        TournamentDetails rebuilt = details(id);
+        assertThat(rebuilt.tournament().getStage()).isEqualTo(TournamentStage.KNOCKOUT);
+        assertThat(rebuilt.tournament().getStatus()).isEqualTo(TournamentStatus.IN_PROGRESS);
+        assertThat(rebuilt.tournament().getKnockoutType()).isEqualTo(KnockoutType.SINGLE);
+        assertThat(rebuilt.knockouts()).hasSize(2);
+        assertThat(names(rebuilt.knockouts().get(0).members())).containsExactly("P2", "P1");
+        assertThat(rebuilt.knockouts().get(0).matches().get("W1-1").isPlayed()).isFalse();
+
+        // ștergerea unui rezultat din grupă: etapa 1 nu mai e completă, turneul revine la grupe
+        tournamentService.clearResult(groupMatch(id, "P3", "P4").getId());
+        TournamentDetails back = details(id);
+        assertThat(back.tournament().getStage()).isEqualTo(TournamentStage.GROUPS);
+        assertThat(back.knockouts()).isEmpty();
+        assertThat(back.canStartFinals()).isFalse();
+        playGroupFavourites(id);
+        assertThat(details(id).canStartFinals()).isTrue();
+    }
+
+    @Test
+    void corectareaUneiGrupeDupaFinale_refaceFinaleleSiRedeschideTurneul() {
+        Long id = tournamentWith(8);
+        tournamentService.start(id, TournamentSettings.groups(5, 2));
+        playGroupFavourites(id);
+        tournamentService.startFinals(id, 2);
+        for (TournamentMatch m : new ArrayList<>(details(id).matches())) {
+            if (!m.isPlayed()) {
+                boolean aStronger = m.getParticipantA().getSeed() < m.getParticipantB().getSeed();
+                tournamentService.recordResult(m.getId(), aStronger ? MatchResultForm.sets(3, 0) : MatchResultForm.sets(0, 3));
+            }
+        }
+        assertThat(details(id).tournament().getStatus()).isEqualTo(TournamentStatus.FINISHED);
+
+        TournamentMatch groupMatch = details(id).matches().stream()
+                .filter(m -> m.getGroup() != null && m.getGroup().isGroupStage())
+                .findFirst().orElseThrow();
+        boolean aWon = groupMatch.getWinner().getId().equals(groupMatch.getParticipantA().getId());
+        tournamentService.recordResult(groupMatch.getId(), aWon ? MatchResultForm.sets(3, 2) : MatchResultForm.sets(2, 3));
+
+        TournamentDetails rebuilt = details(id);
+        assertThat(rebuilt.tournament().getStage()).isEqualTo(TournamentStage.FINALS);
+        assertThat(rebuilt.tournament().getStatus()).isEqualTo(TournamentStatus.IN_PROGRESS);
+        assertThat(rebuilt.tournament().getQualifiersPerGroup()).isEqualTo(2);
+        assertThat(rebuilt.matches().stream()
+                .filter(m -> m.getGroup() != null && !m.getGroup().isGroupStage())
+                .noneMatch(TournamentMatch::isPlayed)).isTrue();
+        assertThat(rebuilt.finals()).hasSize(2);
+    }
+
+    private TournamentMatch groupMatch(Long id, String x, String y) {
+        return details(id).matches().stream()
+                .filter(m -> m.getGroup() != null && m.getGroup().isGroupStage())
+                .filter(m -> {
+                    String a = m.getParticipantA().getPlayer().getFirstName();
+                    String b = m.getParticipantB().getPlayer().getFirstName();
+                    return (a.equals(x) && b.equals(y)) || (a.equals(y) && b.equals(x));
+                })
+                .findFirst().orElseThrow();
+    }
+
     // ------------------------------------------------------------------
 
     /** Câștigă mereu jucătorul cu ratingul mai mare (P1 > P2 > …). */

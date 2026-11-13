@@ -31,6 +31,7 @@ import com.vaadin.flow.component.tabs.Tabs;
 import com.vaadin.flow.component.tabs.TabsVariant;
 import md.ttm.common.BusinessException;
 import md.ttm.model.tournament.Tournament;
+import md.ttm.model.tournament.TournamentGroup;
 import md.ttm.model.tournament.TournamentMatch;
 import md.ttm.model.tournament.TournamentParticipant;
 import md.ttm.model.tournament.TournamentTiebreak;
@@ -472,10 +473,13 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
             redraw.setTooltipText(Tr.t("O nouă tragere la sorți, cât timp nu există rezultate"));
             add(redraw);
         }
-        if (t.getStage() != TournamentStage.GROUPS) {
-            add(hint(Tr.t("Rezultatele din grupe au stabilit calificarea și nu mai pot fi modificate.")));
+        boolean afterGroups = t.getStage() != TournamentStage.GROUPS;
+        if (afterGroups) {
+            add(hint(details.manager()
+                    ? Tr.t("Rezultatele din grupe au stabilit calificarea. Le puteți corecta, dar etapa 2 se va construi din nou.")
+                    : Tr.t("Rezultatele din grupe au stabilit calificarea și nu mai pot fi modificate.")));
         }
-        boolean groupsEditable = details.canRecordResults() && t.getStage() == TournamentStage.GROUPS;
+        boolean groupsEditable = details.canRecordResults() && (!afterGroups || details.manager());
         for (GroupView group : details.groupStage()) {
             add(groupSection(details, group, groupsEditable));
         }
@@ -579,14 +583,23 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
                 .set("padding", "var(--lumo-space-xs) 0")
                 .set("border-top", "1px solid var(--lumo-contrast-10pct)");
         if (editable) {
+            Runnable openTiebreak = () -> new TiebreakDialog(a.getPlayer().getDisplayName(), b.getPlayer().getDisplayName(), round,
+                    pointsA, pointsB, (pa, pb) -> {
+                tournamentService.recordTiebreak(tournamentId, groupId, round, a.getId(), b.getId(), pa, pb);
+                Notifications.success(Tr.t("Rezultat salvat"));
+                refresh();
+                scrollTo(tiebreakCards.get(groupId != null ? groupId : 0L));
+            }).open();
+            boolean rebuild = groupId != null && details.tournament().getStage() != TournamentStage.GROUPS
+                    && details.groupStage().stream().anyMatch(g -> g.group().getId().equals(groupId));
             Button enter = new Button(played ? VaadinIcon.EDIT.create() : VaadinIcon.PLUS.create(),
-                    e -> new TiebreakDialog(a.getPlayer().getDisplayName(), b.getPlayer().getDisplayName(), round,
-                            pointsA, pointsB, (pa, pb) -> {
-                        tournamentService.recordTiebreak(tournamentId, groupId, round, a.getId(), b.getId(), pa, pb);
-                        Notifications.success(Tr.t("Rezultat salvat"));
-                        refresh();
-                        scrollTo(tiebreakCards.get(groupId != null ? groupId : 0L));
-                    }).open());
+                    e -> {
+                        if (rebuild) {
+                            confirmStage2Rebuild(details, openTiebreak);
+                        } else {
+                            openTiebreak.run();
+                        }
+                    });
             enter.addThemeVariants(ButtonVariant.LUMO_ICON, ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL);
             enter.setAriaLabel(Tr.t("Set de departajare {0} – {1}", a.getPlayer().getDisplayName(), b.getPlayer().getDisplayName()));
             enter.setTooltipText(played ? Tr.t("Modifică rezultatul") : Tr.t("Introdu rezultatul"));
@@ -890,6 +903,35 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
     }
 
     private void openResultDialog(TournamentDetails details, TournamentMatch match) {
+        if (rebuildsStage2(details, match.getGroup())) {
+            confirmStage2Rebuild(details, () -> showResultDialog(details, match));
+        } else {
+            showResultDialog(details, match);
+        }
+    }
+
+    /** Un rezultat din grupe după începerea etapei 2: corectarea lui construiește etapa 2 din nou. */
+    private static boolean rebuildsStage2(TournamentDetails details, TournamentGroup group) {
+        return group != null && group.isGroupStage() && details.tournament().getStage() != TournamentStage.GROUPS;
+    }
+
+    /** Mesajul de informare înainte de corectarea unui rezultat din etapa 1, după începerea etapei 2. */
+    private void confirmStage2Rebuild(TournamentDetails details, Runnable proceed) {
+        long played = details.matches().stream()
+                .filter(m -> m.getGroup() != null && !m.getGroup().isGroupStage() && m.isPlayed())
+                .count();
+        ConfirmDialog dialog = new ConfirmDialog();
+        dialog.setHeader(Tr.t("Etapa 2 va fi construită din nou"));
+        dialog.setText(Tr.t("Corectarea unui rezultat din grupe poate schimba calificarea. După salvare, meciurile din etapa 2 se șterg (rezultate înregistrate: {0}), iar etapa 2 se construiește din nou cu aceleași setări. Dacă etapa 1 nu mai e completă, turneul revine la etapa grupelor.", played));
+        dialog.setCancelable(true);
+        dialog.setCancelText(Tr.t("Anulează"));
+        dialog.setConfirmText(Tr.t("Continuă"));
+        dialog.setConfirmButtonTheme("error primary");
+        dialog.addConfirmListener(e -> proceed.run());
+        dialog.open();
+    }
+
+    private void showResultDialog(TournamentDetails details, TournamentMatch match) {
         Runnable onClear = details.manager()
                 ? () -> {
                     tournamentService.clearResult(match.getId());
