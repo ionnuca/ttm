@@ -786,9 +786,10 @@ public class TournamentService {
     }
 
     /**
-     * Etapa 2 se construiește din nou după corectarea unui rezultat din grupe: meciurile ei (cu rezultate cu tot),
-     * seturile de departajare și grupele ei se șterg. Dacă etapa 1 e completă, etapa 2 pornește din nou cu aceleași
-     * setări (câți se califică, tipul tabloului); altfel turneul revine la etapa grupelor.
+     * Etapa 2 se construiește din nou după corectarea unui rezultat din grupe: meciurile ei, seturile de departajare
+     * și grupele ei se șterg. Dacă etapa 1 e completă, etapa 2 pornește din nou cu aceleași setări (câți se califică,
+     * tipul tabloului) și rezultatele meciurilor care rămân aceleași se păstrează: la finale, aceeași pereche în
+     * aceeași finală; în tablou, aceeași pereche pe aceeași poziție. Altfel turneul revine la etapa grupelor.
      */
     private void rebuildStage2(Tournament tournament) {
         TournamentStage previous = tournament.getStage();
@@ -799,6 +800,10 @@ public class TournamentService {
                 .filter(g -> !g.isGroupStage())
                 .toList();
         java.util.Set<Long> stage2Ids = stage2.stream().map(TournamentGroup::getId).collect(java.util.stream.Collectors.toSet());
+        Map<String, SavedResult> saved = new HashMap<>();
+        matchRepository.findByTournamentIdWithParticipants(id).stream()
+                .filter(m -> m.getGroup() != null && stage2Ids.contains(m.getGroup().getId()) && m.isPlayed())
+                .forEach(m -> saved.put(stage2Key(m), SavedResult.of(m)));
         matchRepository.deleteAll(matchRepository.findByTournamentIdWithParticipants(id).stream()
                 .filter(m -> m.getGroup() != null && stage2Ids.contains(m.getGroup().getId()))
                 .toList());
@@ -825,10 +830,62 @@ public class TournamentService {
         if (complete && qualifiers != null) {
             if (previous == TournamentStage.KNOCKOUT && type != null) {
                 startKnockout(id, qualifiers, type);
+                // meciurile tabloului apar tur cu tur: după fiecare rezultat păstrat se pot crea cele următoare
+                boolean restored = true;
+                while (restored) {
+                    restored = false;
+                    for (KnockoutView view : syncBracket(tournament)) {
+                        for (TournamentMatch row : view.matches().values()) {
+                            restored |= restore(row, saved);
+                        }
+                    }
+                }
             } else if (previous == TournamentStage.FINALS) {
                 startFinals(id, qualifiers);
+                matchRepository.findByTournamentIdWithParticipants(id).stream()
+                        .filter(m -> m.getGroup() != null && !m.getGroup().isGroupStage())
+                        .forEach(m -> restore(m, saved));
             }
         }
+    }
+
+    /** Rezultatul unui meci din etapa 2, păstrat cât timp etapa se construiește din nou. */
+    private record SavedResult(MatchOutcome outcome, Long participantA, Integer setsA, Integer setsB, Long winnerId,
+                               String recordedBy, Instant recordedAt) {
+        static SavedResult of(TournamentMatch m) {
+            return new SavedResult(m.getOutcome(), m.getParticipantA().getId(), m.getSetsA(), m.getSetsB(),
+                    m.getWinner().getId(), m.getRecordedBy(), m.getRecordedAt());
+        }
+    }
+
+    /** Același meci după reconstruire: la finale aceeași pereche în aceeași finală, în tablou aceeași pereche pe aceeași poziție. */
+    private static String stage2Key(TournamentMatch m) {
+        long a = m.getParticipantA().getId();
+        long b = m.getParticipantB().getId();
+        TournamentGroup g = m.getGroup();
+        if (g.isKnockout()) {
+            return "K" + g.getPosition() + ":" + m.getBracketSlot() + ":" + a + "-" + b;
+        }
+        return "F" + g.getPosition() + ":" + Math.min(a, b) + "-" + Math.max(a, b);
+    }
+
+    private boolean restore(TournamentMatch m, Map<String, SavedResult> saved) {
+        if (m.isPlayed()) {
+            return false;
+        }
+        SavedResult r = saved.get(stage2Key(m));
+        if (r == null) {
+            return false;
+        }
+        boolean sameOrder = m.getParticipantA().getId().equals(r.participantA());
+        m.setOutcome(r.outcome());
+        m.setSetsA(sameOrder ? r.setsA() : r.setsB());
+        m.setSetsB(sameOrder ? r.setsB() : r.setsA());
+        m.setWinner(m.getParticipantA().getId().equals(r.winnerId()) ? m.getParticipantA() : m.getParticipantB());
+        m.setRecordedBy(r.recordedBy());
+        m.setRecordedAt(r.recordedAt());
+        matchRepository.saveAndFlush(m);
+        return true;
     }
 
     // ------------------------------------------------------------------

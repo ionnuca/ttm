@@ -72,6 +72,8 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
     private final TournamentService tournamentService;
     private final PlayerPhotoService photoService;
     private Long tournamentId;
+    /** Rezultatele din etapa 2 înainte de o corectură din grupe (pentru mesajul de după salvare); altfel {@code null}. */
+    private Long stage2PlayedBefore;
     private String title = "Turneu | TTM";
 
     public TournamentView(TournamentService tournamentService, PlayerPhotoService photoService) {
@@ -587,6 +589,7 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
                     pointsA, pointsB, (pa, pb) -> {
                 tournamentService.recordTiebreak(tournamentId, groupId, round, a.getId(), b.getId(), pa, pb);
                 Notifications.success(Tr.t("Rezultat salvat"));
+                reportStage2Rebuild();
                 refresh();
                 scrollTo(tiebreakCards.get(groupId != null ? groupId : 0L));
             }).open();
@@ -597,6 +600,7 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
                         if (rebuild) {
                             confirmStage2Rebuild(details, openTiebreak);
                         } else {
+                            stage2PlayedBefore = null;
                             openTiebreak.run();
                         }
                     });
@@ -906,6 +910,7 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         if (rebuildsStage2(details, match.getGroup())) {
             confirmStage2Rebuild(details, () -> showResultDialog(details, match));
         } else {
+            stage2PlayedBefore = null;
             showResultDialog(details, match);
         }
     }
@@ -917,18 +922,40 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
 
     /** Mesajul de informare înainte de corectarea unui rezultat din etapa 1, după începerea etapei 2. */
     private void confirmStage2Rebuild(TournamentDetails details, Runnable proceed) {
-        long played = details.matches().stream()
-                .filter(m -> m.getGroup() != null && !m.getGroup().isGroupStage() && m.isPlayed())
-                .count();
+        long played = stage2Played(details);
         ConfirmDialog dialog = new ConfirmDialog();
         dialog.setHeader(Tr.t("Etapa 2 va fi construită din nou"));
-        dialog.setText(Tr.t("Corectarea unui rezultat din grupe poate schimba calificarea. După salvare, meciurile din etapa 2 se șterg (rezultate înregistrate: {0}), iar etapa 2 se construiește din nou cu aceleași setări. Dacă etapa 1 nu mai e completă, turneul revine la etapa grupelor.", played));
+        dialog.setText(Tr.t("Corectarea unui rezultat din grupe poate schimba calificarea. După salvare, etapa 2 se construiește din nou cu aceleași setări. Din cele {0} rezultate înregistrate în etapa 2 se păstrează cele ale meciurilor care rămân aceleași (aceiași jucători în aceeași finală, respectiv pe aceeași poziție în tablou); celelalte se șterg. Dacă etapa 1 nu mai e completă, turneul revine la etapa grupelor.", played));
         dialog.setCancelable(true);
         dialog.setCancelText(Tr.t("Anulează"));
         dialog.setConfirmText(Tr.t("Continuă"));
         dialog.setConfirmButtonTheme("error primary");
-        dialog.addConfirmListener(e -> proceed.run());
+        dialog.addConfirmListener(e -> {
+            stage2PlayedBefore = played;
+            proceed.run();
+        });
         dialog.open();
+    }
+
+    private static long stage2Played(TournamentDetails details) {
+        return details.matches().stream()
+                .filter(m -> m.getGroup() != null && !m.getGroup().isGroupStage() && m.isPlayed())
+                .count();
+    }
+
+    /** După o corectură din grupe: câte rezultate din etapa 2 s-au păstrat și câte s-au șters. */
+    private void reportStage2Rebuild() {
+        if (stage2PlayedBefore == null) {
+            return;
+        }
+        long before = stage2PlayedBefore;
+        stage2PlayedBefore = null;
+        tournamentService.findDetails(tournamentId).ifPresent(after -> {
+            long kept = after.tournament().getStage() == TournamentStage.GROUPS ? 0 : Math.min(before, stage2Played(after));
+            Notifications.success(after.tournament().getStage() == TournamentStage.GROUPS
+                    ? Tr.t("Etapa 1 nu mai e completă: turneul a revenit la etapa grupelor")
+                    : Tr.t("Etapa 2 a fost construită din nou: {0} rezultate păstrate, {1} șterse", kept, before - kept));
+        });
     }
 
     private void showResultDialog(TournamentDetails details, TournamentMatch match) {
@@ -936,6 +963,7 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
                 ? () -> {
                     tournamentService.clearResult(match.getId());
                     Notifications.success(Tr.t("Rezultat șters"));
+                    reportStage2Rebuild();
                     refresh();
                     keepInView(match.getId());
                 }
@@ -943,6 +971,7 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         new MatchResultDialog(match, details.tournament().getSetsToWin(), result -> {
             tournamentService.recordResult(match.getId(), result);
             Notifications.success(Tr.t("Rezultat salvat"));
+            reportStage2Rebuild();
             refresh();
             keepInView(match.getId());
         }, onClear).open();
