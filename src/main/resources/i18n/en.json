@@ -492,6 +492,8 @@
   "{0} din {1} meciuri": "{0} of {1} matches",
   "Rezultatele din grupe au stabilit calificarea. Le puteți corecta, dar etapa 2 se va construi din nou.": "The group results decided qualification. You can correct them, but stage 2 will be rebuilt.",
   "Etapa 2 va fi construită din nou": "Stage 2 will be rebuilt",
-  "Corectarea unui rezultat din grupe poate schimba calificarea. După salvare, meciurile din etapa 2 se șterg (rezultate înregistrate: {0}), iar etapa 2 se construiește din nou cu aceleași setări. Dacă etapa 1 nu mai e completă, turneul revine la etapa grupelor.": "Correcting a group result can change who qualifies. After saving, the stage 2 matches are deleted ({0} results recorded) and stage 2 is rebuilt with the same settings. If stage 1 is no longer complete, the tournament goes back to the group stage.",
-  "Continuă": "Continue"
+  "Continuă": "Continue",
+  "Corectarea unui rezultat din grupe poate schimba calificarea. După salvare, etapa 2 se construiește din nou cu aceleași setări. Din cele {0} rezultate înregistrate în etapa 2 se păstrează cele ale meciurilor care rămân aceleași (aceiași jucători în aceeași finală, respectiv pe aceeași poziție în tablou); celelalte se șterg. Dacă etapa 1 nu mai e completă, turneul revine la etapa grupelor.": "Correcting a group result can change who qualifies. After saving, stage 2 is rebuilt with the same settings. Of the {0} results recorded in stage 2, those of matches that stay the same (same players in the same final, or in the same bracket position) are kept; the others are deleted. If stage 1 is no longer complete, the tournament goes back to the group stage.",
+  "Etapa 1 nu mai e completă: turneul a revenit la etapa grupelor": "Stage 1 is no longer complete: the tournament is back at the group stage",
+  "Etapa 2 a fost construită din nou: {0} rezultate păstrate, {1} șterse": "Stage 2 has been rebuilt: {0} results kept, {1} deleted"
 }
