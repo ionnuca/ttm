@@ -90,6 +90,18 @@ let page = await ctx.newPage();
   await probe.close();
 }
 
+await check('guest: meciurile pe pagini', async () => {
+  await page.goto(`${BASE}/meciuri`);
+  const pager = page.locator('.ttm-pager');
+  await pager.waitFor({ timeout: 10000 });
+  await expectText(page, '1–20 din');
+  await pager.getByRole('button', { name: 'Pagina 2' }).click();
+  await expectText(page, '21–');
+  await page.waitForURL(/pagina=2/, { timeout: 10000 });
+  await shot(page, '00b-guest-meciuri-pagina-2');
+  await page.reload();
+  await expectText(page, '21–');
+});
 await check('guest: pagina principală = turneele', async () => {
   await page.goto(`${BASE}/`);
   await expectText(page, 'Turneul de duminică');
@@ -97,8 +109,8 @@ await check('guest: pagina principală = turneele', async () => {
   // meciurile sunt în meniu, la /meciuri
   await page.getByRole('link', { name: 'Meciuri' }).first().click();
   await page.waitForURL(/\/meciuri$/, { timeout: 10000 });
-  await expectText(page, 'ultimele');
-  await expectText(page, 'Cupa de vară');
+  await expectText(page, 'Meciuri');
+  await expectText(page, '1–20 din');
   await shot(page, '00-guest-acasa-meciuri');
   await page.goto(`${BASE}/jucatori`);
   await page.getByRole('link', { name: 'TTM – pagina principală' }).click();
@@ -139,7 +151,8 @@ await check('guest: pagina jucătorului (detalii, statistici, meciuri)', async (
 });
 await check('guest: meciurile', async () => {
   await page.goto(`${BASE}/meciuri`);
-  await expectText(page, 'ultimele');
+  await expectText(page, 'Meciuri');
+  await page.locator('input[placeholder="Caută după jucător sau turneu"]').fill('Cupa de vară');
   await expectText(page, 'Cupa de vară');
   await shot(page, '15-guest-meciuri');
   await page.locator('input[placeholder="Caută după jucător sau turneu"]').fill('Sârbu');
@@ -675,7 +688,8 @@ await check('telefon: după salvarea scorului pagina rămâne la meci', async ()
 });
 await check('telefon: meciuri', async () => {
   await page.goto(`${BASE}/meciuri`);
-  await expectText(page, 'ultimele');
+  await page.getByRole('heading', { name: 'Meciuri' }).waitFor({ timeout: 10000 });
+  await page.locator('.ttm-pager').scrollIntoViewIfNeeded();
   await shot(page, '16-telefon-meciuri');
 });
 await check('telefon: admin utilizatori', async () => {
@@ -698,9 +712,9 @@ ctx = await browser.newContext(desktop);
 page = await ctx.newPage();
 await check('limba: vizitatorul trece pe rusă', async () => {
   await page.goto(`${BASE}/meciuri`);
-  await expectText(page, 'ultimele');
+  await expectText(page, 'Meciuri');
   await chooseLanguage(page, 'RU');
-  await expectText(page, 'последние');
+  await expectText(page, 'Матчи');
   await expectText(page, 'Настольный теннис');
   await shot(page, '40-limba-ru-meciuri');
   await page.goto(`${BASE}/jucatori`);
@@ -737,12 +751,12 @@ await check('limba: utilizatorul o salvează în cont', async () => {
   ctx = await browser.newContext(desktop);
   page = await ctx.newPage();
   await page.goto(`${BASE}/meciuri`);
-  await expectText(page, 'ultimele');
+  await expectText(page, 'Meciuri');
   await login(page, 'jucator', 'jucator123');
   await page.goto(`${BASE}/meciuri`);
-  await expectText(page, 'latest');
+  await expectText(page, 'Matches');
   await chooseLanguage(page, 'RO');
-  await expectText(page, 'ultimele');
+  await expectText(page, 'Meciuri');
 });
 await ctx.close();
 

@@ -1,6 +1,7 @@
 package md.ttm.ui.match;
 
 import md.ttm.i18n.Tr;
+import md.ttm.ui.components.Pager;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.Paragraph;
 import com.vaadin.flow.component.html.Span;
@@ -11,6 +12,8 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.data.value.ValueChangeMode;
 import com.vaadin.flow.router.HasDynamicTitle;
+import com.vaadin.flow.router.BeforeEnterEvent;
+import com.vaadin.flow.router.BeforeEnterObserver;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
 import md.ttm.service.match.MatchService;
@@ -25,7 +28,7 @@ import java.util.Locale;
 /** Ultimele meciuri cu rezultat, din toate turneele, cu căutare după jucător sau turneu. */
 @Route(value = "meciuri", layout = MainLayout.class)
 @AnonymousAllowed
-public class MatchesView extends VerticalLayout implements HasDynamicTitle {
+public class MatchesView extends VerticalLayout implements HasDynamicTitle, BeforeEnterObserver {
 
     @Override
     public String getPageTitle() {
@@ -33,12 +36,15 @@ public class MatchesView extends VerticalLayout implements HasDynamicTitle {
     }
 
 
-    static final int LIMIT = 200;
+    static final int LIMIT = 5000;
+    static final int PAGE_SIZE = 20;
 
     private final List<MatchSummary> matches;
     private final TextField search = new TextField();
     private final VerticalLayout results = new VerticalLayout();
     private final Span counter = new Span();
+    private final Pager pager = new Pager(PAGE_SIZE);
+    private List<MatchSummary> shown = List.of();
 
     private final Map<Long, Long> photoVersions;
 
@@ -59,32 +65,49 @@ public class MatchesView extends VerticalLayout implements HasDynamicTitle {
         search.setValueChangeMode(ValueChangeMode.LAZY);
         search.setWidthFull();
         search.setMaxWidth("24rem");
-        search.addValueChangeListener(e -> show());
+        search.addValueChangeListener(e -> {
+            pager.setPage(0);
+            show();
+        });
+        pager.addPageChangeListener(p -> {
+            showPage();
+            results.getElement().executeJs("this.scrollIntoView({block: 'start'})");
+        });
 
         results.setPadding(false);
         results.setWidthFull();
         results.setSpacing(false);
-        add(header, search, results);
+        add(header, search, results, pager);
+    }
+
+    @Override
+    public void beforeEnter(BeforeEnterEvent event) {
+        pager.bindToUrl(event);
         show();
     }
 
     private void show() {
         String term = search.getValue() == null ? "" : search.getValue().trim().toLowerCase(Locale.ROOT);
-        List<MatchSummary> shown = term.isEmpty() ? matches : matches.stream()
+        shown = term.isEmpty() ? matches : matches.stream()
                 .filter(m -> contains(m.playerA().getDisplayName(), term)
                         || contains(m.playerB().getDisplayName(), term)
                         || contains(m.tournamentName(), term))
                 .toList();
         counter.setText(matches.isEmpty() ? "" : term.isEmpty()
-                ? Tr.t("ultimele {0}", matches.size())
-                : Tr.t("{0} din ultimele {1}", shown.size(), matches.size()));
+                ? Tr.t("{0} meciuri", matches.size())
+                : Tr.t("{0} din {1} meciuri", shown.size(), matches.size()));
+        pager.setTotal(shown.size());
+        showPage();
+    }
+
+    private void showPage() {
         results.removeAll();
         if (shown.isEmpty()) {
             results.add(new Paragraph(matches.isEmpty()
                     ? Tr.t("Încă nu s-a jucat niciun meci.")
                     : Tr.t("Niciun meci nu corespunde căutării.")));
         } else {
-            results.add(new MatchList(shown, null, photoVersions));
+            results.add(new MatchList(pager.slice(shown), null, photoVersions));
         }
     }
 
