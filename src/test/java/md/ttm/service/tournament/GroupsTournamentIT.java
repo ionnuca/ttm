@@ -124,7 +124,10 @@ class GroupsTournamentIT {
         org.springframework.security.core.context.SecurityContext saved =
                 org.springframework.security.core.context.SecurityContextHolder.getContext();
         try {
-            org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(
+            org.springframework.security.core.context.SecurityContext user =
+                    org.springframework.security.core.context.SecurityContextHolder.createEmptyContext();
+            org.springframework.security.core.context.SecurityContextHolder.setContext(user);
+            user.setAuthentication(
                     new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
                             "jucator", "x", java.util.List.of(
                             new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_USER"))));
