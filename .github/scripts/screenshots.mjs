@@ -369,6 +369,14 @@ await check('admin: finalele după începerea etapei 2', async () => {
   await expectText(page, 'etapa 2 se va construi din nou');
   await shot(page, '31-admin-finale');
 });
+await check('admin: editarea unei finale', async () => {
+  await page.getByRole('button', { name: 'Editează grupa' }).first().click();
+  await expectText(page, 'Un jucător scos iese doar din finală');
+  await shot(page, '31a-admin-editeaza-finala');
+  await page.getByRole('dialog').getByRole('button', { name: 'Adaugă jucători' }).click();
+  await expectText(page, 'Grupa va avea');
+  await page.getByRole('dialog').getByRole('button', { name: 'Închide' }).click();
+});
 await check('admin: corectarea unui meci din grupe după etapa 2', async () => {
   await page.getByRole('button', { name: /^Modifică rezultatul/ }).first().click();
   await expectText(page, 'Etapa 2 va fi construită din nou');

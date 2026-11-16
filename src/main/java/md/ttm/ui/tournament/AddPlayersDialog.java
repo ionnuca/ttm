@@ -37,6 +37,7 @@ class AddPlayersDialog extends Dialog {
     private final List<Player> players;
     private final Map<Long, Long> photoVersions;
     private final int registered;
+    private final boolean group;
     private final Set<Long> selected = new LinkedHashSet<>();
     private final Map<Long, Row> rows = new LinkedHashMap<>();
     private final Div list = new Div();
@@ -50,6 +51,13 @@ class AddPlayersDialog extends Dialog {
 
     AddPlayersDialog(String tournamentName, int registered, List<Player> notRegistered, Map<Long, Long> photoVersions,
                      Consumer<List<Long>> onAdd) {
+        this(tournamentName, registered, notRegistered, photoVersions, false, onAdd);
+    }
+
+    /** @param group adăugarea se face într-o grupă (bara de jos numără jucătorii grupei, nu ai turneului) */
+    AddPlayersDialog(String tournamentName, int registered, List<Player> notRegistered, Map<Long, Long> photoVersions,
+                     boolean group, Consumer<List<Long>> onAdd) {
+        this.group = group;
         this.registered = registered;
         this.photoVersions = photoVersions;
         this.players = new ArrayList<>(notRegistered);
@@ -153,7 +161,8 @@ class AddPlayersDialog extends Dialog {
         int n = selected.size();
         selectedText.setText(n == 0 ? Tr.t("Niciun jucător selectat")
                 : n == 1 ? Tr.t("1 jucător selectat") : Tr.t("{0} jucători selectați", n));
-        totalText.setText(Tr.t("Turneul va avea {0} participanți", registered + n));
+        totalText.setText(group ? Tr.t("Grupa va avea {0} jucători", registered + n)
+                : Tr.t("Turneul va avea {0} participanți", registered + n));
         add.setEnabled(n > 0);
         add.setText(n > 1 ? Tr.t("Adaugă {0} jucători", n) : Tr.t("Adaugă"));
         updateSelectAll();
