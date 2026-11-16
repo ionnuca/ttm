@@ -376,6 +376,10 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         HorizontalLayout heading = new HorizontalLayout(title, progress);
         heading.setAlignItems(FlexComponent.Alignment.BASELINE);
         heading.getStyle().set("flex-wrap", "wrap");
+        if (canEditTable(details, null)) {
+            heading.add(editTableButton(details, null, Tr.t("Editează jucătorii"), Tr.t("Jucătorii turneului"),
+                    details.participants(), details.matches()));
+        }
 
         section.add(heading, new ResultsMatrix(details.participants(), details.standings(), ownId(details),
                 details.ratingChanges()));
@@ -507,7 +511,16 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         section.setPadding(false);
         H4 name = new H4(TournamentLabels.groupName(group.group().getName()));
         name.getStyle().set("margin", "var(--lumo-space-s) 0 0");
-        section.add(name, new ResultsMatrix(group.members(), group.standings(), ownId(details), details.ratingChanges()));
+        if (canEditTable(details, group.group())) {
+            HorizontalLayout heading = new HorizontalLayout(name, editTableButton(details, group.group(),
+                    Tr.t("Editează grupa"), TournamentLabels.groupName(group.group().getName()), group.members(), group.matches()));
+            heading.setAlignItems(FlexComponent.Alignment.BASELINE);
+            heading.getStyle().set("flex-wrap", "wrap");
+            section.add(heading);
+        } else {
+            section.add(name);
+        }
+        section.add(new ResultsMatrix(group.members(), group.standings(), ownId(details), details.ratingChanges()));
         Component tiebreaks = tiebreakSection(details, group.group().getId(), group.members(), group.tiebreaks(),
                 group.pendingTiebreaks(), editable);
         if (tiebreaks != null) {
@@ -522,6 +535,48 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
             section.add(rounds(details, group.matches(), editable));
         }
         return section;
+    }
+
+    // ------------------------------------------------------------------
+    // Editarea grupelor după începere
+    // ------------------------------------------------------------------
+
+    /** Organizatorul poate adăuga sau scoate jucători: Round Robin în desfășurare, grupele în etapa 1, finalele în etapa 2. */
+    private static boolean canEditTable(TournamentDetails details, TournamentGroup group) {
+        Tournament t = details.tournament();
+        if (!details.manager() || t.getStatus() != md.ttm.model.tournament.TournamentStatus.IN_PROGRESS) {
+            return false;
+        }
+        if (group == null) {
+            return !t.isGroupsFormat();
+        }
+        return (group.isGroupStage() && t.getStage() == TournamentStage.GROUPS)
+                || (group.getStage() == TournamentStage.FINALS && t.getStage() == TournamentStage.FINALS);
+    }
+
+    private Button editTableButton(TournamentDetails details, TournamentGroup group, String label, String title,
+                                   List<TournamentParticipant> members, List<TournamentMatch> matches) {
+        Long groupId = group != null ? group.getId() : null;
+        boolean finalTable = group != null && !group.isGroupStage();
+        String explanation = finalTable
+                ? Tr.t("Jucătorii adăugați (încă neînscriși la turneu) primesc meciuri cu toți cei din finală. Un jucător scos iese doar din finală, iar meciurile lui din finală se șterg.")
+                : Tr.t("Jucătorii adăugați primesc meciuri cu toți ceilalți din tabel, în tururile în care sunt liberi. Un jucător scos iese din turneu, iar meciurile lui se șterg.");
+        Button edit = new Button(label, VaadinIcon.USERS.create(), e -> new TableEditDialog(title, explanation, members, matches,
+                photoService.versions(),
+                () -> new AddPlayersDialog(title, members.size(), tournamentService.findPlayersNotRegistered(tournamentId),
+                        photoService.versions(), group != null, ids -> {
+                    tournamentService.addPlayersToTable(tournamentId, groupId, ids);
+                    Notifications.success(ids.size() == 1 ? Tr.t("Jucătorul a fost adăugat")
+                            : Tr.t("Au fost adăugați {0} jucători", ids.size()));
+                    refresh();
+                }).open(),
+                p -> {
+                    tournamentService.removePlayerFromTable(tournamentId, groupId, p.getId());
+                    Notifications.success(Tr.t("{0} a fost scos", p.getPlayer().getDisplayName()));
+                    refresh();
+                }).open());
+        edit.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL);
+        return edit;
     }
 
     // ------------------------------------------------------------------
