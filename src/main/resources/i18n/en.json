@@ -513,5 +513,22 @@
   "Grupa va avea {0} jucători": "The group will have {0} players",
   "Jucătorii se pot adăuga sau scoate doar cât timp turneul e în desfășurare": "Players can be added or removed only while the tournament is in progress",
   "Alegeți grupa": "Choose the group",
-  "Această grupă nu se mai poate modifica": "This group can no longer be changed"
+  "Această grupă nu se mai poate modifica": "This group can no longer be changed",
+  "Pornită": "Running",
+  "Se pornește…": "Starting…",
+  "Oprită": "Stopped",
+  "Stare necunoscută": "Unknown state",
+  "Se oprește…": "Stopping…",
+  "Aplicația de test": "Test application",
+  "Versiunea din develop, cu o copie a datelor din producție. Implicit e oprită, ca să nu ocupe memoria serverului (până la 640 MB); porniți-o doar când aveți nevoie. Pornirea durează aproximativ un minut.": "The develop version, with a copy of the production data. It is stopped by default so it does not use the server memory (up to 640 MB); start it only when you need it. Starting takes about a minute.",
+  "Pornește": "Start",
+  "Oprește": "Stop",
+  "Reîmprospătează": "Refresh",
+  "Deschide aplicația de test →": "Open the test application →",
+  "Verificat de server la {0}.": "Checked by the server at {0}.",
+  "Serviciul de pe server nu a răspuns încă. Dacă nu l-ați instalat, rulați o dată pe server: sudo bash test-control-setup.sh": "The server service has not answered yet. If you have not installed it, run once on the server: sudo bash test-control-setup.sh",
+  "Aplicația de test se pornește": "The test application is starting",
+  "Aplicația de test se oprește": "The test application is stopping",
+  "Comanda aplicației de test nu e disponibilă pe acest server": "Test application control is not available on this server",
+  "Starea aplicației de test nu se poate salva. Pe server rulați o dată deploy/test-control-setup.sh": "The test application state cannot be saved. Run deploy/test-control-setup.sh once on the server"
 }

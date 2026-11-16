@@ -350,6 +350,17 @@ await check('admin: configurarea „Grupe + finale”', async () => {
   await shot(page, '23c-admin-incepe-turneul-grupe');
   await page.getByRole('button', { name: 'Anulează' }).click();
 });
+await check('admin: aplicația de test din Setări', async () => {
+  await page.goto(`${BASE}/setari`);
+  await expectText(page, 'Aplicația de test');
+  await expectText(page, 'Oprită');
+  await page.getByRole('button', { name: 'Pornește' }).click();
+  await expectText(page, 'Aplicația de test se pornește');
+  await expectText(page, 'Se pornește…');
+  await shot(page, '29b-admin-setari-aplicatia-de-test');
+  await page.getByRole('button', { name: 'Oprește' }).click();
+  await expectText(page, 'Aplicația de test se oprește');
+});
 await check('admin: dialogul „Începe etapa 2”', async () => {
   await page.goto(`${BASE}/turnee`);
   await page.getByText('Liga de iarnă').first().click();

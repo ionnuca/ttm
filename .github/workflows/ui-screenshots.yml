@@ -46,7 +46,12 @@ jobs:
           DB_URL: jdbc:postgresql://localhost:5432/ttm
           APP_ADMIN_PASSWORD: admin12345
           SPRING_PROFILES_ACTIVE: demo
+          # comanda aplicației de test (Setări): folderul comun, cu o stare „oprită” ca de la server
+          APP_TEST_CONTROL_DIR: /tmp/ttm-control
+          APP_TEST_URL: https://test.example
         run: |
+          mkdir -p /tmp/ttm-control && echo off > /tmp/ttm-control/test-desired
+          echo "stopped $(date -Iseconds)" > /tmp/ttm-control/test-status
           nohup java -jar target/ttm-*.jar > app.log 2>&1 &
           for i in $(seq 1 60); do
             if curl -sf http://localhost:8080/ > /dev/null; then echo "Aplicația a pornit"; exit 0; fi
