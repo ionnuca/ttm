@@ -87,7 +87,11 @@ jobs:
           scp -i ~/.ssh/deploy deploy/docker-compose.test.yml "$DEPLOY_USER@$DEPLOY_HOST:/opt/ttm-test/docker-compose.yml"
           scp -i ~/.ssh/deploy deploy/test-refresh.sh "$DEPLOY_USER@$DEPLOY_HOST:/opt/ttm-test/"
           echo "$TOKEN" | $SSH "docker login ghcr.io -u ${{ github.actor }} --password-stdin"
-          $SSH "cd /opt/ttm-test && chmod +x test-refresh.sh && docker compose pull -q && docker compose up -d; rc=\$?; docker logout ghcr.io; exit \$rc"
+          # aplicația de test pornește doar dacă e cerută din Setări (/opt/ttm/control/test-desired = on);
+          # fără serviciul de comandă instalat (test-control-setup.sh), rămâne comportamentul vechi: pornită
+          DESIRED=$($SSH "if [ -f /opt/ttm/control/test-desired ]; then tr -d '[:space:]' < /opt/ttm/control/test-desired; else echo on; fi")
+          if [ "$DESIRED" = on ]; then UP="docker compose up -d"; else UP="docker compose up -d --no-start && docker compose stop"; fi
+          $SSH "cd /opt/ttm-test && chmod +x test-refresh.sh && docker compose pull -q && $UP; rc=\$?; docker logout ghcr.io; exit \$rc"
           $SSH "docker image prune -f > /dev/null"
           # adresa de test nu mai cere utilizator și parolă (protecția Caddy, pusă de versiunile vechi ale test-setup.sh)
           $SSH 'bash -s' <<'REMOTE'
@@ -104,6 +108,10 @@ jobs:
             echo "::notice::Caddy reîncărcat; $(grep -c basic_auth "$f" || true) blocuri basic_auth în $f"
           fi
           REMOTE
+          if [ "$DESIRED" != on ]; then
+            echo "### Imaginea de test e actualizată (${SHA:0:7}); aplicația de test e oprită — se pornește din Setări" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
           for i in $(seq 1 60); do
             if $SSH "cd /opt/ttm-test && docker compose logs app-test 2>&1 | grep -q 'Started TtmApplication'"; then
               echo "### Aplicația de test a pornit (${SHA:0:7})" >> "$GITHUB_STEP_SUMMARY"

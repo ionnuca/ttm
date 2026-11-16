@@ -333,6 +333,145 @@ public class TournamentService {
         participantRepository.delete(participant);
     }
 
+    // ------------------------------------------------------------------
+    // Editarea grupelor după începere
+    // ------------------------------------------------------------------
+
+    /**
+     * Adaugă jucători într-un turneu început: în tabelul Round Robin ({@code groupId == null}), într-o grupă (cât
+     * timp se joacă etapa grupelor) sau într-o finală (în etapa finalelor). Fiecare jucător nou primește meciuri cu
+     * toți ceilalți din tabel, puse în tururile în care amândoi sunt liberi (altfel în tururi noi).
+     */
+    @PreAuthorize("hasAnyRole('ADMIN', 'TOURNAMENT_MANAGER')")
+    @Transactional
+    public int addPlayersToTable(Long tournamentId, Long groupId, Collection<Long> playerIds) {
+        if (playerIds == null || playerIds.isEmpty()) {
+            throw new BusinessException("Alegeți cel puțin un jucător");
+        }
+        Tournament tournament = requireTournament(tournamentId);
+        TournamentGroup group = requireEditableTable(tournament, groupId);
+        int added = 0;
+        for (Long playerId : new LinkedHashSet<>(playerIds)) {
+            Player player = playerRepository.findById(playerId)
+                    .orElseThrow(() -> new BusinessException("Jucătorul nu mai există"));
+            if (participantRepository.existsByTournamentIdAndPlayerId(tournamentId, playerId)) {
+                throw new BusinessException("{0} este deja înscris la acest turneu", player.getDisplayName());
+            }
+            List<TournamentParticipant> participants = participantRepository.findByTournamentIdWithPlayer(tournamentId);
+            TournamentParticipant participant = new TournamentParticipant(tournament, player);
+            participant.setStatus(ParticipantStatus.CONFIRMED);
+            participant.setSeed(participants.stream().mapToInt(p -> p.getSeed() != null ? p.getSeed() : 0).max().orElse(0) + 1);
+            participant.setSeedRating(player.getRating());
+            participantRepository.saveAndFlush(participant);
+
+            List<TournamentParticipant> opponents;
+            if (group == null) {
+                opponents = participants;
+            } else {
+                List<TournamentGroupMember> members = memberRepository.findByTournamentIdWithParticipants(tournamentId).stream()
+                        .filter(m -> m.getGroup().getId().equals(group.getId()))
+                        .toList();
+                opponents = members.stream().map(TournamentGroupMember::getParticipant).toList();
+                memberRepository.saveAndFlush(new TournamentGroupMember(group, participant, members.size() + 1));
+            }
+            scheduleNewPlayer(tournament, group, participant, opponents);
+            added++;
+        }
+        deleteTiebreaks(tournamentId, group);
+        return added;
+    }
+
+    /**
+     * Scoate un jucător dintr-un tabel al unui turneu început; meciurile lui din acel tabel (cu rezultate cu tot) se
+     * șterg. Din tabelul Round Robin sau dintr-o grupă jucătorul iese din turneu; dintr-o finală iese doar din finală.
+     */
+    @PreAuthorize("hasAnyRole('ADMIN', 'TOURNAMENT_MANAGER')")
+    @Transactional
+    public void removePlayerFromTable(Long tournamentId, Long groupId, Long participantId) {
+        Tournament tournament = requireTournament(tournamentId);
+        TournamentGroup group = requireEditableTable(tournament, groupId);
+        TournamentParticipant participant = participantRepository.findById(participantId)
+                .filter(p -> p.getTournament().getId().equals(tournamentId))
+                .orElseThrow(() -> new BusinessException("Participantul nu mai este înscris"));
+        Long tableId = group != null ? group.getId() : null;
+        matchRepository.deleteAll(matchRepository.findByTournamentIdWithParticipants(tournamentId).stream()
+                .filter(m -> java.util.Objects.equals(m.getGroup() != null ? m.getGroup().getId() : null, tableId))
+                .filter(m -> m.getParticipantA().getId().equals(participantId) || m.getParticipantB().getId().equals(participantId))
+                .toList());
+        matchRepository.flush();
+        deleteTiebreaks(tournamentId, group);
+        if (group == null || group.isGroupStage()) {
+            // iese din turneu: și din celelalte tabele ale lui (nu există altele în etapa grupelor)
+            memberRepository.deleteAll(memberRepository.findByTournamentIdWithParticipants(tournamentId).stream()
+                    .filter(m -> m.getParticipant().getId().equals(participantId))
+                    .toList());
+            memberRepository.flush();
+            participantRepository.delete(participant);
+            participantRepository.flush();
+        } else {
+            memberRepository.deleteAll(memberRepository.findByTournamentIdWithParticipants(tournamentId).stream()
+                    .filter(m -> m.getGroup().getId().equals(group.getId()) && m.getParticipant().getId().equals(participantId))
+                    .toList());
+            memberRepository.flush();
+        }
+        finishIfComplete(tournament);
+        if (tournament.getStatus() == TournamentStatus.FINISHED) {
+            ratingService.recalculateAll();
+        }
+    }
+
+    /** Tabelul care se poate edita acum: Round Robin în desfășurare, o grupă în etapa grupelor, o finală în etapa finalelor. */
+    private TournamentGroup requireEditableTable(Tournament tournament, Long groupId) {
+        if (tournament.getStatus() != TournamentStatus.IN_PROGRESS) {
+            throw new BusinessException("Jucătorii se pot adăuga sau scoate doar cât timp turneul e în desfășurare");
+        }
+        if (groupId == null) {
+            if (tournament.isGroupsFormat()) {
+                throw new BusinessException("Alegeți grupa");
+            }
+            return null;
+        }
+        TournamentGroup group = groupRepository.findById(groupId)
+                .filter(g -> g.getTournament().getId().equals(tournament.getId()))
+                .orElseThrow(() -> new BusinessException("Grupa nu mai există"));
+        boolean editable = (group.isGroupStage() && tournament.getStage() == TournamentStage.GROUPS)
+                || (group.getStage() == TournamentStage.FINALS && tournament.getStage() == TournamentStage.FINALS);
+        if (!editable) {
+            throw new BusinessException("Această grupă nu se mai poate modifica");
+        }
+        return group;
+    }
+
+    /** Meciurile unui jucător nou cu adversarii din tabel, în tururile în care amândoi sunt liberi. */
+    private void scheduleNewPlayer(Tournament tournament, TournamentGroup group, TournamentParticipant player,
+                                   List<TournamentParticipant> opponents) {
+        Long tableId = group != null ? group.getId() : null;
+        Map<Integer, java.util.Set<Long>> busy = new java.util.TreeMap<>();
+        for (TournamentMatch m : matchRepository.findByTournamentIdWithParticipants(tournament.getId())) {
+            if (java.util.Objects.equals(m.getGroup() != null ? m.getGroup().getId() : null, tableId)) {
+                java.util.Set<Long> ids = busy.computeIfAbsent(m.getRoundNo(), r -> new java.util.HashSet<>());
+                ids.add(m.getParticipantA().getId());
+                ids.add(m.getParticipantB().getId());
+            }
+        }
+        List<TournamentMatch> created = new ArrayList<>();
+        for (TournamentParticipant opponent : opponents) {
+            int round = 1;
+            while (busy.containsKey(round)
+                    && (busy.get(round).contains(player.getId()) || busy.get(round).contains(opponent.getId()))) {
+                round++;
+            }
+            java.util.Set<Long> ids = busy.computeIfAbsent(round, r -> new java.util.HashSet<>());
+            ids.add(player.getId());
+            ids.add(opponent.getId());
+            created.add(group != null
+                    ? new TournamentMatch(tournament, group, round, opponent, player)
+                    : new TournamentMatch(tournament, round, opponent, player));
+        }
+        matchRepository.saveAll(created);
+        matchRepository.flush();
+    }
+
     private TournamentParticipant register(Tournament tournament, Player player, ParticipantStatus status) {
         if (!tournament.isRegistrationOpen()) {
             throw new BusinessException("Înscrierea la acest turneu este închisă");

@@ -350,6 +350,17 @@ await check('admin: configurarea „Grupe + finale”', async () => {
   await shot(page, '23c-admin-incepe-turneul-grupe');
   await page.getByRole('button', { name: 'Anulează' }).click();
 });
+await check('admin: aplicația de test din Setări', async () => {
+  await page.goto(`${BASE}/setari`);
+  await expectText(page, 'Aplicația de test');
+  await expectText(page, 'Oprită');
+  await page.getByRole('button', { name: 'Pornește' }).click();
+  await expectText(page, 'Aplicația de test se pornește');
+  await expectText(page, 'Se pornește…');
+  await shot(page, '29b-admin-setari-aplicatia-de-test');
+  await page.getByRole('button', { name: 'Oprește' }).click();
+  await expectText(page, 'Aplicația de test se oprește');
+});
 await check('admin: dialogul „Începe etapa 2”', async () => {
   await page.goto(`${BASE}/turnee`);
   await page.getByText('Liga de iarnă').first().click();
@@ -368,6 +379,14 @@ await check('admin: finalele după începerea etapei 2', async () => {
   await expectText(page, 'meciuri sunt preluate din etapa 1');
   await expectText(page, 'etapa 2 se va construi din nou');
   await shot(page, '31-admin-finale');
+});
+await check('admin: editarea unei finale', async () => {
+  await page.getByRole('button', { name: 'Editează grupa' }).first().click();
+  await expectText(page, 'Un jucător scos iese doar din finală');
+  await shot(page, '31a-admin-editeaza-finala');
+  await page.getByRole('dialog').getByRole('button', { name: 'Adaugă jucători' }).click();
+  await expectText(page, 'Grupa va avea');
+  await page.getByRole('dialog').getByRole('button', { name: 'Închide' }).click();
 });
 await check('admin: corectarea unui meci din grupe după etapa 2', async () => {
   await page.getByRole('button', { name: /^Modifică rezultatul/ }).first().click();

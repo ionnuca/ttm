@@ -40,6 +40,11 @@ services:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-}
       JAVA_OPTS: ${JAVA_OPTS:--Xmx1g}
       TZ: Europe/Chisinau
+      # pornirea/oprirea aplicației de test din Setări (serviciul de pe server: test-control-setup.sh)
+      APP_TEST_CONTROL_DIR: /app/control
+      APP_TEST_URL: ${APP_TEST_URL:-https://test.tabletennis.omagiu.md}
+    volumes:
+      - ./control:/app/control
     expose:
       - "8080"
 
