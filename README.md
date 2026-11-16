@@ -273,6 +273,8 @@ Copiile de rezervă stau pe același server. Pentru siguranță, descărcați pe
 
 Pe același server rulează și versiunea din `develop`, la o adresă separată. Accesul e ca în producție: paginile publice sunt deschise, iar autentificarea se face cu conturile aplicației (copiate din producție).
 
+Aplicația de test e **oprită implicit** și se pornește sau se oprește din aplicația de producție: **Setări → Aplicația de test** (doar administratorul). Aplicația de producție nu are acces la Docker: scrie doar starea dorită în `/opt/ttm/control/test-desired`; serviciul systemd `ttm-test-control` (instalat o dată cu `sudo bash deploy/test-control-setup.sh`) o aplică și scrie starea reală în `/opt/ttm/control/test-status`. La publicarea de pe `develop`, imaginea se actualizează, dar aplicația pornește doar dacă e cerută.
+
 - containerul `app-test` (`/opt/ttm-test`), cu memoria limitată (Java 288 MB, container 640 MB), ca să nu ia din memoria producției;
 - baza `ttm_test` din același PostgreSQL, o **copie a datelor din producție**; producția nu este atinsă;
 - servită de Caddy-ul producției (`/opt/ttm/sites/test.caddy`), cu HTTPS automat; în bara de sus apare eticheta **TEST**.
