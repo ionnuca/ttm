@@ -198,6 +198,7 @@ await check('guest: turneu Grupe + finale (etapa 1)', async () => {
   await page.goto(`${BASE}/turnee`);
   await page.getByText('Liga de iarnă').first().click();
   await expectStage(page, 'Grupe');
+  await page.locator('.ttm-stage-chips button[aria-pressed="true"]', { hasText: 'Toate' }).waitFor({ timeout: 10000 });
   await expectText(page, 'Grupa A');
   await expectText(page, 'Grupa C');
   await expectNoText(page, 'Începe etapa 2');
