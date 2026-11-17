@@ -113,6 +113,7 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
     private final Map<Long, Component> tiebreakCards = new HashMap<>();
 
     private void refresh() {
+        stageTabs = null;
         matchRows.clear();
         matrices.clear();
         tiebreakCards.clear();
@@ -534,13 +535,28 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         StageTabs.Stage stage2 = new StageTabs.Stage(STAGE_2, t.isKnockoutFormat() ? Tr.t("Tablou") : Tr.t("Finale"),
                 stage2Parts.isEmpty() ? null : progress(played, total), stage2Top, stage2Parts);
 
-        add(new StageTabs(List.of(groups, stage2), afterGroups ? 1 : 0, selectedStage, selectedPart,
+        stageTabs = new StageTabs(List.of(groups, stage2), afterGroups ? 1 : 0, selectedStage, selectedPart,
                 (stageKey, part) -> {
                     selectedStage = stageKey;
                     selectedPart = part;
                     updateUrl();
-                }));
+                });
+        add(stageTabs);
         add(legend(details));
+    }
+
+    /** Taburile etapelor din pagina curentă ({@code null} la Round Robin sau înainte de începere). */
+    private StageTabs stageTabs;
+
+    /** După pornirea etapei 2 pagina trece la finale (tablouri), toate, și derulează la ele. */
+    private void showStage2() {
+        selectedStage = STAGE_2;
+        selectedPart = StageTabs.ALL;
+        refresh();
+        updateUrl();
+        if (stageTabs != null) {
+            stageTabs.getElement().executeJs("this.scrollIntoView({block: 'start', behavior: 'smooth'})");
+        }
     }
 
     private static final String STAGE_GROUPS = "1";
@@ -757,13 +773,13 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
                 new StartKnockoutDialog(details.groupStage(), (qualifiers, type) -> {
                     tournamentService.startKnockout(tournamentId, qualifiers, type);
                     Notifications.success(Tr.t("Etapa 2 a început"));
-                    refresh();
+                    showStage2();
                 }).open();
             } else {
                 new StartFinalsDialog(details.groupStage(), details.tournament().isCommercial(), settings -> {
                     tournamentService.startFinals(tournamentId, settings);
                     Notifications.success(Tr.t("Etapa 2 a început"));
-                    refresh();
+                    showStage2();
                 }).open();
             }
         });
