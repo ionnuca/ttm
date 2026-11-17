@@ -22,7 +22,8 @@ import java.util.function.Consumer;
 
 /**
  * Formularul de creare/editare a unui utilizator (administrator).
- * La creare se face și profilul de jucător, cu datele minime: nume și prenume.
+ * Profilul de jucător e opțional: bifa „Creează și profil de jucător” îl face din nume și prenume
+ * (la creare, sau mai târziu pentru un cont care nu are jucător).
  */
 public class UserFormDialog extends Dialog {
 
@@ -33,6 +34,7 @@ public class UserFormDialog extends Dialog {
     private final Select<Role> role = new Select<>();
     private final Checkbox enabled = new Checkbox(Tr.t("Cont activ (se poate autentifica)"));
     private final Checkbox trusted = new Checkbox(Tr.t("Se înscrie la turnee fără confirmare"));
+    private final Checkbox createPlayer = new Checkbox(Tr.t("Creează și profil de jucător"));
 
     private final BeanValidationBinder<UserForm> binder = new BeanValidationBinder<>(UserForm.class);
 
@@ -43,7 +45,7 @@ public class UserFormDialog extends Dialog {
      */
     public UserFormDialog(AppUser user, Consumer<UserForm> onSave, Runnable onDelete) {
         boolean creating = user == null;
-        boolean hasPlayer = creating || user.getPlayer() != null;
+        boolean hasPlayer = !creating && user.getPlayer() != null;
         UserForm form = creating ? new UserForm() : UserForm.from(user);
 
         setHeaderTitle(creating ? Tr.t("Utilizator nou") : Tr.t("Editare utilizator"));
@@ -57,10 +59,17 @@ public class UserFormDialog extends Dialog {
                 ? Tr.t("Cel puțin {0} caractere", UserService.MIN_PASSWORD_LENGTH)
                 : Tr.t("Lăsați gol pentru a păstra parola actuală"));
 
-        if (hasPlayer) {
-            binder.forField(lastName).asRequired(Tr.t("Introduceți numele")).bind("lastName");
-            binder.forField(firstName).asRequired(Tr.t("Introduceți prenumele")).bind("firstName");
-        }
+        // numele și prenumele sunt ale jucătorului: obligatorii doar dacă există sau se creează jucătorul
+        binder.forField(lastName)
+                .withValidator(v -> !needsPlayer(hasPlayer) || (v != null && !v.isBlank()), Tr.t("Introduceți numele"))
+                .bind("lastName");
+        binder.forField(firstName)
+                .withValidator(v -> !needsPlayer(hasPlayer) || (v != null && !v.isBlank()), Tr.t("Introduceți prenumele"))
+                .bind("firstName");
+        binder.forField(createPlayer).bind("createPlayer");
+        createPlayer.setHelperText(creating
+                ? Tr.t("Fără bifă se creează doar contul (de ex. pentru un organizator care nu joacă)")
+                : Tr.t("Contul nu are profil de jucător; bifați pentru a-i crea unul"));
         binder.forField(username).asRequired(Tr.t("Introduceți numele de utilizator")).bind("username");
         binder.forField(password)
                 .withValidator((value, ctx) -> {
@@ -76,13 +85,25 @@ public class UserFormDialog extends Dialog {
         binder.forField(enabled).bind("enabled");
         binder.forField(trusted).bind("trusted");
         trusted.setTooltipText(Tr.t("Cererea de înscriere la turneu e confirmată automat; organizatorii se înscriu oricum direct"));
+        if (creating) {
+            form.setCreatePlayer(true);
+        }
         binder.readBean(form);
 
         FormLayout layout = new FormLayout();
-        if (hasPlayer) {
-            layout.add(lastName, firstName);
+        if (!hasPlayer) {
+            layout.add(createPlayer);
+            layout.setColspan(createPlayer, 2);
         }
+        layout.add(lastName, firstName);
         layout.add(username, password, role, enabled, trusted);
+        Runnable toggleNames = () -> {
+            boolean show = needsPlayer(hasPlayer);
+            lastName.setVisible(show);
+            firstName.setVisible(show);
+        };
+        createPlayer.addValueChangeListener(e -> toggleNames.run());
+        toggleNames.run();
         layout.setResponsiveSteps(
                 new FormLayout.ResponsiveStep("0", 1),
                 new FormLayout.ResponsiveStep("26rem", 2));
@@ -107,6 +128,10 @@ public class UserFormDialog extends Dialog {
         }
         getFooter().add(cancel, save);
 
-        (hasPlayer ? lastName : username).focus();
+        (needsPlayer(hasPlayer) ? lastName : username).focus();
+    }
+
+    private boolean needsPlayer(boolean hasPlayer) {
+        return hasPlayer || createPlayer.getValue();
     }
 }

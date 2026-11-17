@@ -97,7 +97,10 @@ public class UserService {
     public AppUser create(UserForm form) {
         String username = requireAvailableUsername(form.getUsername(), null);
         requireValidPassword(form.getPassword());
-        Player player = playerRepository.save(newPlayer(form.getFirstName(), form.getLastName()));
+        // profilul de jucător e opțional: un cont poate exista și fără jucător (de ex. un organizator)
+        Player player = form.isCreatePlayer()
+                ? playerRepository.save(newPlayer(form.getFirstName(), form.getLastName()))
+                : null;
         AppUser user = new AppUser(username, passwordEncoder.encode(form.getPassword()),
                 form.getRole() != null ? form.getRole() : Role.USER, player);
         user.setEnabled(form.isEnabled());
@@ -138,11 +141,33 @@ public class UserService {
             player.setFirstName(requireName(form.getFirstName(), "Introduceți prenumele"));
             player.setLastName(requireName(form.getLastName(), "Introduceți numele"));
             playerRepository.save(player);
+        } else if (form.isCreatePlayer()) {
+            user.setPlayer(playerRepository.save(newPlayer(form.getFirstName(), form.getLastName())));
         }
         return userRepository.save(user);
     }
 
-    /** Șterge contul și profilul de jucător asociat. */
+    /** Creează contul de utilizator (rol Utilizator, activ) pentru un jucător care nu are încă unul. */
+    @PreAuthorize("hasRole('ADMIN')")
+    @Transactional
+    public AppUser createAccountFor(Player player, String username, String password) {
+        if (player.getId() != null && userRepository.findByPlayerId(player.getId()).isPresent()) {
+            throw new BusinessException("Jucătorul are deja un cont de utilizator");
+        }
+        String name = requireAvailableUsername(username, null);
+        requireValidPassword(password);
+        AppUser user = new AppUser(name, passwordEncoder.encode(password), Role.USER, player);
+        user.setEnabled(true);
+        return userRepository.save(user);
+    }
+
+    /** Verifică numele de utilizator și parola înainte de a crea ceva (de ex. jucătorul cu tot cu cont). */
+    public void validateNewAccount(String username, String password) {
+        requireAvailableUsername(username, null);
+        requireValidPassword(password);
+    }
+
+    /** Șterge contul; profilul de jucător (cu rezultatele lui) rămâne. */
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public void delete(Long userId) {
@@ -154,15 +179,8 @@ public class UserService {
         if (user.isAdmin() && user.isEnabled()) {
             requireAnotherActiveAdmin();
         }
-        Player player = user.getPlayer();
-        if (player != null) {
-            tournamentService.releasePlayer(player.getId());
-        }
         userRepository.delete(user);
         userRepository.flush();
-        if (player != null) {
-            playerRepository.delete(player);
-        }
     }
 
     // ------------------------------------------------------------------

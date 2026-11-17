@@ -530,5 +530,15 @@
   "Aplicația de test se pornește": "The test application is starting",
   "Aplicația de test se oprește": "The test application is stopping",
   "Comanda aplicației de test nu e disponibilă pe acest server": "Test application control is not available on this server",
-  "Starea aplicației de test nu se poate salva. Pe server rulați o dată deploy/test-control-setup.sh": "The test application state cannot be saved. Run deploy/test-control-setup.sh once on the server"
+  "Starea aplicației de test nu se poate salva. Pe server rulați o dată deploy/test-control-setup.sh": "The test application state cannot be saved. Run deploy/test-control-setup.sh once on the server",
+  "Creează și profil de jucător": "Also create a player profile",
+  "Fără bifă se creează doar contul (de ex. pentru un organizator care nu joacă)": "Unchecked, only the account is created (e.g. for an organiser who does not play)",
+  "Contul nu are profil de jucător; bifați pentru a-i crea unul": "The account has no player profile; check to create one",
+  "Jucătorul are deja un cont de utilizator": "The player already has a user account",
+  "Creează și cont de utilizator": "Also create a user account",
+  "Cont de utilizator": "User account",
+  "Jucătorul se va putea autentifica (rol Utilizator); fără bifă se creează doar jucătorul": "The player will be able to sign in (User role); unchecked, only the player is created",
+  "Jucător adăugat, cu contul {0}": "Player added, with the account {0}",
+  "{0} va fi șters definitiv. Contul lui de utilizator, dacă are unul, rămâne (fără profil de jucător).": "{0} will be deleted permanently. Their user account, if any, stays (without a player profile).",
+  "Contul „{0}” va fi șters definitiv. Profilul de jucător {1} rămâne, cu rezultatele lui.": "The account “{0}” will be deleted permanently. The player profile {1} stays, with its results."
 }

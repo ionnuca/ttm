@@ -112,7 +112,31 @@ class UserServiceIT {
         entityManager.flush();
         entityManager.clear();
         assertThat(userRepository.findById(created.getId())).isEmpty();
-        assertThat(playerRepository.findById(playerId)).isEmpty();
+        // profilul de jucător rămâne
+        assertThat(playerRepository.findById(playerId)).isPresent();
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = "ADMIN")
+    void contFaraJucator_siJucatorAdaugatMaiTarziu() {
+        UserForm form = new UserForm();
+        form.setUsername("organizator");
+        form.setPassword("parola-org");
+        form.setRole(Role.TOURNAMENT_MANAGER);
+        form.setCreatePlayer(false);
+        form.setFirstName("");
+        form.setLastName("");
+        AppUser created = userService.create(form);
+        assertThat(created.getPlayer()).isNull();
+
+        UserForm edit = UserForm.from(created);
+        edit.setPassword("");
+        edit.setCreatePlayer(true);
+        edit.setFirstName("Vasile");
+        edit.setLastName("Grosu");
+        AppUser updated = userService.update(created.getId(), edit);
+        assertThat(updated.getPlayer()).isNotNull();
+        assertThat(updated.getPlayer().getDisplayName()).isEqualTo("Grosu Vasile");
     }
 
     @Test

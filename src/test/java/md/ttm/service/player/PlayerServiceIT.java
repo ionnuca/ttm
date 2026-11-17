@@ -85,7 +85,7 @@ class PlayerServiceIT {
 
     @Test
     @WithMockUser(username = "admin", roles = "ADMIN")
-    void stergereaJucatoruluiStergeSiContulAsociat() {
+    void stergereaJucatoruluiPastreazaContulAsociat() {
         Long userId = userService.register(new RegistrationForm("Ana", "Ciobanu", "ana", "parola-ana")).getId();
         Long playerId = userRepository.findById(userId).orElseThrow().getPlayer().getId();
 
@@ -93,8 +93,25 @@ class PlayerServiceIT {
         entityManager.flush();
         entityManager.clear();
 
-        assertThat(userRepository.findById(userId)).isEmpty();
         assertThat(playerRepository.findById(playerId)).isEmpty();
+        assertThat(userRepository.findById(userId)).hasValueSatisfying(u -> assertThat(u.getPlayer()).isNull());
+    }
+
+    @Test
+    @WithMockUser(username = "admin", roles = "ADMIN")
+    void jucatorNouCuCont() {
+        Player player = new Player("Iulian", "Grosu");
+        Player saved = playerService.createWithAccount(player, "iulian", "parola-iulian");
+        entityManager.flush();
+        entityManager.clear();
+        assertThat(userRepository.findByUsername("iulian"))
+                .hasValueSatisfying(u -> assertThat(u.getPlayer().getId()).isEqualTo(saved.getId()));
+
+        // numele de utilizator ocupat: nu se creează nici jucătorul
+        long before = playerRepository.count();
+        assertThatThrownBy(() -> playerService.createWithAccount(new Player("Alt", "Jucator"), "iulian", "parola-alta"))
+                .isInstanceOf(BusinessException.class);
+        assertThat(playerRepository.count()).isEqualTo(before);
     }
 
     @Test

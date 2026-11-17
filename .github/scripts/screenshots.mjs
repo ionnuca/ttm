@@ -213,6 +213,8 @@ await check('admin: login și lista jucătorilor', async () => {
 await check('admin: dialog adăugare jucător', async () => {
   await page.getByText('Adaugă jucător').click();
   await expectText(page, 'Jucător nou');
+  await page.getByRole('dialog').getByText('Creează și cont de utilizator').click();
+  await page.getByRole('dialog').getByLabel('Nume de utilizator').waitFor({ timeout: 10000 });
   await page.getByRole('button', { name: 'Salvează' }).click();
   await shot(page, '05-admin-jucator-nou-validare');
   await page.keyboard.press('Escape');
@@ -300,6 +302,7 @@ await check('admin: dialog utilizator nou', async () => {
   await page.getByText('Adaugă utilizator').click();
   await expectText(page, 'Utilizator nou');
   await expectText(page, 'Se înscrie la turnee fără confirmare');
+  await expectText(page, 'Creează și profil de jucător');
   await page.getByRole('dialog').locator('vaadin-select:visible').first().click();
   await page.getByRole('option', { name: 'Manager de turnee' }).waitFor({ timeout: 10000 });
   await page.keyboard.press('Escape');
