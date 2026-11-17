@@ -388,6 +388,9 @@ await check('admin: dialogul „Începe etapa 2”', async () => {
   await page.goto(`${BASE}/turnee`);
   await page.getByText('Liga de iarnă').first().click();
   await expectText(page, 'Etapa 1 s-a terminat');
+  // o grupă aleasă înainte: după pornire pagina trebuie să treacă oricum la finale
+  await page.locator('.ttm-stage-chips button', { hasText: /^A$/ }).click();
+  await settle(page);
   await page.getByRole('button', { name: 'Începe etapa 2' }).click();
   await expectText(page, 'Calificați din fiecare grupă în Finala 1');
   await expectText(page, 'Finala 1 (6 jucători)');
@@ -399,6 +402,7 @@ await check('admin: finalele după începerea etapei 2', async () => {
   await expectStage(page, 'Finale');
   await expectText(page, 'Finala 1');
   await expectText(page, 'Finala 2');
+  if (!page.url().includes('etapa=2')) throw new Error('după pornire adresa trebuia să indice etapa 2: ' + page.url());
   await expectText(page, 'meciuri sunt preluate din etapa 1');
   await shot(page, '31-admin-finale');
 });
