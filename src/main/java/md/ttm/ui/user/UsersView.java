@@ -193,7 +193,7 @@ public class UsersView extends VerticalLayout implements HasDynamicTitle {
         ConfirmDialog dialog = new ConfirmDialog();
         dialog.setHeader(Tr.t("Ștergeți utilizatorul?"));
         dialog.setText(user.getPlayer() != null
-                ? Tr.t("Contul „{0}” va fi șters definitiv, împreună cu profilul de jucător.", user.getUsername())
+                ? Tr.t("Contul „{0}” va fi șters definitiv. Profilul de jucător {1} rămâne, cu rezultatele lui.", user.getUsername(), user.getPlayer().getDisplayName())
                 : Tr.t("Contul „{0}” va fi șters definitiv.", user.getUsername()));
         dialog.setCancelable(true);
         dialog.setCancelText(Tr.t("Anulează"));

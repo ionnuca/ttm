@@ -306,13 +306,17 @@ public class PlayersView extends VerticalLayout implements HasDynamicTitle, Befo
 
     private void openEditor(Player player) {
         Runnable onDelete = player.getId() == null ? null : () -> confirmDelete(player);
-        new PlayerFormDialog(player, edited -> {
-            if (edited.getId() == null) {
-                playerService.create(edited);
-            } else {
+        new PlayerFormDialog(player, (edited, account) -> {
+            if (edited.getId() != null) {
                 playerService.save(edited);
+            } else if (account != null) {
+                playerService.createWithAccount(edited, account.username(), account.password());
+            } else {
+                playerService.create(edited);
             }
-            Notifications.success(player.getId() == null ? Tr.t("Jucător adăugat") : Tr.t("Modificări salvate"));
+            Notifications.success(player.getId() != null ? Tr.t("Modificări salvate")
+                    : account != null ? Tr.t("Jucător adăugat, cu contul {0}", account.username())
+                    : Tr.t("Jucător adăugat"));
             refresh();
         }, onDelete).open();
     }
@@ -320,7 +324,7 @@ public class PlayersView extends VerticalLayout implements HasDynamicTitle, Befo
     private void confirmDelete(Player player) {
         ConfirmDialog dialog = new ConfirmDialog();
         dialog.setHeader(Tr.t("Ștergeți jucătorul?"));
-        dialog.setText(Tr.t("{0} va fi șters definitiv, împreună cu contul lui de utilizator, dacă are unul.", player.getDisplayName()));
+        dialog.setText(Tr.t("{0} va fi șters definitiv. Contul lui de utilizator, dacă are unul, rămâne (fără profil de jucător).", player.getDisplayName()));
         dialog.setCancelable(true);
         dialog.setCancelText(Tr.t("Anulează"));
         dialog.setConfirmText(Tr.t("Șterge"));
