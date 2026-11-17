@@ -10,7 +10,7 @@ import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.upload.Upload;
-import com.vaadin.flow.component.upload.receivers.MemoryBuffer;
+import com.vaadin.flow.server.streams.UploadHandler;
 import md.ttm.common.BusinessException;
 import md.ttm.model.player.Player;
 import org.slf4j.Logger;
@@ -19,9 +19,6 @@ import md.ttm.service.player.PlayerPhotoService;
 import md.ttm.ui.components.Notifications;
 import md.ttm.ui.components.PhotoViewer;
 import md.ttm.ui.components.PlayerAvatar;
-
-import java.io.IOException;
-import java.io.InputStream;
 
 /** Poza de profil: avatarul mare, „Alege o poză” și „Șterge poza”. */
 public class PhotoEditor extends HorizontalLayout {
@@ -49,34 +46,35 @@ public class PhotoEditor extends HorizontalLayout {
         setAlignItems(FlexComponent.Alignment.CENTER);
         getStyle().set("flex-wrap", "wrap");
 
-        MemoryBuffer buffer = new MemoryBuffer();
-        Upload upload = new Upload(buffer);
+        Upload upload = new Upload();
+        upload.setUploadHandler(UploadHandler.inMemory((metadata, data) -> {
+            // rulează deja în UI.access(); schimbările ajung la client prin evenimentul „upload-success”
+            try {
+                photoService.save(player.getId(), data);
+                Notifications.success(Tr.t("Poza a fost salvată"));
+                changed();
+            } catch (BusinessException ex) {
+                Notifications.error(ex.getLocalizedMessage());
+            } catch (RuntimeException ex) {
+                log.warn("Poza jucătorului {} nu a putut fi salvată", player.getId(), ex);
+                Notifications.error(Tr.t("Poza nu a putut fi salvată. Încercați o altă poză (JPEG sau PNG)."));
+            }
+            upload.clearFileList();
+        }).whenComplete((context, success) -> {
+            if (!success) {
+                log.warn("Încărcarea pozei a eșuat ({}, {} octeți)", context.fileName(), context.contentLength());
+                Notifications.error(Tr.t("Încărcarea pozei a eșuat. Verificați conexiunea și încercați din nou."));
+                upload.clearFileList();
+            }
+        }));
         upload.setAcceptedFileTypes("image/jpeg", "image/png", ".jpg", ".jpeg", ".png");
         upload.setMaxFiles(1);
         upload.setMaxFileSize(PlayerPhotoService.MAX_UPLOAD_BYTES);
         upload.setDropAllowed(false);
         Button choose = new Button(Tr.t("Alege o poză"), VaadinIcon.CAMERA.create());
         upload.setUploadButton(choose);
-        upload.addSucceededListener(e -> {
-            try (InputStream in = buffer.getInputStream()) {
-                photoService.save(player.getId(), in.readAllBytes());
-                Notifications.success(Tr.t("Poza a fost salvată"));
-                changed();
-            } catch (BusinessException ex) {
-                Notifications.error(ex.getLocalizedMessage());
-            } catch (IOException | RuntimeException ex) {
-                log.warn("Poza jucătorului {} nu a putut fi salvată", player.getId(), ex);
-                Notifications.error(Tr.t("Poza nu a putut fi salvată. Încercați o altă poză (JPEG sau PNG)."));
-            }
-            upload.clearFileList();
-        });
         upload.addFileRejectedListener(e -> Notifications.error(
                 Tr.t("Alegeți o poză JPEG sau PNG de cel mult 20 MB")));
-        upload.addFailedListener(e -> {
-            log.warn("Încărcarea pozei a eșuat ({}, {} octeți)", e.getMIMEType(), e.getContentLength(), e.getReason());
-            Notifications.error(Tr.t("Încărcarea pozei a eșuat. Verificați conexiunea și încercați din nou."));
-            upload.clearFileList();
-        });
 
         delete.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_ERROR);
         delete.addClickListener(e -> {
