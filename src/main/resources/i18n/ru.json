@@ -530,5 +530,15 @@
   "Aplicația de test se pornește": "Тестовое приложение запускается",
   "Aplicația de test se oprește": "Тестовое приложение останавливается",
   "Comanda aplicației de test nu e disponibilă pe acest server": "Управление тестовым приложением на этом сервере недоступно",
-  "Starea aplicației de test nu se poate salva. Pe server rulați o dată deploy/test-control-setup.sh": "Не удаётся сохранить состояние тестового приложения. Выполните один раз на сервере deploy/test-control-setup.sh"
+  "Starea aplicației de test nu se poate salva. Pe server rulați o dată deploy/test-control-setup.sh": "Не удаётся сохранить состояние тестового приложения. Выполните один раз на сервере deploy/test-control-setup.sh",
+  "Creează și profil de jucător": "Создать и профиль игрока",
+  "Fără bifă se creează doar contul (de ex. pentru un organizator care nu joacă)": "Без отметки создаётся только учётная запись (например, для организатора, который не играет)",
+  "Contul nu are profil de jucător; bifați pentru a-i crea unul": "У учётной записи нет профиля игрока; отметьте, чтобы создать",
+  "Jucătorul are deja un cont de utilizator": "У игрока уже есть учётная запись",
+  "Creează și cont de utilizator": "Создать и учётную запись",
+  "Cont de utilizator": "Учётная запись",
+  "Jucătorul se va putea autentifica (rol Utilizator); fără bifă se creează doar jucătorul": "Игрок сможет входить в систему (роль Пользователь); без отметки создаётся только игрок",
+  "Jucător adăugat, cu contul {0}": "Игрок добавлен, с учётной записью {0}",
+  "{0} va fi șters definitiv. Contul lui de utilizator, dacă are unul, rămâne (fără profil de jucător).": "{0} будет удалён навсегда. Его учётная запись, если она есть, остаётся (без профиля игрока).",
+  "Contul „{0}” va fi șters definitiv. Profilul de jucător {1} rămâne, cu rezultatele lui.": "Учётная запись «{0}» будет удалена навсегда. Профиль игрока {1} остаётся, с его результатами."
 }

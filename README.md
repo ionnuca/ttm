@@ -19,6 +19,8 @@ Aplicație web (instalabilă și pe telefon, ca PWA) pentru gestionarea jucător
 | Coloana „Telefon” în clasament | – | – | – | ✅ |
 | Adăugare jucători noi | – | – | ✅ | ✅ |
 | Editare / ștergere jucători | – | – | – | ✅ |
+
+Conturile și jucătorii sunt independenți: un cont poate exista fără jucător (bifa „Creează și profil de jucător” la contul nou), iar un jucător fără cont (bifa „Creează și cont de utilizator” la jucătorul nou, doar administratorul). Ștergerea jucătorului păstrează contul; ștergerea contului păstrează jucătorul și rezultatele lui.
 | Cont nou (înregistrare simplă: nume, prenume, utilizator, parolă) | ✅ | – | – | – |
 | „Profilul meu”: poza, date personale, stil și mână de joc, oraș, telefon, echipament, schimbarea parolei (administratorul își stabilește aici și ratingul inițial) | – | ✅ | ✅ | ✅ |
 | „Utilizatori”: lista completă, adăugare, editare (rol, blocare, parolă), ștergere | – | – | – | ✅ |

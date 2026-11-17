@@ -34,12 +34,24 @@ public class UserForm {
     /** Înscrierea la turnee fără confirmare. */
     private boolean trusted;
 
+    /** La creare (sau la un cont fără jucător): se creează și profilul de jucător, din nume și prenume. */
+    private boolean createPlayer = true;
+
+    public boolean isCreatePlayer() {
+        return createPlayer;
+    }
+
+    public void setCreatePlayer(boolean createPlayer) {
+        this.createPlayer = createPlayer;
+    }
+
     public static UserForm from(AppUser user) {
         UserForm form = new UserForm();
         form.setUsername(user.getUsername());
         form.setRole(user.getRole());
         form.setEnabled(user.isEnabled());
         form.setTrusted(user.isTrusted());
+        form.setCreatePlayer(false);
         if (user.getPlayer() != null) {
             form.setFirstName(user.getPlayer().getFirstName());
             form.setLastName(user.getPlayer().getLastName());

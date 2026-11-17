@@ -8,6 +8,7 @@ import md.ttm.model.user.AppUser;
 import md.ttm.repository.AppUserRepository;
 import md.ttm.repository.PlayerRepository;
 import md.ttm.security.SecurityUtils;
+import md.ttm.service.user.UserService;
 import md.ttm.service.rating.RatingService;
 import md.ttm.service.tournament.TournamentService;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -30,10 +31,13 @@ public class PlayerService {
     private final AppUserRepository userRepository;
     private final TournamentService tournamentService;
     private final RatingService ratingService;
+    private final UserService userService;
 
     public PlayerService(PlayerRepository playerRepository, AppUserRepository userRepository,
-                         TournamentService tournamentService, RatingService ratingService) {
+                         TournamentService tournamentService, RatingService ratingService,
+                         @org.springframework.context.annotation.Lazy UserService userService) {
         this.ratingService = ratingService;
+        this.userService = userService;
         this.tournamentService = tournamentService;
         this.playerRepository = playerRepository;
         this.userRepository = userRepository;
@@ -92,25 +96,31 @@ public class PlayerService {
         return saved;
     }
 
-    /** Șterge un jucător și contul de utilizator asociat, dacă există (administrator). */
+    /**
+     * Adaugă un jucător nou împreună cu contul lui de utilizator (doar administratorul). Numele de utilizator și
+     * parola se verifică înainte, ca jucătorul să nu rămână creat fără cont.
+     */
+    @PreAuthorize("hasRole('ADMIN')")
+    @Transactional
+    public Player createWithAccount(Player player, String username, String password) {
+        userService.validateNewAccount(username, password);
+        Player saved = create(player);
+        userService.createAccountFor(saved, username, password);
+        return saved;
+    }
+
+    /** Șterge un jucător (contul de utilizator asociat rămâne), dacă există (administrator). */
     @PreAuthorize("hasRole('ADMIN')")
     @Transactional
     public void delete(Long playerId) {
         Player player = playerRepository.findById(playerId)
                 .orElseThrow(() -> new BusinessException("Jucătorul nu mai există"));
+        // contul asociat rămâne, doar fără profil de jucător
         Optional<AppUser> account = userRepository.findByPlayerId(playerId);
-        if (account.isPresent()) {
-            boolean ownAccount = SecurityUtils.currentUsername()
-                    .map(account.get().getUsername()::equals)
-                    .orElse(false);
-            if (ownAccount) {
-                throw new BusinessException("Nu vă puteți șterge propriul profil");
-            }
-        }
         tournamentService.releasePlayer(playerId);
         if (account.isPresent()) {
-            userRepository.delete(account.get());
-            userRepository.flush();
+            account.get().setPlayer(null);
+            userRepository.saveAndFlush(account.get());
         }
         playerRepository.delete(player);
     }
