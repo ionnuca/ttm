@@ -96,11 +96,14 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
 
     /** Rândurile meciurilor, ca după salvarea unui rezultat pagina să rămână la meciul respectiv. */
     private final Map<Long, Component> matchRows = new HashMap<>();
+    /** Tabelele-matrice, după id-ul grupei (0 = tabelul Round Robin), ca să revenim la ele după editare. */
+    private final Map<Long, Component> matrices = new HashMap<>();
     /** Casetele cu seturile de departajare, după grupă (0 = tabelul turneului Round Robin). */
     private final Map<Long, Component> tiebreakCards = new HashMap<>();
 
     private void refresh() {
         matchRows.clear();
+        matrices.clear();
         tiebreakCards.clear();
         removeAll();
         RouterLink back = new RouterLink(Tr.t("← Toate turneele"), TournamentsView.class);
@@ -381,8 +384,11 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
                     details.participants(), details.matches()));
         }
 
-        section.add(heading, new ResultsMatrix(details.participants(), details.standings(), ownId(details),
-                details.ratingChanges()));
+        ResultsMatrix matrix = new ResultsMatrix(details.participants(), details.standings(), ownId(details),
+                details.ratingChanges(), details.matches(),
+                details.canRecordResults() ? m -> openResultDialog(details, m, true) : null);
+        matrices.put(0L, matrix);
+        section.add(heading, matrix);
         Component tiebreaks = tiebreakSection(details, null, details.participants(), details.tiebreaks(),
                 details.pendingTiebreaks(), details.canRecordResults());
         if (tiebreaks != null) {
@@ -520,7 +526,10 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         } else {
             section.add(name);
         }
-        section.add(new ResultsMatrix(group.members(), group.standings(), ownId(details), details.ratingChanges()));
+        ResultsMatrix matrix = new ResultsMatrix(group.members(), group.standings(), ownId(details),
+                details.ratingChanges(), group.matches(), editable ? m -> openResultDialog(details, m, true) : null);
+        matrices.put(group.group().getId(), matrix);
+        section.add(matrix);
         Component tiebreaks = tiebreakSection(details, group.group().getId(), group.members(), group.tiebreaks(),
                 group.pendingTiebreaks(), editable);
         if (tiebreaks != null) {
@@ -962,11 +971,16 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
     }
 
     private void openResultDialog(TournamentDetails details, TournamentMatch match) {
+        openResultDialog(details, match, false);
+    }
+
+    /** @param fromMatrix deschis din tabelul-matrice: după salvare revenim la tabel, nu la rândul meciului */
+    private void openResultDialog(TournamentDetails details, TournamentMatch match, boolean fromMatrix) {
         if (rebuildsStage2(details, match.getGroup())) {
-            confirmStage2Rebuild(details, () -> showResultDialog(details, match));
+            confirmStage2Rebuild(details, () -> showResultDialog(details, match, fromMatrix));
         } else {
             stage2PlayedBefore = null;
-            showResultDialog(details, match);
+            showResultDialog(details, match, fromMatrix);
         }
     }
 
@@ -1013,14 +1027,14 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         });
     }
 
-    private void showResultDialog(TournamentDetails details, TournamentMatch match) {
+    private void showResultDialog(TournamentDetails details, TournamentMatch match, boolean fromMatrix) {
         Runnable onClear = details.manager()
                 ? () -> {
                     tournamentService.clearResult(match.getId());
                     Notifications.success(Tr.t("Rezultat șters"));
                     reportStage2Rebuild();
                     refresh();
-                    keepInView(match.getId());
+                    keepInView(match, fromMatrix);
                 }
                 : null;
         new MatchResultDialog(match, details.tournament().getSetsToWin(), result -> {
@@ -1028,7 +1042,7 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
             Notifications.success(Tr.t("Rezultat salvat"));
             reportStage2Rebuild();
             refresh();
-            keepInView(match.getId());
+            keepInView(match, fromMatrix);
         }, onClear).open();
     }
 
@@ -1036,8 +1050,10 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
      * După reîncărcarea paginii, derulează înapoi la meciul editat (altfel, pe telefon,
      * pagina sare la începutul turneului).
      */
-    private void keepInView(Long matchId) {
-        scrollTo(matchRows.get(matchId));
+    private void keepInView(TournamentMatch match, boolean fromMatrix) {
+        scrollTo(fromMatrix
+                ? matrices.get(match.getGroup() != null ? match.getGroup().getId() : 0L)
+                : matchRows.get(match.getId()));
     }
 
     /** Derulează la componenta dată, după reîncărcarea paginii (altfel, pe telefon, pagina sare la început). */
