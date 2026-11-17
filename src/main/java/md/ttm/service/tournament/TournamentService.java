@@ -50,6 +50,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeMap;
 
 /**
  * Turneele: creare, înscriere, începere, rezultate și clasament.
@@ -589,14 +590,21 @@ public class TournamentService {
                 && tournament.getStage() == TournamentStage.GROUPS;
     }
 
+    /** Etapa 2 cu două finale: primii {@code qualifiers} din fiecare grupă în Finala 1, ceilalți în Finala 2. */
+    @PreAuthorize("hasAnyRole('ADMIN', 'TOURNAMENT_MANAGER')")
+    @Transactional
+    public void startFinals(Long tournamentId, int qualifiers) {
+        startFinals(tournamentId, FinalsSettings.twoFinals(qualifiers));
+    }
+
     /**
-     * Etapa 2 la „Grupe + finale”: primii {@code qualifiers} din fiecare grupă trec în Finala 1,
-     * ceilalți în Finala 2. Ambele finale se joacă Round Robin; perechile care s-au întâlnit deja
+     * Etapa 2 la „Grupe + finale”: Finala k primește locurile (k-1)·q+1 … k·q din fiecare grupă, iar ultima finală
+     * pe toți cei rămași. Toate finalele se joacă Round Robin; perechile care s-au întâlnit deja
      * în aceeași grupă nu mai joacă, iar rezultatul lor se preia în tabelul finalei.
      */
     @PreAuthorize("hasAnyRole('ADMIN', 'TOURNAMENT_MANAGER')")
     @Transactional
-    public void startFinals(Long tournamentId, int qualifiers) {
+    public void startFinals(Long tournamentId, FinalsSettings settings) {
         Tournament tournament = requireTournament(tournamentId);
         if (!tournament.isGroupsFormat() || tournament.getStatus() != TournamentStatus.IN_PROGRESS
                 || tournament.getStage() != TournamentStage.GROUPS) {
@@ -617,8 +625,16 @@ public class TournamentService {
             throw new BusinessException("Etapa 1 nu s-a terminat: mai sunt {0} seturi de departajare de jucat", tiebreaks);
         }
         int smallest = groups.stream().mapToInt(g -> g.members().size()).min().orElse(0);
-        if (qualifiers < 1 || qualifiers >= smallest) {
-            throw new BusinessException("Din fiecare grupă se pot califica între 1 și {0} jucători", smallest - 1);
+        int finalCount = settings.finalCount();
+        if (finalCount < 2 || finalCount > smallest) {
+            throw new BusinessException("Cu grupe de {0} jucători se pot forma între 2 și {0} finale", smallest);
+        }
+        int maxQualifiers = FinalsSettings.maxQualifiers(finalCount, smallest);
+        if (settings.qualifiers() < 1 || settings.qualifiers() > maxQualifiers) {
+            throw new BusinessException("Din fiecare grupă se pot califica între 1 și {0} jucători", maxQualifiers);
+        }
+        if (settings.feeRefunds().stream().anyMatch(f -> f < 2 || f > finalCount)) {
+            throw new BusinessException("Taxa de participare se poate returna doar în finalele 2 … {0}", finalCount);
         }
 
         // locul fiecărui jucător în grupa lui
@@ -628,23 +644,28 @@ public class TournamentService {
             g.standings().forEach(row -> placeOf.put(row.id(), row.place()));
             g.members().forEach(p -> groupOf.put(p.getId(), g.group().getId()));
         }
-        // ordinea în finale: întâi toți câștigătorii de grupă, apoi locurile 2 …; la același loc, după rating
+        // ordinea în fiecare finală: întâi locurile mai bune din grupe, la același loc după rating
         Comparator<TournamentParticipant> order = Comparator
                 .comparingInt((TournamentParticipant p) -> placeOf.get(p.getId()))
                 .thenComparingInt(p -> -p.getSeedRating())
                 .thenComparingInt(TournamentParticipant::getSeed);
-        List<TournamentParticipant> final1 = participants.stream()
-                .filter(p -> placeOf.get(p.getId()) <= qualifiers).sorted(order).toList();
-        List<TournamentParticipant> final2 = participants.stream()
-                .filter(p -> placeOf.get(p.getId()) > qualifiers).sorted(order).toList();
+        List<List<TournamentParticipant>> finals = new ArrayList<>();
+        for (int k = 0; k < finalCount; k++) {
+            finals.add(new ArrayList<>());
+        }
+        participants.stream().sorted(order)
+                .forEach(p -> finals.get(settings.finalFor(placeOf.get(p.getId())) - 1).add(p));
 
         List<TournamentMatch> newMatches = new ArrayList<>();
-        newMatches.addAll(createFinal(tournament, TournamentGroup.FINAL_1, "Finala 1", final1, groupOf));
-        newMatches.addAll(createFinal(tournament, TournamentGroup.FINAL_2, "Finala 2", final2, groupOf));
+        for (int k = 1; k <= finalCount; k++) {
+            boolean feeRefund = tournament.isCommercial() && settings.feeRefunds().contains(k);
+            newMatches.addAll(createFinal(tournament, k, "Finala " + k, finals.get(k - 1), groupOf, feeRefund));
+        }
         matchRepository.saveAll(newMatches);
 
         tournament.setStage(TournamentStage.FINALS);
-        tournament.setQualifiersPerGroup(qualifiers);
+        tournament.setQualifiersPerGroup(settings.qualifiers());
+        tournament.setFinalCount(finalCount);
         tournamentRepository.saveAndFlush(tournament);
         if (newMatches.isEmpty()) {
             finish(tournament);
@@ -850,11 +871,14 @@ public class TournamentService {
     }
 
     private List<TournamentMatch> createFinal(Tournament tournament, int position, String name,
-                                              List<TournamentParticipant> members, Map<Long, Long> groupOf) {
+                                              List<TournamentParticipant> members, Map<Long, Long> groupOf,
+                                              boolean feeRefund) {
         if (members.isEmpty()) {
             return List.of();
         }
-        TournamentGroup group = groupRepository.save(new TournamentGroup(tournament, TournamentStage.FINALS, position, name));
+        TournamentGroup finalGroup = new TournamentGroup(tournament, TournamentStage.FINALS, position, name);
+        finalGroup.setFeeRefund(feeRefund);
+        TournamentGroup group = groupRepository.save(finalGroup);
         for (int i = 0; i < members.size(); i++) {
             memberRepository.save(new TournamentGroupMember(group, members.get(i), i + 1));
         }
@@ -891,7 +915,7 @@ public class TournamentService {
     }
 
     /**
-     * La un turneu comercial „Grupe + finale”, câștigătorul Finalei 2 primește obligatoriu cât taxa,
+     * La un turneu comercial „Grupe + finale”, premiile se acordă în finale (Finala 1 și finalele care returnează taxa),
      * deci turneul se poate încheia doar după formarea finalelor.
      */
     static boolean requiresFinalsBeforeFinish(Tournament tournament) {
@@ -938,6 +962,10 @@ public class TournamentService {
         List<TournamentGroup> stage2 = groupRepository.findByTournamentIdOrderByStageAscPositionAsc(id).stream()
                 .filter(g -> !g.isGroupStage())
                 .toList();
+        FinalsSettings finalsSettings = qualifiers == null ? null : new FinalsSettings(
+                tournament.getFinalCount() != null ? tournament.getFinalCount() : 2, qualifiers,
+                stage2.stream().filter(TournamentGroup::isFeeRefund).map(TournamentGroup::getPosition)
+                        .collect(java.util.stream.Collectors.toSet()));
         java.util.Set<Long> stage2Ids = stage2.stream().map(TournamentGroup::getId).collect(java.util.stream.Collectors.toSet());
         Map<String, SavedResult> saved = new HashMap<>();
         matchRepository.findByTournamentIdWithParticipants(id).stream()
@@ -980,7 +1008,7 @@ public class TournamentService {
                     }
                 }
             } else if (previous == TournamentStage.FINALS) {
-                startFinals(id, qualifiers);
+                startFinals(id, finalsSettings);
                 matchRepository.findByTournamentIdWithParticipants(id).stream()
                         .filter(m -> m.getGroup() != null && !m.getGroup().isGroupStage())
                         .forEach(m -> restore(m, saved));
@@ -1470,14 +1498,30 @@ public class TournamentService {
             List<TournamentMatch> counted = new ArrayList<>(own);
             counted.addAll(carried);
             boolean allPlayed = own.stream().allMatch(TournamentMatch::isPlayed);
+            List<StandingsCalculator.Tiebreak> groupTiebreaks = tiebreakResults(tiebreaks, group.getId());
             StandingsCalculator.Table table = StandingsCalculator.table(competitors, results(counted),
-                    tournament.getSetsToWin(), tournament.isCommercial() && allPlayed,
-                    tiebreakResults(tiebreaks, group.getId()));
+                    tournament.getSetsToWin(), allPlayed && tiebreaksDecide(tournament, group, groupTiebreaks),
+                    groupTiebreaks);
             views.add(new GroupView(group, members, own, carried, table.rows(),
                     tiebreaks.stream().filter(t -> group.getId().equals(t.groupId())).toList(),
                     table.tiebreaks()));
         }
         return views;
+    }
+
+    /**
+     * Egalitățile nedepartajate se decid prin seturi de departajare: la turneele comerciale în orice tabel, iar la
+     * celelalte în grupele etapei 1, fiindcă locul din grupă decide în ce finală (sau tablou) intră jucătorul.
+     * Grupele turneelor necomerciale care au trecut la etapa 2 înainte de această regulă, fără seturi de
+     * departajare, își păstrează locurile împărțite.
+     */
+    private static boolean tiebreaksDecide(Tournament tournament, TournamentGroup group,
+                                           List<StandingsCalculator.Tiebreak> groupTiebreaks) {
+        if (tournament.isCommercial()) {
+            return true;
+        }
+        return group.isGroupStage()
+                && (tournament.getStage() == TournamentStage.GROUPS || !groupTiebreaks.isEmpty());
     }
 
     private static List<StandingsCalculator.Result> results(List<TournamentMatch> matches) {
@@ -1491,30 +1535,35 @@ public class TournamentService {
     }
 
     /**
-     * Premiile la „Grupe + finale”: câștigătorul Finalei 2 primește cât taxa de participare,
-     * restul sumei se împarte între premiații Finalei 1 (100% / 60-40% / 50-30-20%).
+     * Premiile la „Grupe + finale”: câștigătorul fiecărei finale marcate de organizator primește cât taxa
+     * de participare, restul sumei se împarte între premiații Finalei 1 (100% / 60-40% / 50-30-20%).
+     * Înainte de etapa 2 (finalele nu există încă) se arată varianta implicită: Finala 2 returnează taxa.
      */
     private static List<PrizePlace> groupPrizes(Tournament tournament, PrizeDistribution distribution,
                                                 BigDecimal pool, List<GroupView> groups) {
         boolean finished = tournament.getStatus() == TournamentStatus.FINISHED;
-        GroupView final1 = groups.stream().filter(g -> g.group().isFinal()
-                && g.group().getPosition() == TournamentGroup.FINAL_1).findFirst().orElse(null);
-        GroupView final2 = groups.stream().filter(g -> g.group().isFinal()
-                && g.group().getPosition() == TournamentGroup.FINAL_2).findFirst().orElse(null);
+        Map<Integer, GroupView> finals = new TreeMap<>();
+        groups.stream().filter(g -> g.group().isFinal()).forEach(g -> finals.put(g.group().getPosition(), g));
+        List<Integer> refunded = finals.isEmpty()
+                ? List.of(2)
+                : finals.values().stream().filter(g -> g.group().isFeeRefund()).map(g -> g.group().getPosition()).toList();
 
         List<PrizePlace> prizes = new ArrayList<>();
         BigDecimal fee = tournament.getEntryFee();
-        BigDecimal rest = pool.subtract(fee).max(BigDecimal.ZERO);
+        BigDecimal rest = pool.subtract(fee.multiply(BigDecimal.valueOf(refunded.size()))).max(BigDecimal.ZERO);
         List<BigDecimal> amounts = distribution.split(rest);
         List<Integer> percentages = distribution.percentages();
+        GroupView final1 = finals.get(TournamentGroup.FINAL_1);
         for (int i = 0; i < amounts.size(); i++) {
             List<String> winners = finished ? namesAtPlace(final1, i + 1) : List.of();
             prizes.add(new PrizePlace(i + 1, "Finala 1 · locul " + (i + 1), percentages.get(i), amounts.get(i),
                     winners.isEmpty() ? null : String.join(", ", winners), winners.size() > 1));
         }
-        List<String> final2Winners = finished ? namesAtPlace(final2, 1) : List.of();
-        prizes.add(new PrizePlace(1, "Finala 2 · locul 1", null, fee.setScale(2, RoundingMode.HALF_UP),
-                final2Winners.isEmpty() ? null : String.join(", ", final2Winners), final2Winners.size() > 1));
+        for (int position : refunded) {
+            List<String> winners = finished ? namesAtPlace(finals.get(position), 1) : List.of();
+            prizes.add(new PrizePlace(1, "Finala " + position + " · locul 1", null, fee.setScale(2, RoundingMode.HALF_UP),
+                    winners.isEmpty() ? null : String.join(", ", winners), winners.size() > 1));
+        }
         return prizes;
     }
 

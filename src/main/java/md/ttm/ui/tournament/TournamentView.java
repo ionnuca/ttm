@@ -405,6 +405,8 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
     private static Span legend(TournamentDetails details) {
         String ties = details.tournament().isCommercial()
                 ? Tr.t("La egalitate de puncte decid meciurile directe; dacă egalitatea rămâne, jucătorii joacă între ei câte un set de departajare.")
+                : details.tournament().isGroupsFormat()
+                ? Tr.t("La egalitate de puncte decid meciurile directe; dacă egalitatea rămâne, în grupe jucătorii joacă între ei câte un set de departajare (etapa 2 începe doar după departajare), iar în etapa 2 împart locul (=).")
                 : Tr.t("La egalitate de puncte decid meciurile directe; dacă egalitatea rămâne, jucătorii împart locul (=).");
         Span legend = new Span(Tr.t("În fiecare celulă: sus — punctele (2 victorie, 1 înfrângere, 0 înfrângere tehnică), jos — scorul la seturi. W — victorie tehnică, L — înfrângere tehnică.")
                 + " " + ties
@@ -684,7 +686,7 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         boolean knockout = details.tournament().isKnockoutFormat();
         Span text = new Span(knockout
                 ? Tr.t("Etapa 1 s-a terminat. Alegeți câți jucători din fiecare grupă intră în Tabloul 1 (ceilalți joacă Tabloul 2) și tipul tablourilor.")
-                : Tr.t("Etapa 1 s-a terminat. Alegeți câți jucători din fiecare grupă trec în Finala 1; ceilalți joacă în Finala 2."));
+                : Tr.t("Etapa 1 s-a terminat. Alegeți câte finale se joacă și câți jucători din fiecare grupă trec în fiecare; ultima finală îi primește pe cei rămași."));
         Button start = new Button(Tr.t("Începe etapa 2"), VaadinIcon.PLAY.create(), e -> {
             if (knockout) {
                 new StartKnockoutDialog(details.groupStage(), (qualifiers, type) -> {
@@ -693,8 +695,8 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
                     refresh();
                 }).open();
             } else {
-                new StartFinalsDialog(details.groupStage(), qualifiers -> {
-                    tournamentService.startFinals(tournamentId, qualifiers);
+                new StartFinalsDialog(details.groupStage(), details.tournament().isCommercial(), settings -> {
+                    tournamentService.startFinals(tournamentId, settings);
                     Notifications.success(Tr.t("Etapa 2 a început"));
                     refresh();
                 }).open();

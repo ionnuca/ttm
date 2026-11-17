@@ -7,7 +7,7 @@ import md.ttm.i18n.Tr;
 public enum TournamentFormat {
     /** O singură grupă, fiecare cu fiecare. */
     ROUND_ROBIN(Tr.key("Round robin")),
-    /** Etapa 1: grupe Round Robin; etapa 2: Finala 1 și Finala 2, tot Round Robin. */
+    /** Etapa 1: grupe Round Robin; etapa 2: Finala 1, 2 … (numărul se alege la începerea etapei), tot Round Robin. */
     GROUPS_FINALS(Tr.key("Grupe + finale")),
     /** Etapa 1: una sau mai multe grupe Round Robin; etapa 2: tablou eliminatoriu (olimpic sau cu ramura de jos). */
     GROUPS_KNOCKOUT(Tr.key("Grupe + eliminare"));

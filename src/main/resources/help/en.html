@@ -44,8 +44,10 @@ The home page is the <b>Tournaments</b> list; the latest matches are under <b>Ma
     Example: 12 players in 3 groups. The pots are places 1–3, 4–6, 7–9 and 10–12 of the rankings. Each group gets one player from each pot,
     so the top three players are certainly in different groups, but who plays whom is decided by the draw.
     In the group table players are listed by rating. As long as no result has been recorded, the administrator can redo the draw with the “Redraw groups” button. Each group plays round robin.</li>
-  <li><b>Stage 2 – finals.</b> After the groups, the organiser chooses how many players from each group go to <b>Final 1</b>; the others play <b>Final 2</b>.
-      Both finals are played round robin, but players who already met in the group do not play again: the stage 1 result is carried over.
+  <li><b>Stage 2 – finals.</b> After the groups, the organiser chooses how many finals are played (at least two) and how many players from each group go to each:
+      with 2 players per final, the top two of each group play <b>Final 1</b>, the next two <b>Final 2</b> and so on, and the <b>last final</b> takes all the remaining players.
+      Example: 8 groups and 4 finals with one player from each group – the group winners play Final 1, the 2nd places Final 2, the 3rd places Final 3 and the rest Final 4.
+      All finals are played round robin, but players who already met in the group do not play again: the stage 1 result is carried over.
       Once stage 2 has started, only the organiser (administrator or tournament manager) can still correct group results: after an information message, stage 2 is rebuilt with the same settings; results of matches that stay the same (same players in the same final or the same bracket position) are kept, the others are deleted; if stage 1 is no longer complete, the tournament goes back to the groups.</li>
 </ol>
 
@@ -85,14 +87,15 @@ using only the matches between them. Results against the other players in the gr
 <p>If the tie cannot be broken:</p>
 <ul>
   <li><b>regular tournament</b> – the players share the place. The table marks it with “=”, e.g. three players in 1st place (1=, 1=, 1=), and the next one is 4th.
-      In “Groups + finals”, if a shared place is among the qualifying places, all players on it go to Final 1;</li>
-  <li><b>commercial tournament</b> – once all group matches are played, the players still tied play one <b>tie-break set</b> against each other,
+      Exception: in the stage 1 groups (“Groups + finals” and “Groups + knockout”) the tie is decided as in a commercial tournament, by tie-break sets,
+      because the group place decides which final or bracket the player goes to; stage 2 can start only once there are no shared places left in the groups;</li>
+  <li><b>commercial tournament</b> (and the stage 1 groups of any tournament) – once all group matches are played, the players still tied play one <b>tie-break set</b> against each other,
       to 11 points (by 2 clear points), and the point score is recorded (e.g. 11:8). Again only among them, sets won decide, then
       the ratio of points won / lost. If the tie remains (rarely), a new round of sets is played. The tie-break sets are shown under the group table;
       the group (or tournament) ends only after they are played. They do not count for the rating or the statistics.</li>
 </ul>
 <p><b>Example.</b> Three players each win one match 3:0 (Ana – Ion 3:0, Ion – Dan 3:0, Dan – Ana 3:0). All have 3 points,
-and among themselves 3 sets won and 3 lost each. In a regular tournament all three are 1st; in a commercial one they play tie-break sets.</p>
+and among themselves 3 sets won and 3 lost each. In a regular tournament all three are 1st; in a commercial one or in a stage 1 group they play tie-break sets.</p>
 
 <h3>5. Commercial tournaments and prizes</h3>
 <p>The prize pool is the entry fee × the number of participants. It is split as follows:</p>
@@ -104,7 +107,7 @@ and among themselves 3 sets won and 3 lost each. In a regular tournament all thr
 </table>
 <p>Each prize is rounded to the nearest multiple of 50 lei (for example 420 → 400, 280 → 300, 225 → 250),
 so the prize total may differ slightly from the pool.</p>
-<p>In <b>Groups + finals</b>, the winner of Final 2 receives the entry fee, and the rest of the pool is shared
+<p>In <b>Groups + finals</b>, the winner of each final chosen by the organiser when stage 2 starts (Final 2 by default) receives the entry fee, and the rest of the pool is shared
 among the Final 1 winners according to the table above. Such a tournament can be finished manually only after stage 2 has started.</p>
 
 <h3>6. Rating (Elo)</h3>

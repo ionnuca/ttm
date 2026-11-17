@@ -7,7 +7,7 @@ import java.math.BigDecimal;
  *
  * @param place      locul premiat (în Finala 1, la „Grupe + finale”)
  * @param title      de exemplu „Locul 1” sau „Finala 2 · locul 1”
- * @param percentage procentul din suma împărțită; {@code null} pentru premiul fix al Finalei 2
+ * @param percentage procentul din suma împărțită; {@code null} pentru premiul fix (cât taxa) al unei finale
  * @param winnerName numele câștigătorului, cunoscut doar după încheierea turneului; la un loc împărțit,
  *                   numele tuturor jucătorilor de pe el, despărțite prin virgulă
  * @param shared     locul e împărțit (egalitate nedepartajată): premiile locurilor ocupate împreună

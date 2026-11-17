@@ -172,7 +172,7 @@ class StartTournamentDialog extends Dialog {
                 summary.setText(isKnockout()
                         ? Tr.t("„{0}”: înscrierea se închide. Se formează {1} grupe din {2} jucători și se generează {3} meciuri pentru etapa 1. După grupe, primii din fiecare grupă joacă Tabloul 1, ceilalți Tabloul 2 (olimpic sau cu ramura de jos, la alegere).",
                                 tournamentName, sizes.size(), participants, matches)
-                        : Tr.t("„{0}”: înscrierea se închide. Se formează {1} grupe din {2} jucători și se generează {3} meciuri pentru etapa 1. După grupe, primii din fiecare grupă joacă în Finala 1, ceilalți în Finala 2.",
+                        : Tr.t("„{0}”: înscrierea se închide. Se formează {1} grupe din {2} jucători și se generează {3} meciuri pentru etapa 1. După grupe, jucătorii trec în finale după locul din grupă (numărul finalelor se alege la începerea etapei 2).",
                                 tournamentName, sizes.size(), participants, matches));
             } else {
                 groupCount.setHelperText(Tr.t("Cel puțin 2 jucători în fiecare grupă"));
@@ -202,7 +202,7 @@ class StartTournamentDialog extends Dialog {
             prizePreview.setText(Tr.t("Suma acumulată = taxa × {0} participanți.", participants)
                     + (groups ? " " + (isKnockout()
                     ? Tr.t("Câștigătorul Tabloului 2 primește cât taxa de participare; restul se împarte între premiații Tabloului 1.")
-                    : Tr.t("Câștigătorul Finalei 2 primește cât taxa de participare; restul se împarte între premiații Finalei 1.")) : ""));
+                    : Tr.t("Câștigătorii finalelor alese la începerea etapei 2 (implicit Finala 2) primesc cât taxa de participare; restul se împarte între premiații Finalei 1.")) : ""));
             return;
         }
         BigDecimal pool = fee.multiply(BigDecimal.valueOf(participants));

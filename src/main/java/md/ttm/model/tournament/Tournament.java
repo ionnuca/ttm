@@ -74,6 +74,10 @@ public class Tournament {
     @Column(name = "qualifiers_per_group")
     private Integer qualifiersPerGroup;
 
+    /** Câte finale are etapa 2 la „Grupe + finale” (ultima primește jucătorii rămași). */
+    @Column(name = "final_count")
+    private Integer finalCount;
+
     @Column(name = "started_at")
     private Instant startedAt;
 
@@ -218,6 +222,14 @@ public class Tournament {
 
     public void setQualifiersPerGroup(Integer qualifiersPerGroup) {
         this.qualifiersPerGroup = qualifiersPerGroup;
+    }
+
+    public Integer getFinalCount() {
+        return finalCount;
+    }
+
+    public void setFinalCount(Integer finalCount) {
+        this.finalCount = finalCount;
     }
 
     public Instant getStartedAt() {
