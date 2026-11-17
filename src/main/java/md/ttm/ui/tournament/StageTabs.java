@@ -13,13 +13,13 @@ import java.util.function.BiConsumer;
 
 /**
  * Etapele unui turneu „Grupe + finale” / „Grupe + eliminare” pe taburi: un comutator Grupe | Finale
- * și, în fiecare etapă, câte un cip pentru fiecare grupă (sau finală, tablou) plus „Toate”.
+ * și, în fiecare etapă, câte un cip pentru fiecare grupă (sau finală, tablou) plus „Toate” (implicit).
  * Comutarea doar ascunde și arată secțiunile deja construite, fără reîncărcarea paginii.
  */
 final class StageTabs extends Div {
 
-    /** O grupă / finală / un tablou: eticheta cipului, conținutul și dacă jucătorul logat e acolo. */
-    record Part(String label, Component content, boolean own) {
+    /** O grupă / finală / un tablou: eticheta cipului și conținutul. */
+    record Part(String label, Component content) {
     }
 
     /**
@@ -65,7 +65,7 @@ final class StageTabs extends Div {
 
     /**
      * @param selectedStage cheia etapei cerute; {@code null} sau necunoscută = {@code defaultStage}
-     * @param selectedPart  cipul cerut (număr de la 1 sau {@link #ALL}); {@code null} = automat
+     * @param selectedPart  cipul cerut (număr de la 1 sau {@link #ALL}); {@code null} = „Toate”
      * @param onChange      după o alegere a utilizatorului: cheia etapei și cipul ales ({@code null} = automat)
      */
     StageTabs(List<Stage> stages, int defaultStage, String selectedStage, String selectedPart,
@@ -147,32 +147,19 @@ final class StageTabs extends Div {
         showPart(index, resolvePart(stages.get(index), part));
     }
 
-    /** Cipul cerut, dacă există; altfel grupa jucătorului logat (dacă e într-una singură) sau „Toate”. */
+    /** Cipul cerut, dacă există; altfel „Toate”. */
     private static String resolvePart(Stage s, String part) {
-        int count = s.parts().size();
-        if (ALL.equals(part)) {
-            return ALL;
-        }
-        if (part != null) {
+        if (part != null && !ALL.equals(part)) {
             try {
                 int n = Integer.parseInt(part);
-                if (n >= 1 && n <= count) {
+                if (n >= 1 && n <= s.parts().size()) {
                     return part;
                 }
             } catch (NumberFormatException ignored) {
-                // cip necunoscut: se alege automat
+                // cip necunoscut: se arată toate
             }
         }
-        int own = -1;
-        for (int p = 0; p < count; p++) {
-            if (s.parts().get(p).own()) {
-                if (own >= 0) {
-                    return ALL;
-                }
-                own = p;
-            }
-        }
-        return own >= 0 ? String.valueOf(own + 1) : ALL;
+        return ALL;
     }
 
     private void showPart(int stageIndex, String key) {

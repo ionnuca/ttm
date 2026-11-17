@@ -80,7 +80,7 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
     /** Rezultatele din etapa 2 înainte de o corectură din grupe (pentru mesajul de după salvare); altfel {@code null}. */
     private Long stage2PlayedBefore;
     private String title = "Turneu | TTM";
-    /** Etapa aleasă pe taburi ({@code null} = cea în curs) și grupa aleasă ({@code null} = automat). */
+    /** Etapa aleasă pe taburi ({@code null} = cea în curs) și grupa aleasă ({@code null} = toate). */
     private String selectedStage;
     private String selectedPart;
 
@@ -479,8 +479,6 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         if (details.canStartFinals()) {
             add(createStartFinalsCard(details));
         }
-        Long own = ownId(details);
-
         List<Component> groupsTop = new ArrayList<>();
         if (details.canRedrawGroups()) {
             Button redraw = new Button(Tr.t("Reîmparte grupele"), VaadinIcon.REFRESH.create(), e -> confirmRedraw());
@@ -498,7 +496,7 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         List<StageTabs.Part> groupParts = new ArrayList<>();
         for (GroupView group : details.groupStage()) {
             groupParts.add(new StageTabs.Part(shortGroupLabel(group.group().getName()),
-                    groupSection(details, group, groupsEditable), isMember(group.members(), own)));
+                    groupSection(details, group, groupsEditable)));
         }
         StageTabs.Stage groups = new StageTabs.Stage(STAGE_GROUPS, Tr.t("Grupe"),
                 progress(details.groupStage().stream().mapToLong(GroupView::playedMatches).sum(),
@@ -516,14 +514,14 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
             for (int i = 0; i < brackets.size(); i++) {
                 KnockoutView view = brackets.get(i);
                 stage2Parts.add(new StageTabs.Part(brackets.size() > 1 ? Tr.t("Tabloul {0}", i + 1) : Tr.t("Tablou"),
-                        knockoutSection(details, view, i + 1, brackets.size()), isMember(view.members(), own)));
+                        knockoutSection(details, view, i + 1, brackets.size())));
                 played += view.matches().values().stream().filter(TournamentMatch::isPlayed).count();
                 total += view.matches().size();
             }
         }
         for (GroupView group : details.finals()) {
             stage2Parts.add(new StageTabs.Part(TournamentLabels.groupName(group.group().getName()),
-                    groupSection(details, group, details.canRecordResults()), isMember(group.members(), own)));
+                    groupSection(details, group, details.canRecordResults())));
             played += group.playedMatches();
             total += group.matches().size();
         }
@@ -566,10 +564,6 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
 
     private static String progress(long played, long total) {
         return total == 0 ? null : played + "/" + total;
-    }
-
-    private static boolean isMember(List<TournamentParticipant> members, Long own) {
-        return own != null && members.stream().anyMatch(p -> own.equals(p.getId()));
     }
 
     /** „Grupa A” → „A” pe cip; celelalte nume rămân întregi. */
