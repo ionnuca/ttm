@@ -2,6 +2,7 @@ package md.ttm.ui.tournament;
 
 import md.ttm.i18n.Tr;
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
 import md.ttm.service.player.PlayerPhotoService;
@@ -22,6 +23,8 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.router.BeforeEvent;
 import com.vaadin.flow.router.HasDynamicTitle;
 import com.vaadin.flow.router.HasUrlParameter;
+import com.vaadin.flow.router.Location;
+import com.vaadin.flow.router.QueryParameters;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouterLink;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
@@ -52,7 +55,9 @@ import md.ttm.ui.layout.MainLayout;
 import md.ttm.ui.player.RatingHistoryList;
 
 import java.util.List;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
@@ -75,6 +80,9 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
     /** Rezultatele din etapa 2 înainte de o corectură din grupe (pentru mesajul de după salvare); altfel {@code null}. */
     private Long stage2PlayedBefore;
     private String title = "Turneu | TTM";
+    /** Etapa aleasă pe taburi ({@code null} = cea în curs) și grupa aleasă ({@code null} = automat). */
+    private String selectedStage;
+    private String selectedPart;
 
     public TournamentView(TournamentService tournamentService, PlayerPhotoService photoService) {
         this.tournamentService = tournamentService;
@@ -86,6 +94,9 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
     @Override
     public void setParameter(BeforeEvent event, Long id) {
         this.tournamentId = id;
+        Map<String, List<String>> params = event.getLocation().getQueryParameters().getParameters();
+        selectedStage = params.getOrDefault(STAGE_PARAM, List.of()).stream().findFirst().orElse(null);
+        selectedPart = params.getOrDefault(PART_PARAM, List.of()).stream().findFirst().orElse(null);
         refresh();
     }
 
@@ -467,53 +478,107 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         if (details.canStartFinals()) {
             add(createStartFinalsCard(details));
         }
-        List<KnockoutView> brackets = details.knockouts();
-        if (!brackets.isEmpty()) {
-            add(BracketDiagram.styles(), bracketModeSwitch());
-        }
-        for (int i = 0; i < brackets.size(); i++) {
-            add(knockoutSection(details, brackets.get(i), i + 1, brackets.size()));
-        }
-        if (!details.finals().isEmpty()) {
-            add(stageTitle(TournamentStage.FINALS, details.finals()));
-            for (GroupView group : details.finals()) {
-                add(groupSection(details, group, details.canRecordResults()));
-            }
-        }
-        add(stageTitle(TournamentStage.GROUPS, details.groupStage()));
+        Long own = ownId(details);
+
+        List<Component> groupsTop = new ArrayList<>();
         if (details.canRedrawGroups()) {
             Button redraw = new Button(Tr.t("Reîmparte grupele"), VaadinIcon.REFRESH.create(), e -> confirmRedraw());
             redraw.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
             redraw.setTooltipText(Tr.t("O nouă tragere la sorți, cât timp nu există rezultate"));
-            add(redraw);
+            groupsTop.add(redraw);
         }
         boolean afterGroups = t.getStage() != TournamentStage.GROUPS;
         if (afterGroups) {
-            add(hint(details.manager()
+            groupsTop.add(hint(details.manager()
                     ? Tr.t("Rezultatele din grupe au stabilit calificarea. Le puteți corecta, dar etapa 2 se va construi din nou.")
                     : Tr.t("Rezultatele din grupe au stabilit calificarea și nu mai pot fi modificate.")));
         }
         boolean groupsEditable = details.canRecordResults() && (!afterGroups || details.manager());
+        List<StageTabs.Part> groupParts = new ArrayList<>();
         for (GroupView group : details.groupStage()) {
-            add(groupSection(details, group, groupsEditable));
+            groupParts.add(new StageTabs.Part(shortGroupLabel(group.group().getName()),
+                    groupSection(details, group, groupsEditable), isMember(group.members(), own)));
         }
+        StageTabs.Stage groups = new StageTabs.Stage(STAGE_GROUPS, Tr.t("Grupe"),
+                progress(details.groupStage().stream().mapToLong(GroupView::playedMatches).sum(),
+                        details.groupStage().stream().mapToLong(g -> g.matches().size()).sum()),
+                groupsTop, groupParts);
+
+        List<Component> stage2Top = new ArrayList<>();
+        List<StageTabs.Part> stage2Parts = new ArrayList<>();
+        long played = 0;
+        long total = 0;
+        List<KnockoutView> brackets = details.knockouts();
+        if (!brackets.isEmpty()) {
+            stage2Top.add(BracketDiagram.styles());
+            stage2Top.add(bracketModeSwitch());
+            for (int i = 0; i < brackets.size(); i++) {
+                KnockoutView view = brackets.get(i);
+                stage2Parts.add(new StageTabs.Part(brackets.size() > 1 ? Tr.t("Tabloul {0}", i + 1) : Tr.t("Tablou"),
+                        knockoutSection(details, view, i + 1, brackets.size()), isMember(view.members(), own)));
+                played += view.matches().values().stream().filter(TournamentMatch::isPlayed).count();
+                total += view.matches().size();
+            }
+        }
+        for (GroupView group : details.finals()) {
+            stage2Parts.add(new StageTabs.Part(TournamentLabels.groupName(group.group().getName()),
+                    groupSection(details, group, details.canRecordResults()), isMember(group.members(), own)));
+            played += group.playedMatches();
+            total += group.matches().size();
+        }
+        if (stage2Parts.isEmpty()) {
+            stage2Top.add(hint(t.isKnockoutFormat()
+                    ? Tr.t("Tablourile eliminatorii se alcătuiesc după ce se termină grupele.")
+                    : Tr.t("Finalele se alcătuiesc după ce se termină grupele.")));
+        }
+        StageTabs.Stage stage2 = new StageTabs.Stage(STAGE_2, t.isKnockoutFormat() ? Tr.t("Tablou") : Tr.t("Finale"),
+                stage2Parts.isEmpty() ? null : progress(played, total), stage2Top, stage2Parts);
+
+        add(new StageTabs(List.of(groups, stage2), afterGroups ? 1 : 0, selectedStage, selectedPart,
+                (stageKey, part) -> {
+                    selectedStage = stageKey;
+                    selectedPart = part;
+                    updateUrl();
+                }));
         add(legend(details));
     }
 
-    private static Component stageTitle(TournamentStage stage, List<GroupView> groups) {
-        long played = groups.stream().mapToLong(GroupView::playedMatches).sum();
-        long total = groups.stream().mapToLong(g -> g.matches().size()).sum();
-        H3 title = new H3(stage.getLabel());
-        title.getStyle().set("margin-bottom", "0");
-        Span progress = new Span(Tr.t("Meciuri jucate: {0} din {1}", played, total));
-        progress.getStyle().set("color", "var(--lumo-secondary-text-color)");
-        HorizontalLayout heading = new HorizontalLayout(title, progress);
-        heading.setAlignItems(FlexComponent.Alignment.BASELINE);
-        heading.getStyle().set("flex-wrap", "wrap").set("margin-top", "var(--lumo-space-l)");
-        return heading;
+    private static final String STAGE_GROUPS = "1";
+    private static final String STAGE_2 = "2";
+    private static final String STAGE_PARAM = "etapa";
+    private static final String PART_PARAM = "grupa";
+
+    private static String progress(long played, long total) {
+        return total == 0 ? null : played + "/" + total;
     }
 
-    /** O grupă: tabelul-matrice și meciurile ei. */
+    private static boolean isMember(List<TournamentParticipant> members, Long own) {
+        return own != null && members.stream().anyMatch(p -> own.equals(p.getId()));
+    }
+
+    /** „Grupa A” → „A” pe cip; celelalte nume rămân întregi. */
+    private static String shortGroupLabel(String stored) {
+        return stored != null && stored.startsWith("Grupa ") ? stored.substring("Grupa ".length())
+                : TournamentLabels.groupName(stored);
+    }
+
+    /** Etapa și grupa alese se păstrează în adresă, ca la reîmprospătare sau într-un link trimis să se deschidă la fel. */
+    private void updateUrl() {
+        UI ui = UI.getCurrent();
+        if (ui == null || tournamentId == null) {
+            return;
+        }
+        Map<String, String> params = new LinkedHashMap<>();
+        if (selectedStage != null) {
+            params.put(STAGE_PARAM, selectedStage);
+        }
+        if (selectedPart != null) {
+            params.put(PART_PARAM, selectedPart);
+        }
+        ui.getPage().getHistory().replaceState(null,
+                new Location("turneu/" + tournamentId, QueryParameters.simple(params)));
+    }
+
     private Component groupSection(TournamentDetails details, GroupView group, boolean editable) {
         VerticalLayout section = new VerticalLayout();
         section.setPadding(false);
