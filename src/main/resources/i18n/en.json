@@ -1,4 +1,10 @@
 {
+  "Grupe": "Groups",
+  "Finale": "Finals",
+  "Tablou": "Bracket",
+  "Toate": "All",
+  "Tablourile eliminatorii se alcătuiesc după ce se termină grupele.": "The knockout brackets are drawn once the groups are finished.",
+  "Finalele se alcătuiesc după ce se termină grupele.": "The finals are drawn once the groups are finished.",
   "(loc împărțit)": "(shared place)",
   "(taxa de participare)": "(entry fee)",
   "({0} grupe)": "({0} groups)",
