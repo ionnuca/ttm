@@ -32,6 +32,7 @@ import com.vaadin.flow.component.tabs.Tab;
 import com.vaadin.flow.component.tabs.Tabs;
 import com.vaadin.flow.component.tabs.TabsVariant;
 import md.ttm.common.BusinessException;
+import md.ttm.model.rating.RatingHistory;
 import md.ttm.model.tournament.Tournament;
 import md.ttm.model.tournament.TournamentGroup;
 import md.ttm.model.tournament.TournamentMatch;
@@ -56,6 +57,7 @@ import md.ttm.ui.player.RatingHistoryList;
 
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -847,9 +849,7 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         }
 
         if (bracketMode() == BracketMode.STANDINGS) {
-            section.add(state.placings().isEmpty()
-                    ? hint(Tr.t("Clasamentul apare pe măsură ce se decid locurile din tablou."))
-                    : knockoutStandings(view));
+            section.add(knockoutStandings(details, view));
             return section;
         }
 
@@ -995,23 +995,51 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
     }
 
     /** Locurile stabilite în tabloul eliminatoriu (toate, după încheiere; până atunci, ale celor eliminați). */
-    private static Component knockoutStandings(KnockoutView view) {
+    /** Un rând din clasamentul tabloului: locul ({@code null} cât timp nu e decis) și jucătorul. */
+    private record KnockoutRow(Integer place, TournamentParticipant participant) {
+    }
+
+    /**
+     * Clasamentul tabloului: toți jucătorii lui, cu ratingul și locul ocupat. Locurile decise vin primele; cât timp
+     * locul unui jucător nu e decis, coloana rămâne goală, iar jucătorii apar în ordinea din tablou.
+     */
+    private static Component knockoutStandings(TournamentDetails details, KnockoutView view) {
         Div card = card();
-        H4 title = new H4(view.state().complete() ? Tr.t("Clasamentul final") : Tr.t("Locuri stabilite până acum"));
+        H4 title = new H4(view.state().complete() ? Tr.t("Clasamentul final") : Tr.t("Clasament"));
         title.getStyle().set("margin", "0 0 var(--lumo-space-xs)");
         card.add(title);
-        Div list = new Div();
-        list.getStyle()
-                .set("display", "grid")
-                .set("grid-template-columns", "auto 1fr")
-                .set("gap", "var(--lumo-space-xs) var(--lumo-space-m)");
-        for (Bracket.Placing placing : view.state().placings()) {
-            Span place = new Span(Tr.t("Locul {0}", placing.place()));
-            place.getStyle().set("font-weight", "600").set("white-space", "nowrap");
-            TournamentParticipant p = view.participant(placing.participantId());
-            list.add(place, new Span(p != null ? p.getPlayer().getDisplayName() : "?"));
+
+        Map<Long, Integer> placeOf = new HashMap<>();
+        view.state().placings().forEach(p -> placeOf.put(p.participantId(), p.place()));
+        List<KnockoutRow> rows = new ArrayList<>();
+        for (int i = 0; i < view.members().size(); i++) {
+            TournamentParticipant p = view.members().get(i);
+            rows.add(new KnockoutRow(placeOf.get(p.getId()), p));
         }
-        card.add(list);
+        // ordinea din tablou se păstrează la locurile încă nedecise (sortarea e stabilă)
+        rows.sort(Comparator.comparing(KnockoutRow::place, Comparator.nullsLast(Comparator.naturalOrder())));
+
+        Grid<KnockoutRow> grid = new Grid<>();
+        grid.addThemeVariants(GridVariant.LUMO_COMPACT, GridVariant.LUMO_ROW_STRIPES);
+        grid.setAllRowsVisible(true);
+        grid.addColumn(r -> r.place() == null ? "" : String.valueOf(r.place()))
+                .setHeader(Tr.t("Loc")).setWidth("4.5rem").setFlexGrow(0);
+        grid.addColumn(r -> r.participant().getPlayer().getDisplayName())
+                .setHeader(Tr.t("Jucător")).setFlexGrow(1);
+        grid.addColumn(r -> {
+                    RatingHistory change = details.ratingChanges().get(r.participant().getPlayer().getId());
+                    if (change == null) {
+                        return String.valueOf(r.participant().getSeedRating());
+                    }
+                    int d = change.getChange();
+                    return change.getRatingBefore() + " → " + change.getRatingAfter() + " (" + (d > 0 ? "+" + d : d) + ")";
+                })
+                .setHeader(Tr.t("Rating")).setAutoWidth(true).setFlexGrow(0);
+        grid.setItems(rows);
+        card.add(grid);
+        if (placeOf.isEmpty()) {
+            card.add(hint(Tr.t("Locurile se completează pe măsură ce se decid în tablou.")));
+        }
         return card;
     }
 

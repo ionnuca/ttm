@@ -489,7 +489,9 @@ await check('admin: „Grupe + eliminare” — tabloul cu ramura de jos', async
   await page.getByRole('tab', { name: 'Clasament' }).click();
   await settle(page);
   if (await page.locator('.ttm-bracket').count() > 0) throw new Error('tabloul desenat nu trebuia să apară la Clasament');
-  await expectText(page, 'Clasamentul apare pe măsură ce se decid locurile din tablou');
+  await expectText(page, 'Locurile se completează pe măsură ce se decid în tablou');
+  // toți jucătorii tablourilor, cu ratingul: 4 + 4 rânduri
+  if (await page.locator('vaadin-grid:visible').count() < 2) throw new Error('lipsește tabelul clasamentului');
   await shot(page, '39d-admin-tablou-clasament');
   // la redeschiderea turneului se pornește din nou de la tabloul desenat
   await page.reload();
