@@ -45,6 +45,9 @@ class TournamentManagerIT {
         List<TournamentMatch> matches = tournamentService.findDetails(tournament.getId()).orElseThrow().matches();
         matches.forEach(m -> tournamentService.recordResult(m.getId(), MatchResultForm.sets(2, 0)));
 
+        // turneul nu se încheie singur: organizatorul confirmă încheierea
+        assertThat(tournamentService.findDetails(tournament.getId()).orElseThrow().readyToFinish()).isTrue();
+        tournamentService.finishManually(tournament.getId());
         TournamentDetails finished = tournamentService.findDetails(tournament.getId()).orElseThrow();
         assertThat(finished.tournament().getStatus()).isEqualTo(TournamentStatus.FINISHED);
         assertThat(finished.canRecordResults()).isTrue();

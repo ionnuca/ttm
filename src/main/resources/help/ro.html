@@ -18,21 +18,26 @@ Pagina principală e lista <b>Turnee</b>; ultimele meciuri sunt la <b>Meciuri</b
   <li><b>Înscrierea.</b> Jucătorii cu cont apasă „Mă înscriu” pe pagina turneului: se trimite o <b>cerere de înscriere</b>, care așteaptă confirmarea unui organizator (administrator sau manager de turnee). Organizatorii primesc o notificare și, pe pagina turneului, la „Cereri de înscriere”, apasă <b>Confirmă</b> sau <b>Respinge</b>. Jucătorul vede răspunsul în <b>notificări</b> (clopoțelul din bara de sus). Administratorul poate marca un utilizator „Se înscrie la turnee fără confirmare” (la <b>Utilizatori</b>): înscrierea lui e confirmată automat. Organizatorul poate adăuga sau scoate direct pe oricine; cererile rămase neconfirmate se anulează la începerea turneului.</li>
   <li><b>Începerea.</b> „Începe turneul” închide înscrierea. Atunci se alege:
     <ul>
-      <li>tipul: <b>Round robin</b>, <b>Grupe + finale</b> sau <b>Grupe + eliminare</b> (cu numărul de grupe);</li>
+      <li>numărul de etape: <b>două</b> (implicit) sau <b>una</b>. Cu o etapă, tipul turneului e <b>Round robin</b>, <b>eliminare directă (olimpic)</b> sau <b>eliminare cu ramura de jos</b>. Cu două etape, prima e pe <b>grupe</b> (se alege numărul de grupe), iar tipul etapei 2 – finale sau tablou eliminatoriu – se alege abia după grupe, la „Începe etapa 2”;</li>
       <li>numărul de seturi: best of 3, 5 sau 7 (câștigă primul la 2, 3 sau 4 seturi);</li>
       <li>opțional, <b>turneu comercial</b>: taxa de participare și numărul de premiați.</li>
     </ul>
     Aplicația formează grupele și generează toate meciurile, pe tururi.</li>
   <li><b>Rezultatele.</b> Fiecare meci primește scorul la seturi (ex. 3:1) sau <b>W – victorie tehnică</b>, când adversarul nu joacă.
       Rezultatele le introduc cei doi jucători sau organizatorul.</li>
-  <li><b>Încheierea.</b> După ultimul rezultat turneul devine „Încheiat” și ratingul se recalculează.
-      Organizatorul îl poate încheia și manual: meciurile fără rezultat rămân „nejucate” și nu contează nici la clasament, nici la rating.
+  <li><b>Încheierea.</b> Turneul nu se încheie niciodată singur. Când s-au jucat toate meciurile (și seturile de departajare), organizatorul vede mesajul „Toate meciurile s-au jucat” și apasă <b>Încheie turneul</b>, cu confirmare; atunci turneul devine „Încheiat” și ratingul se recalculează.
+      Organizatorul îl poate încheia și mai devreme: meciurile fără rezultat rămân „nejucate” și nu contează nici la clasament, nici la rating.
       Rezultatele pot fi corectate și după încheiere; ratingul se recalculează atunci automat.</li>
 </ol>
 
 <h3>3. Formatele de turneu</h3>
-<p><b>Round robin</b> – toți joacă împotriva tuturor, într-o singură grupă ordonată după rating.</p>
-<p><b>Grupe + finale</b> – în două etape:</p>
+<p><b>O etapă</b>:</p>
+<ul>
+  <li><b>Round robin</b> – toți joacă împotriva tuturor, într-o singură grupă ordonată după rating;</li>
+  <li><b>Eliminare directă (olimpic)</b> sau <b>eliminare cu ramura de jos</b> – toți jucătorii intră într-un singur tablou, așezați după rating; tabloul se joacă la fel ca în etapa 2 descrisă mai jos.</li>
+</ul>
+<p><b>Două etape</b> – etapa 1 pe grupe; după grupe, la „Începe etapa 2”, organizatorul alege tipul etapei 2: <b>finale</b> (Grupe + finale) sau <b>tablou eliminatoriu</b>, olimpic sau cu ramura de jos (Grupe + eliminare).</p>
+<p><b>Grupe + finale</b>:</p>
 <ol>
   <li><b>Etapa 1 – grupe.</b> Grupele se formează prin tragere la sorți pe urne, ca să fie echilibrate:
     <ul>
@@ -63,7 +68,7 @@ Etapa 2 se joacă în <b>tablouri eliminatorii</b>:</p>
   <li><b>Olimpic cu ramura de jos</b>: finala tabloului principal decide locurile 1 și 2. Cine pierde înainte de finală trece în <b>ramura de jos</b>, unde cine pierde iese;
       <b>finala ramurii de jos</b> decide locurile 3 și 4;</li>
   <li>meciurile din tablou apar pe măsură ce se știu jucătorii lor. Un rezultat se poate corecta doar cât timp meciul următor în care a ajuns câștigătorul (sau învinsul) nu are rezultat;</li>
-  <li>după începerea etapei 2, organizatorul mai poate corecta rezultatele din grupe; tablourile se construiesc atunci din nou (vezi mai sus). La un turneu comercial câștigătorul Tabloului 2 primește cât taxa de participare, iar restul sumei se împarte după locurile din Tabloul 1 (fără Tabloul 2, se împarte toată suma). Turneul se încheie când ambele tablouri au câștigător.</li>
+  <li>după începerea etapei 2, organizatorul mai poate corecta rezultatele din grupe; tablourile se construiesc atunci din nou (vezi mai sus). La un turneu comercial câștigătorul Tabloului 2 primește cât taxa de participare, iar restul sumei se împarte după locurile din Tabloul 1 (fără Tabloul 2, se împarte toată suma). Turneul se poate încheia când ambele tablouri au câștigător.</li>
 </ul>
 
 <p><b>Pagina turneului</b>: la „Grupe + finale” și „Grupe + eliminare” comutatorul de sus alege etapa – <b>Grupe</b> sau <b>Finale</b> (<b>Tablou</b>) –, iar lângă fiecare apar meciurile jucate din total. Pagina se deschide la etapa în curs. Sub comutator, câte un buton pentru fiecare grupă, finală sau tablou arată doar tabelul ales; „Toate” le arată pe toate. Alegerea rămâne în adresa paginii, deci un link trimis cuiva se deschide la aceeași grupă.</p>

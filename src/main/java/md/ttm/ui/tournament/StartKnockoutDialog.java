@@ -28,7 +28,7 @@ class StartKnockoutDialog extends Dialog {
     private final RadioButtonGroup<KnockoutType> type = new RadioButtonGroup<>(Tr.t("Tabloul eliminatoriu"));
     private final Div preview = new Div();
 
-    StartKnockoutDialog(List<GroupView> groups, BiConsumer<Integer, KnockoutType> onStart) {
+    StartKnockoutDialog(List<GroupView> groups, KnockoutType initialType, BiConsumer<Integer, KnockoutType> onStart) {
         this.groups = groups;
         setHeaderTitle(Tr.t("Începe etapa 2"));
         setWidth("min(95vw, 36rem)");
@@ -44,7 +44,7 @@ class StartKnockoutDialog extends Dialog {
         type.setItems(KnockoutType.values());
         type.setItemLabelGenerator(KnockoutType::getLabel);
         type.addThemeName("vertical");
-        type.setValue(KnockoutType.SINGLE);
+        type.setValue(initialType != null ? initialType : KnockoutType.SINGLE);
         type.addValueChangeListener(e -> updatePreview());
 
         preview.getStyle().set("font-size", "var(--lumo-font-size-s)").set("color", "var(--lumo-secondary-text-color)");

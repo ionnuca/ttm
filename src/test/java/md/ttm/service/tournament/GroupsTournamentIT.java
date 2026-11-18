@@ -138,6 +138,9 @@ class GroupsTournamentIT {
         }
 
         playAllFavourites(id);
+        // turneul nu se încheie singur: organizatorul confirmă încheierea
+        assertThat(tournamentService.findDetails(id).orElseThrow().readyToFinish()).isTrue();
+        tournamentService.finishManually(id);
         TournamentDetails done = details(id);
         assertThat(done.tournament().getStatus()).isEqualTo(TournamentStatus.FINISHED);
 
@@ -232,6 +235,9 @@ class GroupsTournamentIT {
         assertThat(rebuilt.finals()).extracting(g -> g.group().isFeeRefund()).containsExactly(false, true, true);
 
         playAllFavourites(id);
+        // turneul nu se încheie singur: organizatorul confirmă încheierea
+        assertThat(tournamentService.findDetails(id).orElseThrow().readyToFinish()).isTrue();
+        tournamentService.finishManually(id);
         TournamentDetails done = details(id);
         assertThat(done.tournament().getStatus()).isEqualTo(TournamentStatus.FINISHED);
         // 8 × 100 = 800; Finala 2 și Finala 3: câte 100; restul 600 la Finala 1

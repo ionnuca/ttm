@@ -124,6 +124,8 @@ public class DemoDataInitializer implements ApplicationRunner {
                 tournamentService.recordResult(match.getId(), result);
                 game++;
             }
+            // turneul nu se încheie singur: organizatorul confirmă încheierea
+            tournamentService.finishManually(summerId);
 
             Long autumnId = tournamentService.create(
                     new TournamentForm("Cupa de toamnă", LocalDate.now().minusDays(1))).getId();

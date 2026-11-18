@@ -7,6 +7,7 @@ import md.ttm.model.player.Player;
 import md.ttm.model.tournament.KnockoutType;
 import md.ttm.model.tournament.TournamentMatch;
 import md.ttm.model.tournament.TournamentParticipant;
+import md.ttm.model.tournament.TournamentFormat;
 import md.ttm.model.tournament.TournamentStage;
 import md.ttm.model.tournament.TournamentStatus;
 import md.ttm.repository.PlayerRepository;
@@ -86,6 +87,9 @@ class KnockoutTournamentIT {
         win2(id, "W2-1", "P5");
         win2(id, Bracket.THIRD_PLACE, "P7");
 
+        // turneul nu se încheie singur: organizatorul confirmă încheierea
+        assertThat(tournamentService.findDetails(id).orElseThrow().readyToFinish()).isTrue();
+        tournamentService.finishManually(id);
         TournamentDetails done = details(id);
         assertThat(done.tournament().getStatus()).isEqualTo(TournamentStatus.FINISHED);
         Map<Integer, List<String>> places = places(done.knockouts().get(0));
@@ -123,6 +127,9 @@ class KnockoutTournamentIT {
         win(id, "L1-1", "P3");
         assertThat(details(id).tournament().getStatus()).isEqualTo(TournamentStatus.IN_PROGRESS);
         win(id, "W2-1", "P1");
+        // turneul nu se încheie singur: organizatorul confirmă încheierea
+        assertThat(tournamentService.findDetails(id).orElseThrow().readyToFinish()).isTrue();
+        tournamentService.finishManually(id);
         assertThat(details(id).tournament().getStatus()).isEqualTo(TournamentStatus.FINISHED);
 
         // un rezultat de la care depind meciuri jucate nu se mai poate schimba
@@ -143,6 +150,9 @@ class KnockoutTournamentIT {
         assertThat(details(id).tournament().getStatus()).isEqualTo(TournamentStatus.IN_PROGRESS);
         win(id, "L1-1", "P4");
 
+        // turneul nu se încheie singur: organizatorul confirmă încheierea
+        assertThat(tournamentService.findDetails(id).orElseThrow().readyToFinish()).isTrue();
+        tournamentService.finishManually(id);
         TournamentDetails done = details(id);
         assertThat(done.tournament().getStatus()).isEqualTo(TournamentStatus.FINISHED);
         Map<Integer, List<String>> places = places(done.knockouts().get(0));
@@ -186,6 +196,9 @@ class KnockoutTournamentIT {
         win(id, "W1-2", "P2");
         win(id, "W2-1", "P1");
         win(id, Bracket.THIRD_PLACE, "P3");
+        // turneul nu se încheie singur: organizatorul confirmă încheierea
+        assertThat(tournamentService.findDetails(id).orElseThrow().readyToFinish()).isTrue();
+        tournamentService.finishManually(id);
         assertThat(details(id).tournament().getStatus()).isEqualTo(TournamentStatus.FINISHED);
     }
 
@@ -242,6 +255,9 @@ class KnockoutTournamentIT {
                 tournamentService.recordResult(m.getId(), aStronger ? MatchResultForm.sets(3, 0) : MatchResultForm.sets(0, 3));
             }
         }
+        // turneul nu se încheie singur: organizatorul confirmă încheierea
+        assertThat(tournamentService.findDetails(id).orElseThrow().readyToFinish()).isTrue();
+        tournamentService.finishManually(id);
         assertThat(details(id).tournament().getStatus()).isEqualTo(TournamentStatus.FINISHED);
 
         TournamentMatch groupMatch = details(id).matches().stream()
@@ -283,6 +299,66 @@ class KnockoutTournamentIT {
             boolean aStronger = m.getParticipantA().getSeed() < m.getParticipantB().getSeed();
             tournamentService.recordResult(m.getId(), aStronger ? MatchResultForm.sets(3, 1) : MatchResultForm.sets(1, 3));
         }
+    }
+
+    @Test
+    void oEtapa_olimpic_totiJucatoriiInTablou_seIncheieDoarConfirmat() {
+        Long id = tournamentWith(4);
+        tournamentService.start(id, TournamentSettings.knockout(5, KnockoutType.SINGLE));
+
+        TournamentDetails started = details(id);
+        assertThat(started.tournament().getFormat()).isEqualTo(TournamentFormat.KNOCKOUT);
+        assertThat(started.tournament().getStage()).isEqualTo(TournamentStage.KNOCKOUT);
+        assertThat(started.groupStage()).isEmpty();
+        assertThat(started.knockouts()).hasSize(1);
+        assertThat(names(started.knockouts().get(0).members())).containsExactly("P1", "P2", "P3", "P4");
+        assertThat(pair(started.knockouts().get(0), "W1-1")).isEqualTo("P1-P4");
+
+        win(id, "W1-1", "P1");
+        win(id, "W1-2", "P2");
+        win(id, "W2-1", "P1");
+        assertThat(details(id).readyToFinish()).isFalse(); // mai e meciul pentru locul 3
+        win(id, Bracket.THIRD_PLACE, "P3");
+
+        TournamentDetails played = details(id);
+        assertThat(played.tournament().getStatus()).isEqualTo(TournamentStatus.IN_PROGRESS);
+        assertThat(played.readyToFinish()).isTrue();
+        tournamentService.finishManually(id);
+
+        TournamentDetails done = details(id);
+        assertThat(done.tournament().getStatus()).isEqualTo(TournamentStatus.FINISHED);
+        Map<Integer, List<String>> places = places(done.knockouts().get(0));
+        assertThat(places.get(1)).containsExactly("P1");
+        assertThat(places.get(2)).containsExactly("P2");
+        assertThat(places.get(3)).containsExactly("P3");
+    }
+
+    @Test
+    void oEtapa_faraTipulTabloului_seRefuza() {
+        Long id = tournamentWith(4);
+        assertThatThrownBy(() -> tournamentService.start(id, TournamentSettings.knockout(5, null)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("tipul tabloului");
+    }
+
+    @Test
+    void douaEtape_tipulEtapei2SeAlegeLaInceperereaEi() {
+        Long finalsId = tournamentWith(8);
+        tournamentService.start(finalsId, TournamentSettings.twoStages(5, 2));
+        assertThat(details(finalsId).tournament().getFormat()).isEqualTo(TournamentFormat.GROUPS);
+        playGroupFavourites(finalsId);
+        tournamentService.startFinals(finalsId, 2);
+        assertThat(details(finalsId).tournament().getFormat()).isEqualTo(TournamentFormat.GROUPS_FINALS);
+        assertThat(details(finalsId).finals()).hasSize(2);
+
+        Long bracketId = tournamentWith(8);
+        tournamentService.start(bracketId, TournamentSettings.twoStages(5, 2));
+        playGroupFavourites(bracketId);
+        tournamentService.startKnockout(bracketId, 2, KnockoutType.DOUBLE);
+        TournamentDetails bracket = details(bracketId);
+        assertThat(bracket.tournament().getFormat()).isEqualTo(TournamentFormat.GROUPS_KNOCKOUT);
+        assertThat(bracket.tournament().getKnockoutType()).isEqualTo(KnockoutType.DOUBLE);
+        assertThat(bracket.knockouts()).hasSize(2);
     }
 
     private void win(Long id, String slot, String winner) {

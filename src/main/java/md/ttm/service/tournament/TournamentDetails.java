@@ -56,6 +56,23 @@ public record TournamentDetails(
                 && !TournamentService.requiresFinalsBeforeFinish(tournament);
     }
 
+    /**
+     * Turneul în desfășurare s-a jucat complet: ultima etapă (nu doar grupele), toate meciurile, tablourile decise
+     * și seturile de departajare jucate. Nu se încheie singur: organizatorul confirmă încheierea.
+     */
+    public boolean readyToFinish() {
+        if (tournament.getStatus() != TournamentStatus.IN_PROGRESS || unplayedMatches() > 0 || pendingTiebreakCount() > 0) {
+            return false;
+        }
+        if (tournament.isGroupsFormat() && tournament.getStage() == md.ttm.model.tournament.TournamentStage.GROUPS) {
+            return false;
+        }
+        if (tournament.isKnockoutFormat()) {
+            return !knockouts.isEmpty() && knockouts.stream().allMatch(k -> k.state().complete());
+        }
+        return true;
+    }
+
     /** Meciurile încă fără rezultat (după o încheiere manuală: cele care nu s-au mai jucat). */
     public long unplayedMatches() {
         return matches.size() - playedMatches();
