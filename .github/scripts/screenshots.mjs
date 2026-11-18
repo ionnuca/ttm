@@ -319,7 +319,7 @@ await check('admin: seturi de departajare la turneul comercial', async () => {
   await shot(page, '46a-admin-gata-de-incheiere');
   await page.getByRole('button', { name: 'Încheie turneul' }).last().click();
   await expectText(page, 'Încheiați turneul?');
-  await page.getByRole('dialog').getByRole('button', { name: 'Încheie turneul' }).click();
+  await page.getByRole('button', { name: 'Încheie turneul' }).last().click();
   await expectText(page, 'Încheiat');
   await expectText(page, '→'); // ratingul s-a recalculat la încheiere
   await shot(page, '46-admin-departajare-incheiat');
