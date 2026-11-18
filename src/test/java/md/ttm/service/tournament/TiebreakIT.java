@@ -29,12 +29,19 @@ class TiebreakIT {
 
     @Test
     @WithMockUser(username = "admin", roles = "ADMIN")
-    void turneulObisnuit_egalitateaTotalaImparteLocul() {
+    void turneulAmical_seJoacaSiElSeturiDeDepartajare() {
         Long id = cycle(TournamentSettings.roundRobin(5));
         TournamentDetails details = tournamentService.findDetails(id).orElseThrow();
-        assertThat(details.tournament().getStatus()).isEqualTo(TournamentStatus.FINISHED);
-        assertThat(details.standings()).extracting(StandingsCalculator.Row::place).containsOnly(1);
-        assertThat(details.pendingTiebreaks()).isEmpty();
+        // și la un turneu amical fiecare loc se decide: egalitatea totală cere seturi de departajare
+        assertThat(details.tournament().getStatus()).isEqualTo(TournamentStatus.IN_PROGRESS);
+        assertThat(details.pendingTiebreaks()).hasSize(3);
+
+        for (StandingsCalculator.Pairing p : details.pendingTiebreaks()) {
+            tournamentService.recordTiebreak(id, null, p.round(), p.a(), p.b(), 11, 7);
+        }
+        TournamentDetails done = tournamentService.findDetails(id).orElseThrow();
+        assertThat(done.tournament().getStatus()).isEqualTo(TournamentStatus.FINISHED);
+        assertThat(done.standings()).extracting(StandingsCalculator.Row::place).containsExactly(1, 2, 3);
     }
 
     @Test
