@@ -491,6 +491,10 @@ await check('admin: „Grupe + eliminare” — tabloul cu ramura de jos', async
   if (await page.locator('.ttm-bracket').count() > 0) throw new Error('tabloul desenat nu trebuia să apară la Clasament');
   await expectText(page, 'Clasamentul apare pe măsură ce se decid locurile din tablou');
   await shot(page, '39d-admin-tablou-clasament');
+  // la redeschiderea turneului se pornește din nou de la tabloul desenat
+  await page.reload();
+  await settle(page);
+  if (await page.locator('.ttm-bracket').count() < 2) throw new Error('la redeschidere trebuia să apară tabloul desenat');
   await page.getByText('Tablou grafic').click();
   await settle(page);
 });

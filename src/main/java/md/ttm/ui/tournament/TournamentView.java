@@ -28,7 +28,6 @@ import com.vaadin.flow.router.QueryParameters;
 import com.vaadin.flow.router.Route;
 import com.vaadin.flow.router.RouterLink;
 import com.vaadin.flow.server.auth.AnonymousAllowed;
-import com.vaadin.flow.server.VaadinSession;
 import com.vaadin.flow.component.tabs.Tab;
 import com.vaadin.flow.component.tabs.Tabs;
 import com.vaadin.flow.component.tabs.TabsVariant;
@@ -95,6 +94,7 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
     @Override
     public void setParameter(BeforeEvent event, Long id) {
         this.tournamentId = id;
+        bracketMode = BracketMode.GRAPHIC;
         Map<String, List<String>> params = event.getLocation().getQueryParameters().getParameters();
         selectedStage = params.getOrDefault(STAGE_PARAM, List.of()).stream().findFirst().orElse(null);
         selectedPart = params.getOrDefault(PART_PARAM, List.of()).stream().findFirst().orElse(null);
@@ -377,6 +377,7 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         new StartTournamentDialog(details.tournament().getName(), details.participants().size(), settings -> {
             tournamentService.start(tournamentId, settings);
             Notifications.success(Tr.t("Turneul a început"));
+            bracketMode = BracketMode.GRAPHIC;
             refresh();
         }).open();
     }
@@ -594,6 +595,7 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
 
     /** După pornirea etapei 2 pagina trece la finale (tablouri), toate, și derulează la ele. */
     private void showStage2() {
+        bracketMode = BracketMode.GRAPHIC;
         selectedStage = STAGE_2;
         selectedPart = StageTabs.ALL;
         refresh();
@@ -900,13 +902,14 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
     /** Cum se arată tablourile: desenat, ca listă de meciuri pe tururi sau doar clasamentul. */
     private enum BracketMode { GRAPHIC, LIST, STANDINGS }
 
-    private static final String BRACKET_MODE = "ttm.tablou.mod";
+    /**
+     * Modul tablourilor în pagina deschisă. La deschiderea unui turneu, la începerea lui și a etapei 2 se pornește
+     * mereu de la tabloul desenat; alegerea rămâne cât timp lucrați în pagină.
+     */
+    private BracketMode bracketMode = BracketMode.GRAPHIC;
 
-    /** Modul ales se păstrează în sesiune (implicit tabloul desenat). */
-    private static BracketMode bracketMode() {
-        VaadinSession session = VaadinSession.getCurrent();
-        Object mode = session != null ? session.getAttribute(BRACKET_MODE) : null;
-        return mode instanceof BracketMode m ? m : BracketMode.GRAPHIC;
+    private BracketMode bracketMode() {
+        return bracketMode;
     }
 
     private Component bracketModeSwitch() {
@@ -923,7 +926,7 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         tabs.addSelectedChangeListener(e -> {
             BracketMode mode = e.getSelectedTab() == list ? BracketMode.LIST
                     : e.getSelectedTab() == standings ? BracketMode.STANDINGS : BracketMode.GRAPHIC;
-            VaadinSession.getCurrent().setAttribute(BRACKET_MODE, mode);
+            bracketMode = mode;
             refresh();
         });
         tabs.getStyle().set("margin-top", "var(--lumo-space-m)");
