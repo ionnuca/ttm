@@ -624,14 +624,16 @@ public class TournamentService {
         if (tiebreaks > 0) {
             throw new BusinessException("Etapa 1 nu s-a terminat: mai sunt {0} seturi de departajare de jucat", tiebreaks);
         }
-        int smallest = groups.stream().mapToInt(g -> g.members().size()).min().orElse(0);
+        List<Integer> sizes = groups.stream().map(g -> g.members().size()).toList();
         int finalCount = settings.finalCount();
-        if (finalCount < 2 || finalCount > smallest) {
-            throw new BusinessException("Cu grupe de {0} jucători se pot forma între 2 și {0} finale", smallest);
+        int maxQualifiers = FinalsSettings.maxQualifiers(finalCount, sizes);
+        if (maxQualifiers < 1) {
+            throw new BusinessException("Cu aceste grupe nu se pot forma {0} finale", finalCount);
         }
-        int maxQualifiers = FinalsSettings.maxQualifiers(finalCount, smallest);
-        if (settings.qualifiers() < 1 || settings.qualifiers() > maxQualifiers) {
-            throw new BusinessException("Din fiecare grupă se pot califica între 1 și {0} jucători", maxQualifiers);
+        int minQualifiers = FinalsSettings.minQualifiers(sizes.size());
+        if (settings.qualifiers() < minQualifiers || settings.qualifiers() > maxQualifiers) {
+            throw new BusinessException("Din fiecare grupă pot trece în fiecare finală între {0} și {1} jucători",
+                    minQualifiers, maxQualifiers);
         }
         if (settings.feeRefunds().stream().anyMatch(f -> f < 2 || f > finalCount)) {
             throw new BusinessException("Taxa de participare se poate returna doar în finalele 2 … {0}", finalCount);

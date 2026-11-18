@@ -31,7 +31,7 @@ import java.util.stream.IntStream;
 class StartFinalsDialog extends Dialog {
 
     private final List<GroupView> groups;
-    private final int smallest;
+    private final List<Integer> sizes;
     private final Select<Integer> finalCount = new Select<>();
     private final Select<Integer> qualifiers = new Select<>();
     private final CheckboxGroup<Integer> feeRefunds = new CheckboxGroup<>();
@@ -42,9 +42,12 @@ class StartFinalsDialog extends Dialog {
         setHeaderTitle(Tr.t("Începe etapa 2"));
         setWidth("min(95vw, 36rem)");
 
-        smallest = groups.stream().mapToInt(g -> g.members().size()).min().orElse(2);
+        sizes = groups.stream().map(g -> g.members().size()).toList();
+        int largest = sizes.stream().mapToInt(Integer::intValue).max().orElse(2);
         finalCount.setLabel(Tr.t("Număr de finale"));
-        finalCount.setItems(IntStream.rangeClosed(2, Math.max(2, smallest)).boxed().toList());
+        List<Integer> counts = IntStream.rangeClosed(2, Math.max(2, largest)).boxed()
+                .filter(n -> FinalsSettings.maxQualifiers(n, sizes) >= 1).toList();
+        finalCount.setItems(counts.isEmpty() ? List.of(2) : counts);
         finalCount.setValue(2);
         finalCount.setHelperText(Tr.t("Ultima finală îi primește pe toți jucătorii rămași"));
         finalCount.setWidthFull();
@@ -87,16 +90,18 @@ class StartFinalsDialog extends Dialog {
     /** Alt număr de finale: se schimbă câți pot trece în fiecare finală și finalele care pot returna taxa. */
     private void updateFinalCount() {
         int count = finalCount.getValue();
-        int max = Math.max(1, FinalsSettings.maxQualifiers(count, smallest));
+        int min = FinalsSettings.minQualifiers(sizes.size());
+        int max = Math.max(min, FinalsSettings.maxQualifiers(count, sizes));
         Integer previous = qualifiers.getValue();
         qualifiers.setLabel(count == 2
                 ? Tr.t("Calificați din fiecare grupă în Finala 1")
                 : Tr.t("Jucători din fiecare grupă în fiecare finală (în afară de ultima)"));
-        qualifiers.setItems(IntStream.rangeClosed(1, max).boxed().toList());
+        qualifiers.setItems(IntStream.rangeClosed(min, max).boxed().toList());
         qualifiers.setItemLabelGenerator(n -> count == 2
                 ? (n == 1 ? Tr.t("Primul din fiecare grupă") : Tr.t("Primii {0} din fiecare grupă", n))
                 : (n == 1 ? Tr.t("Câte un jucător din fiecare grupă") : Tr.t("Câte {0} jucători din fiecare grupă", n)));
-        qualifiers.setValue(previous != null && previous <= max ? previous : Math.min(count == 2 ? 2 : 1, max));
+        qualifiers.setValue(previous != null && previous >= min && previous <= max ? previous
+                : Math.max(min, Math.min(count == 2 ? 2 : 1, max)));
 
         Set<Integer> refunds = new HashSet<>(feeRefunds.getValue());
         List<Integer> candidates = IntStream.rangeClosed(2, count).boxed().toList();
