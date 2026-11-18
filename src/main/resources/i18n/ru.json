@@ -1,6 +1,6 @@
 {
+  "Locurile se completează pe măsură ce se decid în tablou.": "Места заполняются по мере их определения в сетке.",
   "Clasament": "Таблица",
-  "Clasamentul apare pe măsură ce se decid locurile din tablou.": "Таблица заполняется по мере того, как в сетке определяются места.",
   "(cu ramura de jos)": "(с нижней сеткой)",
   "(olimpic)": "(олимпийская)",
   "Cel puțin o grupă, cu minimum 2 jucători în fiecare": "Хотя бы одна группа, минимум 2 игрока в каждой",
@@ -457,7 +457,6 @@
   "Finala": "Финал",
   "Grupe + eliminare": "Группы + плей-офф",
   "La acest turneu etapa 2 este un tablou eliminatoriu": "В этом турнире этап 2 — турнирная сетка",
-  "Locuri stabilite până acum": "Места, определённые на данный момент",
   "Ramura de jos": "Нижняя сетка",
   "Rezultatul nu se mai poate schimba: meciurile următoare din tablou au deja rezultat. Ștergeți întâi rezultatele lor.": "Результат больше нельзя изменить: следующие матчи сетки уже сыграны. Сначала удалите их результаты.",
   "Semifinale": "Полуфиналы",
