@@ -1,4 +1,6 @@
 {
+  "Cu aceste grupe nu se pot forma {0} finale": "С такими группами нельзя составить {0} финала(ов)",
+  "Din fiecare grupă pot trece în fiecare finală între {0} și {1} jucători": "Из каждой группы в каждый финал могут пройти от {0} до {1} игроков",
   "Locurile se completează pe măsură ce se decid în tablou.": "Места заполняются по мере их определения в сетке.",
   "Clasament": "Таблица",
   "(cu ramura de jos)": "(с нижней сеткой)",
@@ -568,7 +570,6 @@
   "Jucător adăugat, cu contul {0}": "Игрок добавлен, с учётной записью {0}",
   "{0} va fi șters definitiv. Contul lui de utilizator, dacă are unul, rămâne (fără profil de jucător).": "{0} будет удалён навсегда. Его учётная запись, если она есть, остаётся (без профиля игрока).",
   "Contul „{0}” va fi șters definitiv. Profilul de jucător {1} rămâne, cu rezultatele lui.": "Учётная запись «{0}» будет удалена навсегда. Профиль игрока {1} остаётся, с его результатами.",
-  "Cu grupe de {0} jucători se pot forma între 2 și {0} finale": "При группах из {0} игроков можно сформировать от 2 до {0} финалов",
   "Taxa de participare se poate returna doar în finalele 2 … {0}": "Взнос за участие можно вернуть только в финалах 2 … {0}",
   "Număr de finale": "Количество финалов",
   "Ultima finală îi primește pe toți jucătorii rămași": "В последний финал попадают все оставшиеся игроки",

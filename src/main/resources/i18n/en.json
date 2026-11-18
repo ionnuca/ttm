@@ -1,4 +1,6 @@
 {
+  "Cu aceste grupe nu se pot forma {0} finale": "These groups cannot form {0} finals",
+  "Din fiecare grupă pot trece în fiecare finală între {0} și {1} jucători": "Between {0} and {1} players from each group can go to each final",
   "Locurile se completează pe măsură ce se decid în tablou.": "Places fill in as they are decided in the bracket.",
   "Clasament": "Standings",
   "(cu ramura de jos)": "(with lower bracket)",
@@ -568,7 +570,6 @@
   "Jucător adăugat, cu contul {0}": "Player added, with the account {0}",
   "{0} va fi șters definitiv. Contul lui de utilizator, dacă are unul, rămâne (fără profil de jucător).": "{0} will be deleted permanently. Their user account, if any, stays (without a player profile).",
   "Contul „{0}” va fi șters definitiv. Profilul de jucător {1} rămâne, cu rezultatele lui.": "The account “{0}” will be deleted permanently. The player profile {1} stays, with its results.",
-  "Cu grupe de {0} jucători se pot forma între 2 și {0} finale": "With groups of {0} players, between 2 and {0} finals can be formed",
   "Taxa de participare se poate returna doar în finalele 2 … {0}": "The entry fee can only be returned in finals 2 … {0}",
   "Număr de finale": "Number of finals",
   "Ultima finală îi primește pe toți jucătorii rămași": "The last final takes all the remaining players",

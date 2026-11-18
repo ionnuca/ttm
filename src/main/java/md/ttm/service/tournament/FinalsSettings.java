@@ -1,5 +1,6 @@
 package md.ttm.service.tournament;
 
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -27,8 +28,29 @@ public record FinalsSettings(int finalCount, int qualifiers, Set<Integer> feeRef
         return Math.min(finalCount, (Math.max(place, 1) - 1) / qualifiers + 1);
     }
 
-    /** Cel mai mare număr de calificați pe finală pentru grupe de cel puțin {@code smallestGroup} jucători. */
-    public static int maxQualifiers(int finalCount, int smallestGroup) {
-        return (smallestGroup - 1) / (finalCount - 1);
+    /**
+     * Cel mai mare număr de jucători din fiecare grupă în fiecare finală (în afară de ultima), pentru grupele date:
+     * fiecare grupă trebuie să aibă destui jucători pentru finalele dinainte de ultima, iar ultima finală – cei rămași
+     * din toate grupele – cel puțin 2 jucători. O grupă poate să nu mai aibă pe nimeni în ultima finală.
+     * Rezultatul e 0 dacă nu se pot forma atâtea finale.
+     */
+    public static int maxQualifiers(int finalCount, List<Integer> groupSizes) {
+        if (finalCount < 2 || groupSizes.isEmpty()) {
+            return 0;
+        }
+        int smallest = groupSizes.stream().mapToInt(Integer::intValue).min().orElse(0);
+        for (int q = smallest / (finalCount - 1); q >= minQualifiers(groupSizes.size()); q--) {
+            int taken = q * (finalCount - 1);
+            int last = groupSizes.stream().mapToInt(n -> Math.max(0, n - taken)).sum();
+            if (last >= 2) {
+                return q;
+            }
+        }
+        return 0;
+    }
+
+    /** Cel mai mic număr de jucători pe grupă într-o finală, ca finala să aibă cel puțin 2 jucători. */
+    public static int minQualifiers(int groupCount) {
+        return groupCount >= 2 ? 1 : 2;
     }
 }
