@@ -415,11 +415,7 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
     }
 
     private static Span legend(TournamentDetails details) {
-        String ties = details.tournament().isCommercial()
-                ? Tr.t("La egalitate de puncte decid meciurile directe; dacă egalitatea rămâne, jucătorii joacă între ei câte un set de departajare.")
-                : details.tournament().isGroupsFormat()
-                ? Tr.t("La egalitate de puncte decid meciurile directe; dacă egalitatea rămâne, în grupe jucătorii joacă între ei câte un set de departajare (etapa 2 începe doar după departajare), iar în etapa 2 împart locul (=).")
-                : Tr.t("La egalitate de puncte decid meciurile directe; dacă egalitatea rămâne, jucătorii împart locul (=).");
+        String ties = Tr.t("La egalitate de puncte decid meciurile directe; dacă egalitatea rămâne, jucătorii joacă între ei câte un set de departajare.");
         Span legend = new Span(Tr.t("În fiecare celulă: sus — punctele (2 victorie, 1 înfrângere, 0 înfrângere tehnică), jos — scorul la seturi. W — victorie tehnică, L — înfrângere tehnică.")
                 + " " + ties
                 + (details.tournament().getStatus() == TournamentStatus.FINISHED

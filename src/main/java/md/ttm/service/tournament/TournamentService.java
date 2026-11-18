@@ -1413,8 +1413,9 @@ public class TournamentService {
                         m.getWinner().getId(), m.isWalkover()))
                 .toList();
         boolean allPlayed = matches.stream().allMatch(TournamentMatch::isPlayed);
+        List<StandingsCalculator.Tiebreak> recorded = tiebreakResults(tiebreaks, null);
         return StandingsCalculator.table(competitors, results, tournament.getSetsToWin(),
-                tournament.isCommercial() && allPlayed, tiebreakResults(tiebreaks, null));
+                allPlayed && tiebreaksDecide(tournament, null, recorded), recorded);
     }
 
     private static List<StandingsCalculator.Tiebreak> tiebreakResults(List<TournamentTiebreak> tiebreaks, Long groupId) {
@@ -1510,18 +1511,20 @@ public class TournamentService {
     }
 
     /**
-     * Egalitățile nedepartajate se decid prin seturi de departajare: la turneele comerciale în orice tabel, iar la
-     * celelalte în grupele etapei 1, fiindcă locul din grupă decide în ce finală (sau tablou) intră jucătorul.
-     * Grupele turneelor necomerciale care au trecut la etapa 2 înainte de această regulă, fără seturi de
-     * departajare, își păstrează locurile împărțite.
+     * Egalitățile nedepartajate se decid prin seturi de departajare în orice tabel, la orice turneu, ca fiecare
+     * jucător să aibă un loc al lui. Excepții, pentru datele de dinainte de această regulă, la turneele necomerciale:
+     * grupele etapei 1 trecute la etapa 2 fără seturi de departajare și tabelele turneelor deja încheiate fără ele
+     * își păstrează locurile împărțite.
      */
     private static boolean tiebreaksDecide(Tournament tournament, TournamentGroup group,
                                            List<StandingsCalculator.Tiebreak> groupTiebreaks) {
-        if (tournament.isCommercial()) {
+        if (tournament.isCommercial() || !groupTiebreaks.isEmpty()) {
             return true;
         }
-        return group.isGroupStage()
-                && (tournament.getStage() == TournamentStage.GROUPS || !groupTiebreaks.isEmpty());
+        if (group != null && group.isGroupStage()) {
+            return tournament.getStage() == TournamentStage.GROUPS;
+        }
+        return tournament.getStatus() != TournamentStatus.FINISHED;
     }
 
     private static List<StandingsCalculator.Result> results(List<TournamentMatch> matches) {
