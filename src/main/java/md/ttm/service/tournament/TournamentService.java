@@ -988,6 +988,8 @@ public class TournamentService {
         groupRepository.deleteAll(stage2);
         groupRepository.flush();
 
+        boolean wasFinished = tournament.getStatus() == TournamentStatus.FINISHED;
+        Instant finishedAt = tournament.getFinishedAt();
         tournament.setStage(TournamentStage.GROUPS);
         tournament.setStatus(TournamentStatus.IN_PROGRESS);
         tournament.setFinishedAt(null);
@@ -1014,6 +1016,15 @@ public class TournamentService {
                 matchRepository.findByTournamentIdWithParticipants(id).stream()
                         .filter(m -> m.getGroup() != null && !m.getGroup().isGroupStage())
                         .forEach(m -> restore(m, saved));
+            }
+        }
+        // un turneu încheiat rămâne încheiat dacă, după corectură, etapa 2 e tot completă (rezultatele s-au păstrat)
+        if (wasFinished) {
+            matchRepository.flush();
+            if (details(tournament).readyToFinish()) {
+                tournament.setStatus(TournamentStatus.FINISHED);
+                tournament.setFinishedAt(finishedAt);
+                tournamentRepository.saveAndFlush(tournament);
             }
         }
     }

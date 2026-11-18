@@ -53,6 +53,7 @@ class RatingServiceIT {
 
         TournamentMatch match = onlyMatch(t);
         tournamentService.recordResult(match.getId(), winnerIs(match, ana, 3, 1));
+        finish(t);
 
         assertThat(rating(ana)).isEqualTo(1020);
         assertThat(rating(ion)).isEqualTo(980);
@@ -76,6 +77,7 @@ class RatingServiceIT {
         long anaParticipant = match.getParticipantA().getPlayer().getId().equals(ana.getId())
                 ? match.getParticipantA().getId() : match.getParticipantB().getId();
         tournamentService.recordResult(match.getId(), MatchResultForm.walkover(anaParticipant));
+        finish(t);
 
         assertThat(rating(ana)).isEqualTo(1000);
         assertThat(rating(ion)).isEqualTo(1100);
@@ -90,10 +92,12 @@ class RatingServiceIT {
         Long first = tournament("Primul", 1, ana, ion);
         TournamentMatch m1 = onlyMatch(first);
         tournamentService.recordResult(m1.getId(), winnerIs(m1, ana, 3, 0));   // Ana 1020, Ion 980
+        finish(first);
 
         Long second = tournament("Al doilea", 10, ana, ion);
         TournamentMatch m2 = onlyMatch(second);
         tournamentService.recordResult(m2.getId(), winnerIs(m2, ion, 3, 2));   // din 1020/980: Ion +22
+        finish(second);
         assertThat(rating(ana)).isEqualTo(998);
         assertThat(rating(ion)).isEqualTo(1002);
 
@@ -111,6 +115,7 @@ class RatingServiceIT {
         Long t = tournament("T1", 1, ana, ion);
         TournamentMatch match = onlyMatch(t);
         tournamentService.recordResult(match.getId(), winnerIs(match, ana, 3, 1));
+        finish(t);
         assertThat(rating(ana)).isEqualTo(1020);
 
         tournamentService.clearResult(match.getId());
@@ -126,6 +131,7 @@ class RatingServiceIT {
         Long t = tournament("T1", 1, ana, ion);
         TournamentMatch match = onlyMatch(t);
         tournamentService.recordResult(match.getId(), winnerIs(match, ana, 3, 1));
+        finish(t);
 
         tournamentService.delete(t);
         assertThat(rating(ana)).isEqualTo(1000);
@@ -139,6 +145,7 @@ class RatingServiceIT {
         Long t = tournament("T1", 1, ana, ion);
         TournamentMatch match = onlyMatch(t);
         tournamentService.recordResult(match.getId(), winnerIs(match, ana, 3, 1));
+        finish(t);
 
         Player edited = reload(ana);
         entityManager.detach(edited);
@@ -157,6 +164,7 @@ class RatingServiceIT {
         Long t = tournament("T1", 1, ana, ion);
         TournamentMatch match = onlyMatch(t);
         tournamentService.recordResult(match.getId(), winnerIs(match, ana, 3, 1));
+        finish(t);
 
         var admin = SecurityContextHolder.getContext().getAuthentication();
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
@@ -187,6 +195,11 @@ class RatingServiceIT {
         }
         tournamentService.start(id, TournamentSettings.roundRobin(5));
         return id;
+    }
+
+    /** Turneul nu se încheie singur: organizatorul confirmă încheierea, iar ratingul se calculează atunci. */
+    private void finish(Long tournamentId) {
+        tournamentService.finishManually(tournamentId);
     }
 
     private TournamentMatch onlyMatch(Long tournamentId) {
