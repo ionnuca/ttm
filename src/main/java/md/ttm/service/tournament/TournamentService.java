@@ -50,6 +50,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.TreeMap;
 
 /**
@@ -355,10 +356,35 @@ public class TournamentService {
         for (Long playerId : new LinkedHashSet<>(playerIds)) {
             Player player = playerRepository.findById(playerId)
                     .orElseThrow(() -> new BusinessException("Jucătorul nu mai există"));
-            if (participantRepository.existsByTournamentIdAndPlayerId(tournamentId, playerId)) {
-                throw new BusinessException("{0} este deja înscris la acest turneu", player.getDisplayName());
-            }
             List<TournamentParticipant> participants = participantRepository.findByTournamentIdWithPlayer(tournamentId);
+            TournamentParticipant existing = participants.stream()
+                    .filter(p -> p.getPlayer().getId().equals(playerId))
+                    .findFirst().orElse(null);
+            if (existing != null) {
+                // un jucător scos dintr-o finală (dar rămas în turneu) poate fi pus înapoi într-o finală
+                if (group == null || !group.isFinal() || inAnyFinal(tournamentId, existing.getId())) {
+                    throw new BusinessException("{0} este deja înscris la acest turneu", player.getDisplayName());
+                }
+                List<TournamentGroupMember> all = memberRepository.findByTournamentIdWithParticipants(tournamentId);
+                Set<Long> stageOneMates = all.stream()
+                        .filter(m -> m.getGroup().isGroupStage() && m.getParticipant().getId().equals(existing.getId()))
+                        .map(m -> m.getGroup().getId())
+                        .flatMap(gid -> all.stream().filter(m -> m.getGroup().getId().equals(gid)))
+                        .map(m -> m.getParticipant().getId())
+                        .collect(Collectors.toSet());
+                List<TournamentGroupMember> members = all.stream()
+                        .filter(m -> m.getGroup().getId().equals(group.getId()))
+                        .toList();
+                memberRepository.saveAndFlush(new TournamentGroupMember(group, existing, members.size() + 1));
+                // cu cei din aceeași grupă nu se mai joacă: rezultatul din etapa 1 se preia în finală
+                List<TournamentParticipant> opponents = members.stream()
+                        .map(TournamentGroupMember::getParticipant)
+                        .filter(p -> !stageOneMates.contains(p.getId()))
+                        .toList();
+                scheduleNewPlayer(tournament, group, existing, opponents);
+                added++;
+                continue;
+            }
             TournamentParticipant participant = new TournamentParticipant(tournament, player);
             participant.setStatus(ParticipantStatus.CONFIRMED);
             participant.setSeed(participants.stream().mapToInt(p -> p.getSeed() != null ? p.getSeed() : 0).max().orElse(0) + 1);
@@ -415,6 +441,34 @@ public class TournamentService {
                     .toList());
             memberRepository.flush();
         }
+    }
+
+    private boolean inAnyFinal(Long tournamentId, Long participantId) {
+        return memberRepository.findByTournamentIdWithParticipants(tournamentId).stream()
+                .anyMatch(m -> m.getGroup().isFinal() && m.getParticipant().getId().equals(participantId));
+    }
+
+    /**
+     * Jucătorii care se pot adăuga într-un tabel al unui turneu început: cei neînscriși și, la o finală, și jucătorii
+     * turneului care nu mai sunt în nicio finală (scoși dintr-una), primii în listă.
+     */
+    @PreAuthorize("hasAnyRole('ADMIN', 'TOURNAMENT_MANAGER')")
+    @Transactional(readOnly = true)
+    public List<Player> findPlayersForTable(Long tournamentId, Long groupId) {
+        List<Player> result = new ArrayList<>();
+        TournamentGroup group = groupId == null ? null : groupRepository.findById(groupId).orElse(null);
+        if (group != null && group.isFinal()) {
+            Set<Long> inFinals = memberRepository.findByTournamentIdWithParticipants(tournamentId).stream()
+                    .filter(m -> m.getGroup().isFinal())
+                    .map(m -> m.getParticipant().getId())
+                    .collect(Collectors.toSet());
+            participantRepository.findByTournamentIdWithPlayer(tournamentId).stream()
+                    .filter(p -> p.getStatus() == ParticipantStatus.CONFIRMED && !inFinals.contains(p.getId()))
+                    .map(TournamentParticipant::getPlayer)
+                    .forEach(result::add);
+        }
+        result.addAll(findPlayersNotRegistered(tournamentId));
+        return result;
     }
 
     /** Tabelul care se poate edita acum: Round Robin în desfășurare, o grupă în etapa grupelor, o finală în etapa finalelor. */
