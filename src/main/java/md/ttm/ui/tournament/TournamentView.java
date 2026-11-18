@@ -699,7 +699,7 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
                 : Tr.t("Jucătorii adăugați primesc meciuri cu toți ceilalți din tabel, în tururile în care sunt liberi. Un jucător scos iese din turneu, iar meciurile lui se șterg.");
         Button edit = new Button(label, VaadinIcon.USERS.create(), e -> new TableEditDialog(title, explanation, members, matches,
                 photoService.versions(),
-                () -> new AddPlayersDialog(title, members.size(), tournamentService.findPlayersNotRegistered(tournamentId),
+                () -> new AddPlayersDialog(title, members.size(), tournamentService.findPlayersForTable(tournamentId, groupId),
                         photoService.versions(), group != null, ids -> {
                     tournamentService.addPlayersToTable(tournamentId, groupId, ids);
                     Notifications.success(ids.size() == 1 ? Tr.t("Jucătorul a fost adăugat")

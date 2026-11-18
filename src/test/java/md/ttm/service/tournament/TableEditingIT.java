@@ -113,6 +113,28 @@ class TableEditingIT {
         assertThat(after.participants()).extracting(p -> p.getId()).contains(fromFinal.getId());
         assertThat(after.tournament().getStage()).isEqualTo(TournamentStage.FINALS);
         assertThat(after.tournament().getStatus()).isEqualTo(TournamentStatus.IN_PROGRESS);
+
+        // ... și poate fi pus înapoi în finală: apare printre jucătorii care se pot adăuga
+        Long removedPlayer = fromFinal.getPlayer().getId();
+        assertThat(tournamentService.findPlayersForTable(id, final1.group().getId()))
+                .extracting(p -> p.getId()).contains(removedPlayer);
+        assertThat(tournamentService.findPlayersForTable(id, after.finals().get(1).group().getId()))
+                .extracting(p -> p.getId()).contains(removedPlayer);
+        tournamentService.addPlayersToTable(id, final1.group().getId(), List.of(removedPlayer));
+        GroupView back = details(id).finals().get(0);
+        assertThat(back.members()).extracting(p -> p.getId()).contains(fromFinal.getId());
+        assertThat(details(id).participants()).filteredOn(p -> p.getPlayer().getId().equals(removedPlayer)).hasSize(1);
+        // cu colegul din grupă nu se joacă din nou: rezultatul din etapa 1 se preia
+        long againstGroupMate = back.matches().stream()
+                .filter(m -> m.getParticipantA().getId().equals(fromFinal.getId()) || m.getParticipantB().getId().equals(fromFinal.getId()))
+                .count();
+        assertThat(againstGroupMate).isEqualTo(back.members().size() - 2);
+        assertThat(back.carried()).anyMatch(m -> m.getParticipantA().getId().equals(fromFinal.getId())
+                || m.getParticipantB().getId().equals(fromFinal.getId()));
+        assertNoPlayerTwiceInARound(back.matches());
+        // e deja într-o finală: nu se mai poate adăuga încă o dată
+        assertThatThrownBy(() -> tournamentService.addPlayersToTable(id, details(id).finals().get(1).group().getId(),
+                List.of(removedPlayer))).isInstanceOf(BusinessException.class);
     }
 
     // ------------------------------------------------------------------
