@@ -41,6 +41,7 @@ import md.ttm.model.tournament.TournamentTiebreak;
 import md.ttm.service.tournament.StandingsCalculator;
 import md.ttm.service.tournament.Bracket;
 import md.ttm.service.tournament.KnockoutView;
+import md.ttm.model.tournament.KnockoutType;
 import md.ttm.model.tournament.TournamentStage;
 import md.ttm.model.tournament.TournamentStatus;
 import md.ttm.security.SecurityUtils;
@@ -132,8 +133,13 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         if (details.prizePool() != null) {
             add(createPrizes(details));
         }
+        if (details.manager() && details.readyToFinish()) {
+            add(createFinishCard(details));
+        }
         if (details.tournament().isStarted() && details.tournament().isGroupsFormat()) {
             addGroupsTournament(details);
+        } else if (details.tournament().isStarted() && details.tournament().isSingleKnockout()) {
+            addKnockoutTournament(details);
         } else if (details.tournament().isStarted()) {
             add(createStandings(details), createMatches(details));
         } else {
@@ -522,11 +528,11 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
             total += group.matches().size();
         }
         if (stage2Parts.isEmpty()) {
-            stage2Top.add(hint(t.isKnockoutFormat()
-                    ? Tr.t("Tablourile eliminatorii se alcătuiesc după ce se termină grupele.")
-                    : Tr.t("Finalele se alcătuiesc după ce se termină grupele.")));
+            stage2Top.add(hint(Tr.t("Etapa 2 (finale sau tablou eliminatoriu) se alcătuiește după ce se termină grupele; tipul ei se alege atunci.")));
         }
-        StageTabs.Stage stage2 = new StageTabs.Stage(STAGE_2, t.isKnockoutFormat() ? Tr.t("Tablou") : Tr.t("Finale"),
+        String stage2Label = t.getStage() == TournamentStage.KNOCKOUT ? Tr.t("Tablou")
+                : t.getStage() == TournamentStage.FINALS ? Tr.t("Finale") : Tr.t("Etapa 2");
+        StageTabs.Stage stage2 = new StageTabs.Stage(STAGE_2, stage2Label,
                 stage2Parts.isEmpty() ? null : progress(played, total), stage2Top, stage2Parts);
 
         stageTabs = new StageTabs(List.of(groups, stage2), afterGroups ? 1 : 0, selectedStage, selectedPart,
@@ -537,6 +543,50 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
                 });
         add(stageTabs);
         add(legend(details));
+    }
+
+    /** Al doilea pas din „Începe etapa 2”: configurarea tipului ales (finalele sau tabloul). */
+    private void openStageTwo(TournamentDetails details, KnockoutType knockoutType) {
+        if (knockoutType != null) {
+            new StartKnockoutDialog(details.groupStage(), knockoutType, (qualifiers, type) -> {
+                tournamentService.startKnockout(tournamentId, qualifiers, type);
+                Notifications.success(Tr.t("Etapa 2 a început"));
+                showStage2();
+            }).open();
+        } else {
+            new StartFinalsDialog(details.groupStage(), details.tournament().isCommercial(), settings -> {
+                tournamentService.startFinals(tournamentId, settings);
+                Notifications.success(Tr.t("Etapa 2 a început"));
+                showStage2();
+            }).open();
+        }
+    }
+
+    /** Turneu de o etapă pe tablou eliminatoriu: tabloul cu toți jucătorii. */
+    private void addKnockoutTournament(TournamentDetails details) {
+        add(BracketDiagram.styles(), bracketModeSwitch());
+        List<KnockoutView> brackets = details.knockouts();
+        for (int i = 0; i < brackets.size(); i++) {
+            add(knockoutSection(details, brackets.get(i), i + 1, brackets.size()));
+        }
+    }
+
+    /** Totul s-a jucat: turneul nu se încheie singur, organizatorul confirmă încheierea. */
+    private Component createFinishCard(TournamentDetails details) {
+        Div card = card();
+        card.getStyle()
+                .set("border-color", "var(--lumo-primary-color-50pct)")
+                .set("background", "var(--lumo-primary-color-10pct)");
+        Span text = new Span(Tr.t("Toate meciurile s-au jucat. Încheiați turneul ca să se stabilească clasamentul final și să se actualizeze ratingul."));
+        Button finish = new Button(Tr.t("Încheie turneul"), VaadinIcon.FLAG_CHECKERED.create(), e -> confirmFinish(details));
+        finish.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+        HorizontalLayout row = new HorizontalLayout(text, finish);
+        row.setAlignItems(FlexComponent.Alignment.CENTER);
+        row.setWidthFull();
+        row.getStyle().set("flex-wrap", "wrap");
+        text.getStyle().set("flex", "1");
+        card.add(row);
+        return card;
     }
 
     /** Taburile etapelor din pagina curentă ({@code null} la Round Robin sau înainte de începere). */
@@ -630,7 +680,7 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
             return false;
         }
         if (group == null) {
-            return !t.isGroupsFormat();
+            return t.isRoundRobin();
         }
         return (group.isGroupStage() && t.getStage() == TournamentStage.GROUPS)
                 || (group.getStage() == TournamentStage.FINALS && t.getStage() == TournamentStage.FINALS);
@@ -754,25 +804,9 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         card.getStyle()
                 .set("border-color", "var(--lumo-success-color-50pct)")
                 .set("background", "var(--lumo-success-color-10pct)");
-        boolean knockout = details.tournament().isKnockoutFormat();
-        Span text = new Span(knockout
-                ? Tr.t("Etapa 1 s-a terminat. Alegeți câți jucători din fiecare grupă intră în Tabloul 1 (ceilalți joacă Tabloul 2) și tipul tablourilor.")
-                : Tr.t("Etapa 1 s-a terminat. Alegeți câte finale se joacă și câți jucători din fiecare grupă trec în fiecare; ultima finală îi primește pe cei rămași."));
-        Button start = new Button(Tr.t("Începe etapa 2"), VaadinIcon.PLAY.create(), e -> {
-            if (knockout) {
-                new StartKnockoutDialog(details.groupStage(), (qualifiers, type) -> {
-                    tournamentService.startKnockout(tournamentId, qualifiers, type);
-                    Notifications.success(Tr.t("Etapa 2 a început"));
-                    showStage2();
-                }).open();
-            } else {
-                new StartFinalsDialog(details.groupStage(), details.tournament().isCommercial(), settings -> {
-                    tournamentService.startFinals(tournamentId, settings);
-                    Notifications.success(Tr.t("Etapa 2 a început"));
-                    showStage2();
-                }).open();
-            }
-        });
+        Span text = new Span(Tr.t("Etapa 1 s-a terminat. Alegeți tipul etapei 2 (finale Round Robin sau tablou eliminatoriu) și cine trece unde."));
+        Button start = new Button(Tr.t("Începe etapa 2"), VaadinIcon.PLAY.create(),
+                e -> new StageTwoDialog(details.tournament(), type -> openStageTwo(details, type)).open());
         start.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_SUCCESS);
         HorizontalLayout row = new HorizontalLayout(text, start);
         row.setAlignItems(FlexComponent.Alignment.CENTER);
@@ -792,7 +826,8 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         VerticalLayout section = new VerticalLayout();
         section.setPadding(false);
 
-        H3 title = new H3(count > 1 ? Tr.t("Etapa 2 — Tabloul {0}", number) : TournamentStage.KNOCKOUT.getLabel());
+        H3 title = new H3(details.tournament().isSingleKnockout() ? Tr.t("Tablou eliminatoriu")
+                : count > 1 ? Tr.t("Etapa 2 — Tabloul {0}", number) : TournamentStage.KNOCKOUT.getLabel());
         title.getStyle().set("margin-bottom", "0");
         long played = view.matches().values().stream().filter(TournamentMatch::isPlayed).count();
         Span progress = new Span(Tr.t("Meciuri jucate: {0} din {1}", played, view.matches().size()));

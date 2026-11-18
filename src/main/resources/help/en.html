@@ -18,21 +18,26 @@ The home page is the <b>Tournaments</b> list; the latest matches are under <b>Ma
   <li><b>Registration.</b> Players with an account press “Sign up for it” on the tournament page: this sends a <b>registration request</b>, which waits for an organiser (administrator or tournament manager) to confirm it. Organisers get a notification and, on the tournament page under “Registration requests”, press <b>Confirm</b> or <b>Reject</b>. The player sees the answer in the <b>notifications</b> (the bell in the top bar). The administrator can mark a user “Registers for tournaments without confirmation” (under <b>Users</b>): their registration is confirmed automatically. The organiser can also add or remove anyone directly; requests still unconfirmed are cancelled when the tournament starts.</li>
   <li><b>Starting.</b> “Start tournament” closes registration. At that point you choose:
     <ul>
-      <li>the type: <b>Round robin</b>, <b>Groups + finals</b> or <b>Groups + knockout</b> (with the number of groups);</li>
+      <li>the number of stages: <b>two</b> (default) or <b>one</b>. With one stage the tournament is <b>Round robin</b>, <b>single elimination</b> or <b>knockout with a lower bracket</b>. With two stages the first one is played in <b>groups</b> (you choose the number of groups), and the type of stage 2 – finals or a knockout bracket – is chosen only after the groups, at “Start stage 2”;</li>
       <li>the number of sets: best of 3, 5 or 7 (first to win 2, 3 or 4 sets);</li>
       <li>optionally, a <b>commercial tournament</b>: the entry fee and the number of winners.</li>
     </ul>
     The app forms the groups and generates all the matches, round by round.</li>
   <li><b>Results.</b> Each match gets a set score (e.g. 3:1) or <b>W – walkover</b>, when the opponent does not play.
       Results are entered by the two players or by the organiser.</li>
-  <li><b>Finishing.</b> After the last result the tournament becomes “Finished” and the ratings are recalculated.
-      The organiser can also finish it manually: matches without a result stay “unplayed” and count neither for the standings nor for the rating.
+  <li><b>Finishing.</b> The tournament never finishes by itself. When all matches (and tie-break sets) have been played, the organiser sees “All matches have been played” and presses <b>Finish tournament</b>, with a confirmation; the tournament then becomes “Finished” and the ratings are recalculated.
+      The organiser can also finish it earlier: matches without a result stay “unplayed” and count neither for the standings nor for the rating.
       Results can be corrected after the end as well; the rating is then recalculated automatically.</li>
 </ol>
 
 <h3>3. Tournament formats</h3>
-<p><b>Round robin</b> – everybody plays everybody, in a single group ordered by rating.</p>
-<p><b>Groups + finals</b> – in two stages:</p>
+<p><b>One stage</b>:</p>
+<ul>
+  <li><b>Round robin</b> – everybody plays everybody, in a single group ordered by rating;</li>
+  <li><b>Single elimination</b> or <b>knockout with a lower bracket</b> – all players enter a single bracket, seeded by rating; it is played like the stage 2 bracket described below.</li>
+</ul>
+<p><b>Two stages</b> – stage 1 in groups; after the groups, at “Start stage 2”, the organiser chooses the type of stage 2: <b>finals</b> (Groups + finals) or a <b>knockout bracket</b>, single elimination or with a lower bracket (Groups + knockout).</p>
+<p><b>Groups + finals</b>:</p>
 <ol>
   <li><b>Stage 1 – groups.</b> The groups are formed by a random draw from rating pots, so they are balanced:
     <ul>
@@ -63,7 +68,7 @@ Stage 2 is played in <b>knockout brackets</b>:</p>
   <li><b>With a lower bracket</b>: the main bracket final decides 1st and 2nd place. Whoever loses before the final moves to the <b>lower bracket</b>, where a loss means you are out;
       the <b>lower bracket final</b> decides 3rd and 4th place;</li>
   <li>bracket matches appear as soon as their players are known. A result can be corrected only while the next match its winner (or loser) reached has no result;</li>
-  <li>once stage 2 has started, the organiser can still correct group results; the brackets are then rebuilt (see above). In a commercial tournament the Bracket 2 winner receives the entry fee and the rest of the pool follows the Bracket 1 places (without Bracket 2, the whole pool). The tournament ends when both brackets have a winner.</li>
+  <li>once stage 2 has started, the organiser can still correct group results; the brackets are then rebuilt (see above). In a commercial tournament the Bracket 2 winner receives the entry fee and the rest of the pool follows the Bracket 1 places (without Bracket 2, the whole pool). The tournament can be finished once both brackets have a winner.</li>
 </ul>
 
 <p><b>The tournament page</b>: for “Groups + finals” and “Groups + knockout” the switch at the top picks the stage – <b>Groups</b> or <b>Finals</b> (<b>Bracket</b>) –, each with the number of matches played out of the total. The page opens at the current stage. Below the switch, one button per group, final or bracket shows only that table; “All” shows them all. The choice is kept in the page address, so a link you send opens at the same group.</p>

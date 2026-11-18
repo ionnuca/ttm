@@ -39,6 +39,9 @@ class TiebreakIT {
         for (StandingsCalculator.Pairing p : details.pendingTiebreaks()) {
             tournamentService.recordTiebreak(id, null, p.round(), p.a(), p.b(), 11, 7);
         }
+        // turneul nu se încheie singur: organizatorul confirmă încheierea
+        assertThat(tournamentService.findDetails(id).orElseThrow().readyToFinish()).isTrue();
+        tournamentService.finishManually(id);
         TournamentDetails done = tournamentService.findDetails(id).orElseThrow();
         assertThat(done.tournament().getStatus()).isEqualTo(TournamentStatus.FINISHED);
         assertThat(done.standings()).extracting(StandingsCalculator.Row::place).containsExactly(1, 2, 3);
@@ -65,6 +68,9 @@ class TiebreakIT {
         for (StandingsCalculator.Pairing p : details.pendingTiebreaks()) {
             tournamentService.recordTiebreak(id, null, p.round(), p.a(), p.b(), 11, 7);
         }
+        // turneul nu se încheie singur: organizatorul confirmă încheierea
+        assertThat(tournamentService.findDetails(id).orElseThrow().readyToFinish()).isTrue();
+        tournamentService.finishManually(id);
         TournamentDetails done = tournamentService.findDetails(id).orElseThrow();
         assertThat(done.tournament().getStatus()).isEqualTo(TournamentStatus.FINISHED);
         assertThat(done.pendingTiebreaks()).isEmpty();

@@ -58,6 +58,7 @@ class MatchServiceIT {
             }
         }
 
+        tournamentService.finishManually(tournament.getId()); // ratingul se calculează la încheiere
         List<MatchSummary> recent = matchService.findRecent(10);
         assertThat(recent).hasSizeGreaterThanOrEqualTo(3);
         assertThat(recent.subList(0, 3)).allSatisfy(m -> assertThat(m.tournamentName()).isEqualTo("Cupa statisticii"));

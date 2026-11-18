@@ -213,8 +213,8 @@ await check('guest: turneu Grupe + finale (etapa 1)', async () => {
   await settle(page);
   if (await page.locator('h4:visible', { hasText: 'Grupa A' }).count() > 0) throw new Error('după reîncărcare trebuia să rămână Grupa B');
   await shot(page, '29a-guest-turneu-o-grupa');
-  await page.getByRole('button', { name: /^Finale/ }).click();
-  await expectText(page, 'Finalele se alcătuiesc după ce se termină grupele');
+  await page.getByRole('button', { name: /^Etapa 2/ }).click();
+  await expectText(page, 'Etapa 2 (finale sau tablou eliminatoriu) se alcătuiește după ce se termină grupele');
   await page.getByRole('button', { name: /^Grupe/ }).click();
   await page.locator('.ttm-stage-chips button', { hasText: 'Toate' }).click();
   await settle(page);
@@ -313,6 +313,13 @@ await check('admin: seturi de departajare la turneul comercial', async () => {
     await page.getByRole('dialog').waitFor({ state: 'detached', timeout: 10000 });
     await settle(page);
   }
+  // turneul nu se încheie singur: organizatorul confirmă
+  await expectText(page, 'Toate meciurile s-au jucat');
+  await expectNoText(page, 'Încheiat');
+  await shot(page, '46a-admin-gata-de-incheiere');
+  await page.getByRole('button', { name: 'Încheie turneul' }).last().click();
+  await expectText(page, 'Încheiați turneul?');
+  await page.getByRole('button', { name: 'Încheie turneul' }).last().click();
   await expectText(page, 'Încheiat');
   await expectText(page, '→'); // ratingul s-a recalculat la încheiere
   await shot(page, '46-admin-departajare-incheiat');
@@ -347,7 +354,18 @@ await check('admin: turneu cu înscriere deschisă', async () => {
 });
 await check('admin: configurarea la începerea turneului', async () => {
   await page.getByRole('button', { name: 'Începe turneul' }).click();
+  await expectText(page, 'Numărul de etape');
+  await expectText(page, 'Tipul etapei 2 (finale Round Robin, tablou olimpic sau cu ramura de jos) îl alegeți după grupe');
+  await shot(page, '23a-admin-incepe-turneul-doua-etape');
+  await page.getByRole('dialog').getByText('O etapă', { exact: true }).click();
   await expectText(page, 'Tipul turneului');
+  await expectText(page, 'se generează 6 meciuri în 3 tururi');
+  await page.getByRole('dialog').locator('vaadin-select:visible').filter({ hasText: 'Round robin' }).first().click();
+  await page.getByRole('option', { name: 'Eliminare directă (olimpic)' }).click();
+  await expectText(page, 'Toți cei 4 jucători intră în tabloul eliminatoriu');
+  await shot(page, '23d-admin-incepe-turneul-eliminare');
+  await page.getByRole('dialog').locator('vaadin-select:visible').filter({ hasText: 'Eliminare directă' }).first().click();
+  await page.getByRole('option', { name: 'Round robin (fiecare cu fiecare)' }).click();
   await expectText(page, 'se generează 6 meciuri în 3 tururi');
   await page.getByText('Turneu comercial (cu taxă de participare și premii)').click();
   await page.getByText('2 câștigători (60% / 40%)').click();
@@ -361,16 +379,13 @@ await check('admin: configurarea „Grupe + finale”', async () => {
   await page.reload();
   await settle(page);
   await page.getByRole('button', { name: 'Începe turneul' }).click();
-  await expectText(page, 'Tipul turneului');
-  await page.locator('vaadin-select:visible').filter({ hasText: 'Round robin' }).first().click();
-  await page.getByRole('option', { name: 'Grupe + finale' }).click();
-  await settle(page);
+  await expectText(page, 'Numărul de etape');
   await expectText(page, 'Numărul de grupe');
   await expectText(page, 'Jucători pe grupă: 2, 2');
   await page.getByText('Turneu comercial (cu taxă de participare și premii)').click();
   await page.getByLabel('Taxa de participare').fill('50');
   await page.getByLabel('Taxa de participare').press('Tab');
-  await expectText(page, 'Finala 2 · locul 1: 50 lei');
+  await expectText(page, 'câștigătorul Finalei 2 (Tabloului 2): 50 lei');
   await shot(page, '23c-admin-incepe-turneul-grupe');
   await page.getByRole('button', { name: 'Anulează' }).click();
 });
@@ -393,6 +408,9 @@ await check('admin: dialogul „Începe etapa 2”', async () => {
   await page.locator('.ttm-stage-chips button', { hasText: /^A$/ }).click();
   await settle(page);
   await page.getByRole('button', { name: 'Începe etapa 2' }).click();
+  await expectText(page, 'Tipul etapei 2');
+  await shot(page, '30a-admin-tipul-etapei-2');
+  await page.getByRole('dialog').getByRole('button', { name: 'Continuă' }).click();
   await expectText(page, 'Calificați din fiecare grupă în Finala 1');
   await expectText(page, 'Finala 1 (6 jucători)');
   await expectText(page, 'Finala 2 (3 jucători)');
@@ -439,8 +457,10 @@ await check('admin: încheierea manuală a turneului', async () => {
 await check('admin: „Grupe + eliminare” — tabloul cu ramura de jos', async () => {
   await page.goto(`${BASE}/turnee`);
   await page.getByText('Cupa eliminatorie').first().click();
-  await expectText(page, 'intră în Tabloul 1');
+  await expectText(page, 'Etapa 1 s-a terminat');
   await page.getByRole('button', { name: 'Începe etapa 2' }).click();
+  await page.getByRole('dialog').getByText('Tablou eliminatoriu cu ramura de jos (dublă eliminare)').click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Continuă' }).click();
   await expectText(page, 'Calificați din fiecare grupă în Tabloul 1');
   await page.getByRole('dialog').getByText('Olimpic cu ramura de jos: învinșii joacă în ramura de jos pentru locul 3').click();
   await expectText(page, 'În Tabloul 1 intră 4 jucători');

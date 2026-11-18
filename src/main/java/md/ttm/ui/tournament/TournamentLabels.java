@@ -81,6 +81,10 @@ public final class TournamentLabels {
         if (tournament.isGroupsFormat() && tournament.getGroupCount() != null) {
             format += " " + Tr.t("({0} grupe)", tournament.getGroupCount());
         }
+        if (tournament.isSingleKnockout() && tournament.getKnockoutType() != null) {
+            format += " " + (tournament.getKnockoutType() == md.ttm.model.tournament.KnockoutType.DOUBLE
+                    ? Tr.t("(cu ramura de jos)") : Tr.t("(olimpic)"));
+        }
         return format + " · best of " + tournament.getBestOf();
     }
 
