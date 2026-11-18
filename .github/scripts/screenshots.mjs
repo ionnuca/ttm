@@ -485,6 +485,12 @@ await check('admin: „Grupe + eliminare” — tabloul cu ramura de jos', async
   await settle(page);
   if (await page.locator('.ttm-bracket').count() > 0) throw new Error('tabloul desenat nu trebuia să apară în modul listă');
   await shot(page, '39c-admin-tablou-lista');
+  // al treilea tab: doar clasamentul tablourilor
+  await page.getByRole('tab', { name: 'Clasament' }).click();
+  await settle(page);
+  if (await page.locator('.ttm-bracket').count() > 0) throw new Error('tabloul desenat nu trebuia să apară la Clasament');
+  await expectText(page, 'Clasamentul apare pe măsură ce se decid locurile din tablou');
+  await shot(page, '39d-admin-tablou-clasament');
   await page.getByText('Tablou grafic').click();
   await settle(page);
 });

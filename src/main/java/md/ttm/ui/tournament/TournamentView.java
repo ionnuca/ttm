@@ -844,8 +844,11 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
                     : Tr.t("Ceilalți jucători din grupe joacă pentru câștigătorul părții a doua.")));
         }
 
-        if (!state.placings().isEmpty()) {
-            section.add(knockoutStandings(view));
+        if (bracketMode() == BracketMode.STANDINGS) {
+            section.add(state.placings().isEmpty()
+                    ? hint(Tr.t("Clasamentul apare pe măsură ce se decid locurile din tablou."))
+                    : knockoutStandings(view));
+            return section;
         }
 
         Long own = ownId(details);
@@ -867,7 +870,7 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
                 partTitle.getStyle().set("margin", "var(--lumo-space-s) 0 0");
                 section.add(partTitle);
             }
-            if (!bracketAsList()) {
+            if (bracketMode() == BracketMode.GRAPHIC) {
                 section.add(BracketDiagram.of(view, part, own, editable ? m -> openResultDialog(details, m) : null,
                         m -> roundLabel(m, state.type()), matchRows));
                 continue;
@@ -894,22 +897,33 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         return section;
     }
 
-    private static final String BRACKET_AS_LIST = "ttm.tablou.lista";
+    /** Cum se arată tablourile: desenat, ca listă de meciuri pe tururi sau doar clasamentul. */
+    private enum BracketMode { GRAPHIC, LIST, STANDINGS }
 
-    /** Tabloul se arată ca listă de meciuri pe tururi (altfel desenat); alegerea se păstrează în sesiune. */
-    private static boolean bracketAsList() {
+    private static final String BRACKET_MODE = "ttm.tablou.mod";
+
+    /** Modul ales se păstrează în sesiune (implicit tabloul desenat). */
+    private static BracketMode bracketMode() {
         VaadinSession session = VaadinSession.getCurrent();
-        return session != null && Boolean.TRUE.equals(session.getAttribute(BRACKET_AS_LIST));
+        Object mode = session != null ? session.getAttribute(BRACKET_MODE) : null;
+        return mode instanceof BracketMode m ? m : BracketMode.GRAPHIC;
     }
 
     private Component bracketModeSwitch() {
         Tab drawn = new Tab(VaadinIcon.SITEMAP.create(), new Span(Tr.t("Tablou grafic")));
         Tab list = new Tab(VaadinIcon.LIST.create(), new Span(Tr.t("Listă de meciuri")));
-        Tabs tabs = new Tabs(drawn, list);
+        Tab standings = new Tab(VaadinIcon.TROPHY.create(), new Span(Tr.t("Clasament")));
+        Tabs tabs = new Tabs(drawn, list, standings);
         tabs.addThemeVariants(TabsVariant.LUMO_SMALL);
-        tabs.setSelectedTab(bracketAsList() ? list : drawn);
+        tabs.setSelectedTab(switch (bracketMode()) {
+            case GRAPHIC -> drawn;
+            case LIST -> list;
+            case STANDINGS -> standings;
+        });
         tabs.addSelectedChangeListener(e -> {
-            VaadinSession.getCurrent().setAttribute(BRACKET_AS_LIST, e.getSelectedTab() == list);
+            BracketMode mode = e.getSelectedTab() == list ? BracketMode.LIST
+                    : e.getSelectedTab() == standings ? BracketMode.STANDINGS : BracketMode.GRAPHIC;
+            VaadinSession.getCurrent().setAttribute(BRACKET_MODE, mode);
             refresh();
         });
         tabs.getStyle().set("margin-top", "var(--lumo-space-m)");
