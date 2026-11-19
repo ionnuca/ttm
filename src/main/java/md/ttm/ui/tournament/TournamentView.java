@@ -2,6 +2,7 @@ package md.ttm.ui.tournament;
 
 import md.ttm.i18n.Tr;
 import com.vaadin.flow.component.Component;
+import com.vaadin.flow.component.Html;
 import com.vaadin.flow.component.UI;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -356,33 +357,53 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
             section.add(new Paragraph(Tr.t("Încă nu s-a înscris nimeni.")));
             return section;
         }
-        Grid<TournamentParticipant> grid = new Grid<>();
-        grid.addThemeVariants(GridVariant.LUMO_ROW_STRIPES, GridVariant.LUMO_COMPACT);
-        grid.setAllRowsVisible(true);
+        // pe calculator lista se așază pe coloane (de sus în jos, apoi coloana următoare); pe telefon rămâne una
         List<TournamentParticipant> participants = details.participants();
-        grid.addColumn(p -> participants.indexOf(p) + 1)
-                .setHeader("#").setWidth("3rem").setFlexGrow(0).setTextAlign(ColumnTextAlign.END);
-        // fără oraș: pe telefon numele trebuie să încapă întreg
-        grid.addColumn(p -> p.getPlayer().getDisplayName()).setHeader(Tr.t("Nume Prenume")).setFlexGrow(1);
-        grid.addColumn(p -> p.getPlayer().getRating()).setHeader(Tr.t("Rating"))
-                .setWidth("5rem").setFlexGrow(0).setTextAlign(ColumnTextAlign.END);
-        if (details.manager()) {
-            grid.addComponentColumn(p -> {
+        Div list = new Div();
+        list.addClassName("ttm-participants");
+        list.add(new Html("""
+                <style>
+                .ttm-participants{columns:17rem;column-gap:var(--lumo-space-l);width:100%;
+                  border-top:1px solid var(--lumo-contrast-10pct)}
+                .ttm-participant{display:flex;align-items:center;gap:var(--lumo-space-s);break-inside:avoid;
+                  min-height:2.25rem;padding:0 var(--lumo-space-xs);border-bottom:1px solid var(--lumo-contrast-10pct)}
+                .ttm-participant .nr{width:1.75rem;text-align:right;flex:none;color:var(--lumo-secondary-text-color);
+                  font-size:var(--lumo-font-size-s)}
+                .ttm-participant .name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+                .ttm-participant .rating{flex:none;color:var(--lumo-secondary-text-color);
+                  font-variant-numeric:tabular-nums}
+                .ttm-participant vaadin-button{margin:0;flex:none}
+                </style>
+                """.strip()));
+        for (int i = 0; i < participants.size(); i++) {
+            TournamentParticipant p = participants.get(i);
+            Div row = new Div();
+            row.addClassName("ttm-participant");
+            Span nr = new Span(String.valueOf(i + 1));
+            nr.addClassName("nr");
+            Span name = new Span(p.getPlayer().getDisplayName());
+            name.addClassName("name");
+            name.setTitle(p.getPlayer().getDisplayName());
+            Span rating = new Span(String.valueOf(p.getPlayer().getRating()));
+            rating.addClassName("rating");
+            row.add(nr, name, rating);
+            if (details.manager()) {
                 Button remove = new Button(VaadinIcon.CLOSE_SMALL.create(), e -> run(
                         () -> tournamentService.removeParticipant(tournamentId, p.getId()),
                         Tr.t("{0} a fost scos din turneu", p.getPlayer().getDisplayName())));
-                remove.addThemeVariants(ButtonVariant.LUMO_ICON, ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_ERROR);
+                remove.addThemeVariants(ButtonVariant.LUMO_ICON, ButtonVariant.LUMO_TERTIARY,
+                        ButtonVariant.LUMO_ERROR, ButtonVariant.LUMO_SMALL);
                 remove.setAriaLabel(Tr.t("Scoate {0}", p.getPlayer().getDisplayName()));
                 remove.setTooltipText(Tr.t("Scoate din turneu"));
-                return remove;
-            }).setAutoWidth(true).setFlexGrow(0);
+                row.add(remove);
+            }
+            list.add(row);
         }
-        grid.setItems(participants);
         Span order = new Span(Tr.t("Ordinea e după rating; la începerea turneului devine ordinea din grupă. Tipul turneului, numărul de seturi și opțiunea de turneu comercial se aleg la „Începe turneul”."));
         order.getStyle()
                 .set("font-size", "var(--lumo-font-size-s)")
                 .set("color", "var(--lumo-secondary-text-color)");
-        section.add(grid, order);
+        section.add(list, order);
         return section;
     }
 
