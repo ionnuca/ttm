@@ -9,6 +9,7 @@ import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.component.html.H2;
 import com.vaadin.flow.component.html.H3;
 import com.vaadin.flow.component.html.Paragraph;
+import com.vaadin.flow.component.html.H4;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.icon.VaadinIcon;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -18,6 +19,7 @@ import com.vaadin.flow.server.streams.DownloadHandler;
 import jakarta.annotation.security.RolesAllowed;
 import md.ttm.service.admin.BackupService;
 import md.ttm.service.admin.TestEnvironmentService;
+import md.ttm.service.admin.TestToolsService;
 import md.ttm.ui.components.Badges;
 import md.ttm.ui.components.Notifications;
 import com.vaadin.flow.component.AttachEvent;
@@ -50,7 +52,7 @@ public class SettingsView extends VerticalLayout implements HasDynamicTitle {
     private final Div testCard = new Div();
 
     public SettingsView(BackupService backupService, ObjectProvider<BuildProperties> buildProperties,
-                        TestEnvironmentService testEnvironment) {
+                        TestEnvironmentService testEnvironment, TestToolsService testTools) {
         this.testEnvironment = testEnvironment;
         setMaxWidth("44rem");
         H2 title = new H2(Tr.t("Setări"));
@@ -64,6 +66,25 @@ public class SettingsView extends VerticalLayout implements HasDynamicTitle {
             add(testCard);
             renderTestCard();
         }
+        if (testTools.enabled()) {
+            add(createTestToolsCard(testTools));
+        }
+    }
+
+    /** Doar în aplicația de test: date de încercare. */
+    private static Component createTestToolsCard(TestToolsService testTools) {
+        Div card = new Div();
+        styleCard(card);
+        H4 head = new H4(Tr.t("Unelte de test"));
+        head.getStyle().set("margin", "0");
+        Span text = new Span(Tr.t("Disponibile doar în aplicația de test. Rezultatele aleatorii pentru meciuri se completează din pagina turneului, cu butonul „Completează rezultatele (test)”."));
+        text.getStyle().set("color", "var(--lumo-secondary-text-color)");
+        Button players = new Button(Tr.t("Adaugă 50 de jucători aleatori"), VaadinIcon.USERS.create(), e -> {
+            int created = testTools.createRandomPlayers(50);
+            Notifications.success(Tr.t("Au fost adăugați {0} jucători", created));
+        });
+        card.add(head, text, players);
+        return card;
     }
 
     // ------------------------------------------------------------------

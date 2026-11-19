@@ -423,6 +423,7 @@ await check('admin: finalele după începerea etapei 2', async () => {
   await expectText(page, 'Finala 2');
   if (!page.url().includes('etapa=2')) throw new Error('după pornire adresa trebuia să indice etapa 2: ' + page.url());
   await expectText(page, 'meciuri sunt preluate din etapa 1');
+  await expectNoText(page, 'Completează rezultatele (test)'); // uneltele de test lipsesc în afara aplicației de test
   await shot(page, '31-admin-finale');
 });
 await check('admin: editarea unei finale', async () => {
