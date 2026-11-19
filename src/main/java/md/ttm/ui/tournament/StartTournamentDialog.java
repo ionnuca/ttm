@@ -248,10 +248,10 @@ class StartTournamentDialog extends Dialog {
     private void updatePrizePreview() {
         BigDecimal fee = entryFee.getValue();
         boolean groups = isGroups();
-        winners.setLabel(groups ? Tr.t("Premiați din Finala 1 (Tabloul 1)") : Tr.t("Numărul de câștigători"));
+        winners.setLabel(groups ? Tr.t("Premiați din F1 (Tabloul 1)") : Tr.t("Numărul de câștigători"));
         if (!commercial.getValue() || fee == null || fee.signum() <= 0 || winners.getValue() == null) {
             prizePreview.setText(Tr.t("Suma acumulată = taxa × {0} participanți.", participants)
-                    + (groups ? " " + Tr.t("În etapa 2, câștigătorul Finalei 2 (sau al Tabloului 2) primește cât taxa de participare; restul se împarte între premiații Finalei 1 (Tabloului 1).") : ""));
+                    + (groups ? " " + Tr.t("În etapa 2, câștigătorul F2 (sau al Tabloului 2) primește cât taxa de participare; restul se împarte între premiații F1 (Tabloului 1).") : ""));
             return;
         }
         BigDecimal pool = fee.multiply(BigDecimal.valueOf(participants));
@@ -262,7 +262,7 @@ class StartTournamentDialog extends Dialog {
             places.add(Tr.t("locul {0}", i + 1) + ": " + TournamentLabels.money(amounts.get(i)));
         }
         if (groups) {
-            places.add(Tr.t("câștigătorul Finalei 2 (Tabloului 2)") + ": " + TournamentLabels.money(fee));
+            places.add(Tr.t("câștigătorul F2 (Tabloului 2)") + ": " + TournamentLabels.money(fee));
         }
         prizePreview.setText(Tr.t("Suma acumulată: {0} ({1} participanți) — {2}.",
                 TournamentLabels.money(pool), participants, String.join(", ", places)));

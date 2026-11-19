@@ -199,19 +199,19 @@ await check('guest: turneu Grupe + finale (etapa 1)', async () => {
   await page.getByText('Liga de iarnă').first().click();
   await expectStage(page, 'Grupe');
   await page.locator('.ttm-stage-chips button[aria-pressed="true"]', { hasText: 'Toate' }).waitFor({ timeout: 10000 });
-  await expectText(page, 'Grupa A');
-  await expectText(page, 'Grupa C');
+  await expectText(page, 'G1');
+  await expectText(page, 'G3');
   await expectNoText(page, 'Începe etapa 2');
   await shot(page, '29-guest-turneu-grupe');
   // cipul unei grupe arată doar grupa respectivă și se păstrează în adresă
-  await page.locator('.ttm-stage-chips button', { hasText: /^B$/ }).click();
+  await page.locator('.ttm-stage-chips button', { hasText: /^G2$/ }).click();
   await settle(page);
-  if (await page.locator('h4:visible', { hasText: 'Grupa A' }).count() > 0) throw new Error('Grupa A nu trebuia să se vadă');
-  if (await page.locator('h4:visible', { hasText: 'Grupa B' }).count() === 0) throw new Error('lipsește Grupa B');
+  if (await page.locator('h4:visible', { hasText: 'G1' }).count() > 0) throw new Error('G1 nu trebuia să se vadă');
+  if (await page.locator('h4:visible', { hasText: 'G2' }).count() === 0) throw new Error('lipsește G2');
   if (!page.url().includes('grupa=2')) throw new Error('grupa aleasă lipsește din adresă: ' + page.url());
   await page.reload();
   await settle(page);
-  if (await page.locator('h4:visible', { hasText: 'Grupa A' }).count() > 0) throw new Error('după reîncărcare trebuia să rămână Grupa B');
+  if (await page.locator('h4:visible', { hasText: 'G1' }).count() > 0) throw new Error('după reîncărcare trebuia să rămână G2');
   await shot(page, '29a-guest-turneu-o-grupa');
   await page.getByRole('button', { name: /^Etapa 2/ }).click();
   await expectText(page, 'Etapa 2 (finale sau tablou eliminatoriu) se alcătuiește după ce se termină grupele');
@@ -385,7 +385,7 @@ await check('admin: configurarea „Grupe + finale”', async () => {
   await page.getByText('Turneu comercial (cu taxă de participare și premii)').click();
   await page.getByLabel('Taxa de participare').fill('50');
   await page.getByLabel('Taxa de participare').press('Tab');
-  await expectText(page, 'câștigătorul Finalei 2 (Tabloului 2): 50 lei');
+  await expectText(page, 'câștigătorul F2 (Tabloului 2): 50 lei');
   await shot(page, '23c-admin-incepe-turneul-grupe');
   await page.getByRole('button', { name: 'Anulează' }).click();
 });
@@ -405,22 +405,22 @@ await check('admin: dialogul „Începe etapa 2”', async () => {
   await page.getByText('Liga de iarnă').first().click();
   await expectText(page, 'Etapa 1 s-a terminat');
   // o grupă aleasă înainte: după pornire pagina trebuie să treacă oricum la finale
-  await page.locator('.ttm-stage-chips button', { hasText: /^A$/ }).click();
+  await page.locator('.ttm-stage-chips button', { hasText: /^G1$/ }).click();
   await settle(page);
   await page.getByRole('button', { name: 'Începe etapa 2' }).click();
   await expectText(page, 'Tipul etapei 2');
   await shot(page, '30a-admin-tipul-etapei-2');
   await page.getByRole('dialog').getByRole('button', { name: 'Continuă' }).click();
-  await expectText(page, 'Calificați din fiecare grupă în Finala 1');
-  await expectText(page, 'Finala 1 (6 jucători)');
-  await expectText(page, 'Finala 2 (3 jucători)');
+  await expectText(page, 'Calificați din fiecare grupă în F1');
+  await expectText(page, 'F1 (6 jucători)');
+  await expectText(page, 'F2 (3 jucători)');
   await shot(page, '30-admin-incepe-etapa-2');
 });
 await check('admin: finalele după începerea etapei 2', async () => {
   await page.getByRole('dialog').getByRole('button', { name: 'Începe etapa 2' }).click();
   await expectStage(page, 'Finale');
-  await expectText(page, 'Finala 1');
-  await expectText(page, 'Finala 2');
+  await expectText(page, 'F1');
+  await expectText(page, 'F2');
   if (!page.url().includes('etapa=2')) throw new Error('după pornire adresa trebuia să indice etapa 2: ' + page.url());
   await expectText(page, 'meciuri sunt preluate din etapa 1');
   await expectNoText(page, 'Completează rezultatele (test)'); // uneltele de test lipsesc în afara aplicației de test
@@ -722,9 +722,9 @@ await check('telefon: turneu', async () => {
 await check('telefon: turneu cu finale', async () => {
   await page.goto(`${BASE}/turnee`);
   await page.getByText('Liga de iarnă').first().click();
-  await expectText(page, 'Finala 1');
+  await expectText(page, 'F1');
   await shot(page, '32-telefon-finale');
-  await page.locator('.ttm-stage-chips button', { hasText: 'Finala 1' }).click();
+  await page.locator('.ttm-stage-chips button', { hasText: 'F1' }).click();
   await settle(page);
   await shot(page, '32a-telefon-o-finala');
   await page.getByRole('button', { name: /^Grupe/ }).click();
@@ -826,7 +826,7 @@ await check('limba: vizitatorul trece pe engleză', async () => {
   await page.goto(`${BASE}/turnee`);
   await expectText(page, 'Tournaments');
   await page.getByText('Liga de iarnă').first().click();
-  await expectText(page, 'Final 1');
+  await expectText(page, 'F1');
   await shot(page, '43-limba-en-turneu');
 });
 await check('limba: utilizatorul o salvează în cont', async () => {

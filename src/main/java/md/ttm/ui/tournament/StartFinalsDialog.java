@@ -57,7 +57,7 @@ class StartFinalsDialog extends Dialog {
         qualifiers.addValueChangeListener(e -> updatePreview());
 
         feeRefunds.setLabel(Tr.t("Câștigătorul primește cât taxa de participare"));
-        feeRefunds.setItemLabelGenerator(n -> Tr.t("Finala {0}", n));
+        feeRefunds.setItemLabelGenerator(n -> "F" + n);
         feeRefunds.setHelperText(Tr.t("Restul sumei se împarte între premiații Finalei 1"));
         feeRefunds.setVisible(commercial);
 
@@ -94,7 +94,7 @@ class StartFinalsDialog extends Dialog {
         int max = Math.max(min, FinalsSettings.maxQualifiers(count, sizes));
         Integer previous = qualifiers.getValue();
         qualifiers.setLabel(count == 2
-                ? Tr.t("Calificați din fiecare grupă în Finala 1")
+                ? Tr.t("Calificați din fiecare grupă în F1")
                 : Tr.t("Jucători din fiecare grupă în fiecare finală (în afară de ultima)"));
         qualifiers.setItems(IntStream.rangeClosed(min, max).boxed().toList());
         qualifiers.setItemLabelGenerator(n -> count == 2
@@ -130,7 +130,7 @@ class StartFinalsDialog extends Dialog {
             }
         }
         for (int k = 0; k < count; k++) {
-            preview.add(line(Tr.t("Finala {0} ({1} jucători): ", k + 1, finals.get(k).size()), finals.get(k)));
+            preview.add(line(Tr.t("F{0} ({1} jucători): ", k + 1, finals.get(k).size()), finals.get(k)));
         }
     }
 

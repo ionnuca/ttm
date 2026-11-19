@@ -20,7 +20,7 @@ import java.util.function.Consumer;
 class StageTwoDialog extends Dialog {
 
     enum Type {
-        FINALS(Tr.key("Finale (Round Robin): Finala 1, Finala 2 …")),
+        FINALS(Tr.key("Finale (Round Robin): F1, F2 …")),
         SINGLE(Tr.key("Tablou eliminatoriu olimpic")),
         DOUBLE(Tr.key("Tablou eliminatoriu cu ramura de jos (dublă eliminare)"));
 

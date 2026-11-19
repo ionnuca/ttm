@@ -647,10 +647,9 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         return total == 0 ? null : played + "/" + total;
     }
 
-    /** „Grupa A” → „A” pe cip; celelalte nume rămân întregi. */
+    /** Pe cip, numele scurt al grupei: „G1”, „G2” … */
     private static String shortGroupLabel(String stored) {
-        return stored != null && stored.startsWith("Grupa ") ? stored.substring("Grupa ".length())
-                : TournamentLabels.groupName(stored);
+        return TournamentLabels.groupName(stored);
     }
 
     /** Etapa și grupa alese se păstrează în adresă, ca la reîmprospătare sau într-un link trimis să se deschidă la fel. */
