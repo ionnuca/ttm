@@ -48,6 +48,7 @@ import md.ttm.security.SecurityUtils;
 import md.ttm.service.tournament.GroupView;
 import md.ttm.service.tournament.PrizePlace;
 import md.ttm.service.tournament.TournamentDetails;
+import md.ttm.service.admin.TestToolsService;
 import md.ttm.service.tournament.TournamentService;
 import md.ttm.ui.account.LoginView;
 import md.ttm.ui.components.Badges;
@@ -78,6 +79,7 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
 
     private final TournamentService tournamentService;
     private final PlayerPhotoService photoService;
+    private final TestToolsService testTools;
     private Long tournamentId;
     /** Rezultatele din etapa 2 înainte de o corectură din grupe (pentru mesajul de după salvare); altfel {@code null}. */
     private Long stage2PlayedBefore;
@@ -86,9 +88,11 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
     private String selectedStage;
     private String selectedPart;
 
-    public TournamentView(TournamentService tournamentService, PlayerPhotoService photoService) {
+    public TournamentView(TournamentService tournamentService, PlayerPhotoService photoService,
+                          TestToolsService testTools) {
         this.tournamentService = tournamentService;
         this.photoService = photoService;
+        this.testTools = testTools;
         setMaxWidth("80rem");
         setWidthFull();
     }
@@ -176,6 +180,13 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
                         e -> confirmFinish(details));
                 finish.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
                 titleRow.add(finish);
+            }
+            if (testTools.enabled() && t.getStatus() == TournamentStatus.IN_PROGRESS) {
+                Button fill = new Button(Tr.t("Completează rezultatele (test)"), VaadinIcon.MAGIC.create(),
+                        e -> confirmFillResults());
+                fill.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_CONTRAST);
+                fill.setTooltipText(Tr.t("Doar în aplicația de test: rezultate aleatorii pentru toate meciurile fără rezultat"));
+                titleRow.add(fill);
             }
             Button delete = new Button(Tr.t("Șterge"), VaadinIcon.TRASH.create(), e -> confirmDelete(t));
             delete.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_ERROR);
@@ -546,6 +557,26 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
                 });
         add(stageTabs);
         add(legend(details));
+    }
+
+    /** Doar în aplicația de test: rezultate aleatorii pentru meciurile fără rezultat și seturile de departajare. */
+    private void confirmFillResults() {
+        ConfirmDialog dialog = new ConfirmDialog();
+        dialog.setHeader(Tr.t("Completează rezultatele?"));
+        dialog.setText(Tr.t("Toate meciurile fără rezultat din etapa curentă (și cele care apar pe parcurs în tablou) primesc rezultate aleatorii; jucătorul cu rating mai mare câștigă mai des. Se completează și seturile de departajare. Turneul nu trece singur la etapa următoare și nu se încheie."));
+        dialog.setCancelable(true);
+        dialog.setCancelText(Tr.t("Anulează"));
+        dialog.setConfirmText(Tr.t("Completează"));
+        dialog.addConfirmListener(e -> {
+            try {
+                int filled = testTools.fillResults(tournamentId);
+                Notifications.success(Tr.t("Rezultate completate: {0}", filled));
+            } catch (RuntimeException ex) {
+                Notifications.error(Notifications.saveError(ex));
+            }
+            refresh();
+        });
+        dialog.open();
     }
 
     /** Al doilea pas din „Începe etapa 2”: configurarea tipului ales (finalele sau tabloul). */
