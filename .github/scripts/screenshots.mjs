@@ -668,6 +668,13 @@ await check('manager: înscrierea mai multor jucători deodată', async () => {
   await dialog.getByRole('button', { name: 'Adaugă 2 jucători' }).click();
   await expectText(page, 'Au fost înscriși 2 jucători');
   await expectText(page, 'Participanți înscriși (7)');
+  // pe calculator lista participanților se așază pe mai multe coloane
+  const cols = await page.evaluate(() => {
+    const rows = [...document.querySelectorAll('.ttm-participant')];
+    return new Set(rows.map(r => Math.round(r.getBoundingClientRect().left))).size;
+  });
+  if (cols < 2) throw new Error('participanții trebuiau așezați pe coloane, nu pe o singură coloană lată');
+  await shot(page, '24b-admin-participanti-coloane');
 });
 await check('utilizator: vede notificarea confirmării', async () => {
   const c = await browser.newContext(desktop);
