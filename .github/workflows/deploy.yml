@@ -73,8 +73,9 @@ jobs:
             sleep 3
           done
           # serverul web răspunde înainte ca pașii de pornire (administrator, jucători de test) să se termine
+          # după „Started” urmează pașii de pornire (administratorul, jucătorii de test): se așteaptă și ei
           for i in $(seq 1 40); do
-            if docker compose -f docker-compose.prod.yml logs app 2>&1 | grep -q "Started TtmApplication"; then break; fi
+            if docker compose -f docker-compose.prod.yml logs app 2>&1 | grep -q "Cont de administrator creat"; then break; fi
             sleep 3
           done
           docker compose -f docker-compose.prod.yml logs app > app.log
