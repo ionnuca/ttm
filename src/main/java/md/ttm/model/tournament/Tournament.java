@@ -74,6 +74,10 @@ public class Tournament {
     @Column(name = "qualifiers_per_group")
     private Integer qualifiersPerGroup;
 
+    /** Câte finale are etapa 2 la „Grupe + finale” (ultima primește jucătorii rămași). */
+    @Column(name = "final_count")
+    private Integer finalCount;
+
     @Column(name = "started_at")
     private Instant startedAt;
 
@@ -180,12 +184,23 @@ public class Tournament {
 
     /** Turneu cu etapa grupelor: „Grupe + finale” sau „Grupe + eliminare”. */
     public boolean isGroupsFormat() {
-        return format == TournamentFormat.GROUPS_FINALS || format == TournamentFormat.GROUPS_KNOCKOUT;
+        return format == TournamentFormat.GROUPS || format == TournamentFormat.GROUPS_FINALS
+                || format == TournamentFormat.GROUPS_KNOCKOUT;
     }
 
-    /** „Grupe + eliminare”: etapa 2 e un tablou eliminatoriu. */
+    /** Se joacă pe tablou eliminatoriu: într-o singură etapă sau în etapa 2, după grupe. */
     public boolean isKnockoutFormat() {
-        return format == TournamentFormat.GROUPS_KNOCKOUT;
+        return format == TournamentFormat.KNOCKOUT || format == TournamentFormat.GROUPS_KNOCKOUT;
+    }
+
+    /** Turneu de o etapă pe tablou eliminatoriu, fără grupe. */
+    public boolean isSingleKnockout() {
+        return format == TournamentFormat.KNOCKOUT;
+    }
+
+    /** Turneu de o etapă, Round Robin (fiecare cu fiecare). */
+    public boolean isRoundRobin() {
+        return format == TournamentFormat.ROUND_ROBIN;
     }
 
     public KnockoutType getKnockoutType() {
@@ -218,6 +233,14 @@ public class Tournament {
 
     public void setQualifiersPerGroup(Integer qualifiersPerGroup) {
         this.qualifiersPerGroup = qualifiersPerGroup;
+    }
+
+    public Integer getFinalCount() {
+        return finalCount;
+    }
+
+    public void setFinalCount(Integer finalCount) {
+        this.finalCount = finalCount;
     }
 
     public Instant getStartedAt() {

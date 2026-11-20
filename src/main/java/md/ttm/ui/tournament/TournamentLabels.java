@@ -33,7 +33,7 @@ public final class TournamentLabels {
     public static String prizeTitle(String stored) {
         java.util.regex.Matcher finalPlace = java.util.regex.Pattern.compile("Finala (\\d+) · locul (\\d+)").matcher(stored);
         if (finalPlace.matches()) {
-            return Tr.t("Finala {0} · locul {1}", finalPlace.group(1), finalPlace.group(2));
+            return Tr.t("F{0} · locul {1}", finalPlace.group(1), finalPlace.group(2));
         }
         java.util.regex.Matcher bracketPlace = java.util.regex.Pattern.compile("Tabloul (\\d+) · locul (\\d+)").matcher(stored);
         if (bracketPlace.matches()) {
@@ -46,16 +46,19 @@ public final class TournamentLabels {
         return stored;
     }
 
-    /** Numele unei grupe sau finale, salvat în română („Grupa A”, „Finala 1”), în limba interfeței. */
+    /** Numele unei grupe sau finale, salvat în română („Grupa A”, „Finala 1”), afișat scurt: „G1”, „F1”. */
     public static String groupName(String stored) {
         if (stored == null) {
             return null;
         }
+        // grupele și finalele se afișează scurt: G1, G2 … și F1, F2 …
         if (stored.startsWith("Grupa ")) {
-            return Tr.t("Grupa {0}", stored.substring("Grupa ".length()));
+            String letter = stored.substring("Grupa ".length());
+            return letter.length() == 1 && Character.isUpperCase(letter.charAt(0))
+                    ? "G" + (letter.charAt(0) - 'A' + 1) : "G" + letter;
         }
         if (stored.startsWith("Finala ")) {
-            return Tr.t("Finala {0}", stored.substring("Finala ".length()));
+            return "F" + stored.substring("Finala ".length());
         }
         if (stored.startsWith("Tabloul ")) {
             return Tr.t("Tabloul {0}", stored.substring("Tabloul ".length()));
@@ -80,6 +83,10 @@ public final class TournamentLabels {
         String format = tournament.getFormat().getLabel();
         if (tournament.isGroupsFormat() && tournament.getGroupCount() != null) {
             format += " " + Tr.t("({0} grupe)", tournament.getGroupCount());
+        }
+        if (tournament.isSingleKnockout() && tournament.getKnockoutType() != null) {
+            format += " " + (tournament.getKnockoutType() == md.ttm.model.tournament.KnockoutType.DOUBLE
+                    ? Tr.t("(cu ramura de jos)") : Tr.t("(olimpic)"));
         }
         return format + " · best of " + tournament.getBestOf();
     }

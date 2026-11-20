@@ -27,7 +27,8 @@ import java.util.function.Function;
  * de la punctul 1, doar cu meciurile dintre ei (ca la ITTF). Cei care nu pot fi despărțiți împart locul
  * (de exemplu 1, 1, 1, 4).
  * <p>
- * La turneele comerciale, după ce s-au jucat toate meciurile tabelului, jucătorii rămași la egalitate joacă
+ * La turneele comerciale (și, la orice turneu, în grupele etapei 1), după ce s-au jucat toate meciurile tabelului,
+ * jucătorii rămași la egalitate joacă
  * între ei câte un set de departajare, cu scorul la puncte. Contează, tot între ei, setele câștigate, apoi
  * raportul punctelor câștigate / pierdute; dacă egalitatea rămâne, se joacă o nouă rundă.
  */
@@ -94,7 +95,7 @@ public final class StandingsCalculator {
      * @param results          meciurile jucate
      * @param setsToWin        seturile necesare pentru a câștiga un meci
      * @param tiebreaksAllowed egalitățile nedepartajate se decid prin seturi de departajare
-     *                         (turneu comercial, toate meciurile tabelului jucate)
+     *                         (turneu comercial sau grupă din etapa 1, toate meciurile tabelului jucate)
      * @param tiebreaks        seturile de departajare deja jucate
      */
     public static Table table(List<Competitor> competitors, List<Result> results, int setsToWin,

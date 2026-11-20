@@ -15,14 +15,13 @@ import jakarta.persistence.Table;
 import java.util.Objects;
 
 /**
- * O grupă dintr-un turneu „Grupe + finale”: Grupa A, B … în etapa 1, Finala 1 și Finala 2 în etapa 2.
+ * O grupă dintr-un turneu „Grupe + finale”: Grupa A, B … în etapa 1, Finala 1, 2 … în etapa 2.
  */
 @Entity
 @Table(name = "tournament_group")
 public class TournamentGroup {
 
     public static final int FINAL_1 = 1;
-    public static final int FINAL_2 = 2;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -41,6 +40,10 @@ public class TournamentGroup {
 
     @Column(name = "name", nullable = false, length = 50)
     private String name;
+
+    /** La turneele comerciale: câștigătorul acestei finale primește cât taxa de participare. */
+    @Column(name = "fee_refund", nullable = false)
+    private boolean feeRefund;
 
     public TournamentGroup() {
     }
@@ -89,6 +92,14 @@ public class TournamentGroup {
 
     public String getName() {
         return name;
+    }
+
+    public boolean isFeeRefund() {
+        return feeRefund;
+    }
+
+    public void setFeeRefund(boolean feeRefund) {
+        this.feeRefund = feeRefund;
     }
 
     @Override

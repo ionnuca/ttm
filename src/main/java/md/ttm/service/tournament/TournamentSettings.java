@@ -1,6 +1,7 @@
 package md.ttm.service.tournament;
 
 import md.ttm.model.tournament.Tournament;
+import md.ttm.model.tournament.KnockoutType;
 import md.ttm.model.tournament.TournamentFormat;
 
 import java.math.BigDecimal;
@@ -17,6 +18,8 @@ public class TournamentSettings {
     private Integer winnersCount = 1;
     private BigDecimal entryFee;
     private Integer groupCount = 2;
+    /** La o etapă pe tablou ({@link TournamentFormat#KNOCKOUT}): olimpic sau cu ramura de jos. */
+    private KnockoutType knockoutType;
 
     public static TournamentSettings roundRobin(int bestOf) {
         TournamentSettings settings = new TournamentSettings();
@@ -45,6 +48,30 @@ public class TournamentSettings {
         settings.setFormat(TournamentFormat.GROUPS_KNOCKOUT);
         settings.setGroupCount(groupCount);
         return settings;
+    }
+
+    /** Două etape: grupele etapei 1 (minimum una); tipul etapei 2 se alege la începerea ei. */
+    public static TournamentSettings twoStages(int bestOf, int groupCount) {
+        TournamentSettings settings = roundRobin(bestOf);
+        settings.setFormat(TournamentFormat.GROUPS);
+        settings.setGroupCount(groupCount);
+        return settings;
+    }
+
+    /** O etapă pe tablou eliminatoriu, cu toți jucătorii. */
+    public static TournamentSettings knockout(int bestOf, KnockoutType type) {
+        TournamentSettings settings = roundRobin(bestOf);
+        settings.setFormat(TournamentFormat.KNOCKOUT);
+        settings.setKnockoutType(type);
+        return settings;
+    }
+
+    public KnockoutType getKnockoutType() {
+        return knockoutType;
+    }
+
+    public void setKnockoutType(KnockoutType knockoutType) {
+        this.knockoutType = knockoutType;
     }
 
     public Integer getGroupCount() {

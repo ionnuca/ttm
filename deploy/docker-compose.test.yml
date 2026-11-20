@@ -20,6 +20,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:?Lipsește DB_PASSWORD în /opt/ttm-test/.env}
       APP_ENVIRONMENT_LABEL: TEST
       APP_REGISTRATION_ENABLED: "true"
+      APP_TEST_TOOLS: "true"
       JAVA_OPTS: -Xmx288m -XX:MaxMetaspaceSize=192m -Xss512k -XX:+UseSerialGC
       TZ: Europe/Chisinau
     mem_limit: 640m

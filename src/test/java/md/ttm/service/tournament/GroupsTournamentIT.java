@@ -138,6 +138,9 @@ class GroupsTournamentIT {
         }
 
         playAllFavourites(id);
+        // turneul nu se încheie singur: organizatorul confirmă încheierea
+        assertThat(tournamentService.findDetails(id).orElseThrow().readyToFinish()).isTrue();
+        tournamentService.finishManually(id);
         TournamentDetails done = details(id);
         assertThat(done.tournament().getStatus()).isEqualTo(TournamentStatus.FINISHED);
 
@@ -192,6 +195,107 @@ class GroupsTournamentIT {
         assertThat(done.prizes().get(1).winnerName()).isEqualTo("Test P5, Test P6");
         assertThat(done.prizes().get(1).shared()).isTrue();
         assertThat(done.prizes().get(0).winnerName()).isNotNull();
+    }
+
+    @Test
+    void etapa2_maiMulteFinale_ultimaPrimesteRestul_taxaReturnataInFinaleleAlese() {
+        Long id = tournamentWith(8);
+        TournamentSettings settings = TournamentSettings.groups(5, 2);
+        settings.setCommercial(true);
+        settings.setWinnersCount(1);
+        settings.setEntryFee(new BigDecimal("100"));
+        tournamentService.start(id, settings);
+        playAllFavourites(id);
+
+        // grupe de 4: cel mult 4 finale; cu 3 finale cel mult (4-1)/2 = 1 jucător pe finală
+        assertThatThrownBy(() -> tournamentService.startFinals(id, new FinalsSettings(5, 1, java.util.Set.of())))
+                .isInstanceOf(BusinessException.class);
+        assertThatThrownBy(() -> tournamentService.startFinals(id, new FinalsSettings(3, 2, java.util.Set.of())))
+                .isInstanceOf(BusinessException.class);
+        assertThatThrownBy(() -> tournamentService.startFinals(id, new FinalsSettings(3, 1, java.util.Set.of(1))))
+                .isInstanceOf(BusinessException.class);
+
+        tournamentService.startFinals(id, new FinalsSettings(3, 1, java.util.Set.of(2, 3)));
+        TournamentDetails finals = details(id);
+        assertThat(finals.tournament().getFinalCount()).isEqualTo(3);
+        assertThat(finals.finals()).extracting(g -> g.group().getName())
+                .containsExactly("Finala 1", "Finala 2", "Finala 3");
+        // grupa A: P1, P4, P5, P8; grupa B: P2, P3, P6, P7 (locurile după rating)
+        assertThat(names(finals.finals().get(0).members())).containsExactly("P1", "P2");
+        assertThat(names(finals.finals().get(1).members())).containsExactly("P3", "P4");
+        assertThat(names(finals.finals().get(2).members())).containsExactly("P5", "P6", "P7", "P8");
+        assertThat(finals.finals()).extracting(g -> g.group().isFeeRefund()).containsExactly(false, true, true);
+
+        // corectarea unui rezultat din grupe reconstruiește etapa 2 cu aceleași setări
+        TournamentMatch groupMatch = finals.groupStage().get(0).matches().get(0);
+        tournamentService.recordResult(groupMatch.getId(), groupMatch.getSetsA() > groupMatch.getSetsB()
+                ? MatchResultForm.sets(3, 1) : MatchResultForm.sets(1, 3));
+        TournamentDetails rebuilt = details(id);
+        assertThat(rebuilt.finals()).hasSize(3);
+        assertThat(rebuilt.finals()).extracting(g -> g.group().isFeeRefund()).containsExactly(false, true, true);
+
+        playAllFavourites(id);
+        // turneul nu se încheie singur: organizatorul confirmă încheierea
+        assertThat(tournamentService.findDetails(id).orElseThrow().readyToFinish()).isTrue();
+        tournamentService.finishManually(id);
+        TournamentDetails done = details(id);
+        assertThat(done.tournament().getStatus()).isEqualTo(TournamentStatus.FINISHED);
+        // 8 × 100 = 800; Finala 2 și Finala 3: câte 100; restul 600 la Finala 1
+        assertThat(done.prizes()).extracting(PrizePlace::title)
+                .containsExactly("Finala 1 · locul 1", "Finala 2 · locul 1", "Finala 3 · locul 1");
+        assertThat(done.prizes()).extracting(PrizePlace::amount)
+                .containsExactly(new BigDecimal("600.00"), new BigDecimal("100.00"), new BigDecimal("100.00"));
+        assertThat(done.prizes()).extracting(PrizePlace::winnerName)
+                .containsExactly("Test P1", "Test P3", "Test P5");
+    }
+
+    @Test
+    void turneuNecomercial_egalitateaDinGrupaSeDepartajeazaInainteaEtapei2() {
+        Long id = tournamentWith(8);
+        tournamentService.start(id, TournamentSettings.groups(5, 2));
+        // grupa lui P1; membrii sunt în ordinea ratingului: P1, apoi câte unul din urnele {P3,P4}, {P5,P6}, {P7,P8}
+        GroupView group = details(id).groupStage().stream()
+                .filter(g -> names(g.members()).contains("P1")).findFirst().orElseThrow();
+        List<TournamentParticipant> m = group.members();
+        long first = m.get(0).getId(), second = m.get(1).getId(), third = m.get(2).getId(), last = m.get(3).getId();
+
+        // cerc: primul îl bate pe al doilea, al doilea pe al treilea, al treilea pe primul; toți trei îl bat pe ultimul
+        Map<java.util.Set<Long>, Long> winnerOf = Map.of(
+                java.util.Set.of(first, second), first,
+                java.util.Set.of(second, third), second,
+                java.util.Set.of(third, first), third);
+        for (TournamentMatch match : group.matches()) {
+            long a = match.getParticipantA().getId();
+            long b = match.getParticipantB().getId();
+            long winner = winnerOf.getOrDefault(java.util.Set.of(a, b), a == last ? b : a);
+            tournamentService.recordResult(match.getId(), winner == a ? MatchResultForm.sets(3, 0) : MatchResultForm.sets(0, 3));
+        }
+        playAllFavourites(id);
+
+        // egalitate perfectă pe locul 1: la un turneu necomercial, grupa cere seturi de departajare
+        TournamentDetails tied = details(id);
+        GroupView tiedGroup = tied.groupStage().stream()
+                .filter(g -> g.group().getId().equals(group.group().getId())).findFirst().orElseThrow();
+        assertThat(tiedGroup.pendingTiebreaks()).hasSize(3);
+        assertThat(tied.canStartFinals()).isFalse();
+        assertThatThrownBy(() -> tournamentService.startFinals(id, 1))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("seturi de departajare");
+
+        // primul câștigă ambele seturi, al doilea îl bate pe al treilea
+        for (StandingsCalculator.Pairing p : tiedGroup.pendingTiebreaks()) {
+            java.util.Set<Long> pair = java.util.Set.of(p.a(), p.b());
+            long winner = pair.contains(first) ? first : second;
+            long loser = p.a() == winner ? p.b() : p.a();
+            tournamentService.recordTiebreak(id, group.group().getId(), p.round(), winner, loser, 11, 5);
+        }
+
+        TournamentDetails decided = details(id);
+        assertThat(decided.groupStage()).allSatisfy(g ->
+                assertThat(g.standings()).noneMatch(StandingsCalculator.Row::sharedPlace));
+        assertThat(decided.canStartFinals()).isTrue();
+        tournamentService.startFinals(id, 1);
+        assertThat(names(details(id).finals().get(0).members())).containsExactly("P1", "P2");
     }
 
     // ------------------------------------------------------------------

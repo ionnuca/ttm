@@ -7,7 +7,7 @@ import md.ttm.i18n.Tr;
 public enum TournamentStage {
     /** Etapa 1: grupele. */
     GROUPS(Tr.key("Etapa 1 — Grupe")),
-    /** Etapa 2: Finala 1 și Finala 2. */
+    /** Etapa 2: Finala 1, 2 … */
     FINALS(Tr.key("Etapa 2 — Finale")),
     /** Etapa 2 la „Grupe + eliminare”: tabloul eliminatoriu. */
     KNOCKOUT(Tr.key("Etapa 2 — Tablou eliminatoriu"));

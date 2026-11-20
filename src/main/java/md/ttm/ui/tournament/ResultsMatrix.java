@@ -4,16 +4,19 @@ import md.ttm.i18n.Tr;
 import com.vaadin.flow.component.html.Div;
 import com.vaadin.flow.dom.Element;
 import md.ttm.model.rating.RatingHistory;
+import md.ttm.model.tournament.TournamentMatch;
 import md.ttm.model.tournament.TournamentParticipant;
 import md.ttm.service.tournament.StandingsCalculator;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  * Tabelul Round Robin în formă de matrice. Fiecare celulă arată, sub formă de fracție,
  * punctele obținute (sus) și scorul la seturi (jos), din perspectiva jucătorului de pe rând.
  * Ultimele coloane: seturi câștigate/pierdute, puncte și locul în clasament.
+ * Când rezultatele se pot introduce, un click pe celulă deschide meciul celor doi jucători.
  */
 class ResultsMatrix extends Div {
 
@@ -25,9 +28,12 @@ class ResultsMatrix extends Div {
      * @param standings    rândurile calculate, în aceeași ordine
      * @param highlighted  participantul evidențiat (utilizatorul curent), poate fi {@code null}
      * @param ratingChanges ratingul înainte/după turneu, pe jucător (gol dacă turneul nu e încheiat)
+     * @param matches      meciurile tabelului (cele preluate din etapa 1 lipsesc și nu se pot deschide)
+     * @param onMatchClick deschide editarea meciului din celula apăsată; {@code null} = celulele nu se pot apăsa
      */
     ResultsMatrix(List<TournamentParticipant> participants, List<StandingsCalculator.Row> standings,
-                  Long highlighted, Map<Long, RatingHistory> ratingChanges) {
+                  Long highlighted, Map<Long, RatingHistory> ratingChanges,
+                  List<TournamentMatch> matches, Consumer<TournamentMatch> onMatchClick) {
         getStyle()
                 .set("overflow-x", "auto")
                 .set("max-width", "100%")
@@ -65,7 +71,14 @@ class ResultsMatrix extends Div {
                 if (opponent.getId().equals(participant.getId())) {
                     tr.appendChild(cell("", "background:var(--lumo-contrast-20pct);"));
                 } else {
-                    tr.appendChild(resultCell(cells.get(opponent.getId())));
+                    Element td = resultCell(cells.get(opponent.getId()));
+                    if (onMatchClick != null) {
+                        matches.stream()
+                                .filter(m -> m.involves(participant.getId()) && m.involves(opponent.getId()))
+                                .findFirst()
+                                .ifPresent(m -> makeClickable(td, m, participant, opponent, onMatchClick));
+                    }
+                    tr.appendChild(td);
                 }
             }
             tr.appendChild(cell(row.setsWon() + "/" + row.setsLost(), "white-space:nowrap;"));
@@ -81,6 +94,14 @@ class ResultsMatrix extends Div {
             body.appendChild(tr);
         }
         table.appendChild(body);
+        if (onMatchClick != null) {
+            // fără temă proprie: :hover și :focus-visible nu se pot scrie în stilul inline al celulei
+            Element style = new Element("style");
+            style.setText(".ttm-matrix-cell{cursor:pointer}"
+                    + ".ttm-matrix-cell:hover{box-shadow:inset 0 0 0 2px var(--lumo-primary-color-50pct)}"
+                    + ".ttm-matrix-cell:focus-visible{outline:2px solid var(--lumo-primary-color);outline-offset:-2px}");
+            getElement().appendChild(style);
+        }
         getElement().appendChild(table);
     }
 
@@ -147,6 +168,22 @@ class ResultsMatrix extends Div {
         fraction.appendChild(points, score);
         td.appendChild(fraction);
         return td;
+    }
+
+    private static void makeClickable(Element td, TournamentMatch match, TournamentParticipant participant,
+                                      TournamentParticipant opponent, Consumer<TournamentMatch> onMatchClick) {
+        String label = match.isPlayed()
+                ? Tr.t("Modifică rezultatul {0} – {1}", participant.getPlayer().getDisplayName(), opponent.getPlayer().getDisplayName())
+                : Tr.t("Introdu rezultatul {0} – {1}", participant.getPlayer().getDisplayName(), opponent.getPlayer().getDisplayName());
+        td.setAttribute("title", label);
+        td.setAttribute("aria-label", label);
+        td.setAttribute("role", "button");
+        td.setAttribute("tabindex", "0");
+        td.setAttribute("class", "ttm-matrix-cell");
+        td.addEventListener("click", e -> onMatchClick.accept(match));
+        td.addEventListener("keydown", e -> onMatchClick.accept(match))
+                .setFilter("event.key === 'Enter' || event.key === ' '")
+                .preventDefault();
     }
 
     private static Element headerCell(String text) {

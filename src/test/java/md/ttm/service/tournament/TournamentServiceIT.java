@@ -96,6 +96,9 @@ class TournamentServiceIT {
             }
         }
 
+        // turneul nu se încheie singur: organizatorul confirmă încheierea
+        assertThat(tournamentService.findDetails(tournament.getId()).orElseThrow().readyToFinish()).isTrue();
+        tournamentService.finishManually(tournament.getId());
         details = tournamentService.findDetails(tournament.getId()).orElseThrow();
         assertThat(details.tournament().getStatus()).isEqualTo(TournamentStatus.FINISHED);
         assertThat(details.playedMatches()).isEqualTo(6);
@@ -145,6 +148,9 @@ class TournamentServiceIT {
         TournamentMatch match = tournamentService.findDetails(tournament.getId()).orElseThrow().matches().get(0);
 
         tournamentService.recordResult(match.getId(), MatchResultForm.sets(3, 0));
+        // turneul nu se încheie singur: organizatorul confirmă încheierea
+        assertThat(tournamentService.findDetails(tournament.getId()).orElseThrow().readyToFinish()).isTrue();
+        tournamentService.finishManually(tournament.getId());
         assertThat(status(tournament)).isEqualTo(TournamentStatus.FINISHED);
 
         tournamentService.clearResult(match.getId());
