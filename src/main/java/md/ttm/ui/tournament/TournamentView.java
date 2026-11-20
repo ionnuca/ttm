@@ -293,7 +293,6 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
               padding:var(--lumo-space-m);border:1px solid var(--lumo-contrast-10pct);
               border-radius:var(--lumo-border-radius-l);background:var(--lumo-base-color)}
             .ttm-reg-panel vaadin-button{margin:0}
-            .ttm-reg-panel .pair{display:grid;grid-template-columns:1fr 1fr;gap:var(--lumo-space-s)}
             .ttm-reg-panel .line{display:flex;align-items:center;gap:var(--lumo-space-s);flex-wrap:wrap;
               color:var(--lumo-secondary-text-color);font-size:var(--lumo-font-size-s)}
             .ttm-reg-panel .admin{display:flex;justify-content:space-between;border-top:1px solid var(--lumo-contrast-10pct);
@@ -397,17 +396,11 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
                     e -> run(() -> tournamentService.unregisterSelf(tournamentId), Tr.t("V-ați retras de la turneu")));
             pair.add(leave);
         }
-        if (pair.size() == 2) {
-            Div row = new Div(pair.get(0), pair.get(1));
-            row.addClassName("pair");
-            pair.forEach(b -> b.setWidthFull());
-            panel.add(row);
-        } else {
-            pair.forEach(b -> {
-                b.setWidthFull();
-                panel.add(b);
-            });
-        }
+        // unul sub altul, pe toată lățimea panoului: textele încap întregi
+        pair.forEach(b -> {
+            b.setWidthFull();
+            panel.add(b);
+        });
         if (details.ownRequestPending()) {
             Span pending = Badges.badge(Tr.t("Cererea de înscriere așteaptă confirmarea organizatorului"), Badges.Tone.PRIMARY);
             pending.getStyle().set("white-space", "normal");
