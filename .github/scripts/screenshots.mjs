@@ -668,13 +668,14 @@ await check('manager: înscrierea mai multor jucători deodată', async () => {
   await dialog.getByRole('button', { name: 'Adaugă 2 jucători' }).click();
   await expectText(page, 'Au fost înscriși 2 jucători');
   await expectText(page, 'Participanți înscriși (7)');
-  // pe calculator lista participanților se așază pe mai multe coloane
-  const cols = await page.evaluate(() => {
-    const rows = [...document.querySelectorAll('.ttm-participant')];
-    return new Set(rows.map(r => Math.round(r.getBoundingClientRect().left))).size;
+  // pe calculator panoul cu acțiuni stă în dreapta listei de participanți
+  const side = await page.evaluate(() => {
+    const panel = document.querySelector('.ttm-reg-panel')?.getBoundingClientRect();
+    const list = document.querySelector('.ttm-reg-main')?.getBoundingClientRect();
+    return panel && list ? panel.left > list.right - 1 : false;
   });
-  if (cols < 2) throw new Error('participanții trebuiau așezați pe coloane, nu pe o singură coloană lată');
-  await shot(page, '24b-admin-participanti-coloane');
+  if (!side) throw new Error('panoul cu acțiuni trebuia să fie în dreapta listei');
+  await shot(page, '24b-admin-inscriere-panou');
 });
 await check('utilizator: vede notificarea confirmării', async () => {
   const c = await browser.newContext(desktop);
@@ -719,6 +720,19 @@ await check('telefon: guest', async () => {
   if (cut.length) throw new Error('victorii/înfrângeri tăiate: ' + cut.slice(0, 3).join(', '));
   await expectText(page, '🥇 1');
   await shot(page, '12-telefon-guest-jucatori');
+});
+await check('telefon: turneu la înscriere', async () => {
+  await page.goto(`${BASE}/turnee`);
+  await page.getByText('Turneul de duminică').first().click();
+  await expectText(page, 'Participanți înscriși');
+  // pe telefon panoul cu starea și acțiunile stă deasupra listei
+  const above = await page.evaluate(() => {
+    const panel = document.querySelector('.ttm-reg-panel')?.getBoundingClientRect();
+    const list = document.querySelector('.ttm-reg-main')?.getBoundingClientRect();
+    return panel && list ? panel.bottom <= list.top + 1 : false;
+  });
+  if (!above) throw new Error('pe telefon panoul trebuia să fie deasupra listei');
+  await shot(page, '27a-telefon-inscriere');
 });
 await check('telefon: turneu', async () => {
   await page.goto(`${BASE}/turnee`);

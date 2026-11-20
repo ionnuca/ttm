@@ -53,6 +53,7 @@ import md.ttm.service.admin.TestToolsService;
 import md.ttm.service.tournament.TournamentService;
 import md.ttm.ui.account.LoginView;
 import md.ttm.ui.components.Badges;
+import md.ttm.ui.components.PlayerAvatar;
 import md.ttm.ui.components.Notifications;
 import md.ttm.ui.layout.MainLayout;
 import md.ttm.ui.player.RatingHistoryList;
@@ -136,6 +137,11 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
             return;
         }
         title = details.tournament().getName() + " | TTM";
+        if (!details.tournament().isStarted()) {
+            // la înscriere: titlul, lista și panoul cu acțiuni (varianta „panou lateral”)
+            add(createRegistrationPage(details));
+            return;
+        }
         add(createHeader(details));
         if (details.prizePool() != null) {
             add(createPrizes(details));
@@ -147,10 +153,8 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
             addGroupsTournament(details);
         } else if (details.tournament().isStarted() && details.tournament().isSingleKnockout()) {
             addKnockoutTournament(details);
-        } else if (details.tournament().isStarted()) {
-            add(createStandings(details), createMatches(details));
         } else {
-            add(createRegistration(details));
+            add(createStandings(details), createMatches(details));
         }
     }
 
@@ -171,11 +175,6 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
             Div spacer = new Div();
             spacer.getStyle().set("flex-grow", "1");
             titleRow.add(spacer);
-            if (t.isRegistrationOpen()) {
-                Button edit = new Button(Tr.t("Editează"), VaadinIcon.EDIT.create(), e -> openEditDialog(t));
-                edit.addThemeVariants(ButtonVariant.LUMO_TERTIARY);
-                titleRow.add(edit);
-            }
             if (details.canFinishManually()) {
                 Button finish = new Button(Tr.t("Încheie turneul"), VaadinIcon.FLAG_CHECKERED.create(),
                         e -> confirmFinish(details));
@@ -285,14 +284,95 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         return card;
     }
 
-    private Component createRegistration(TournamentDetails details) {
-        VerticalLayout section = new VerticalLayout();
-        section.setPadding(false);
-        section.add(new H3(Tr.t("Participanți înscriși ({0})", details.participants().size())));
+    private static final String REGISTRATION_STYLE = """
+            <style>
+            .ttm-reg{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--lumo-space-m);width:100%;
+              grid-template-areas:"title" "panel" "main"}
+            .ttm-reg-title{grid-area:title;margin:0}
+            .ttm-reg-panel{grid-area:panel;display:flex;flex-direction:column;gap:var(--lumo-space-s);
+              padding:var(--lumo-space-m);border:1px solid var(--lumo-contrast-10pct);
+              border-radius:var(--lumo-border-radius-l);background:var(--lumo-base-color)}
+            .ttm-reg-panel vaadin-button{margin:0}
+            .ttm-reg-panel .pair{display:grid;grid-template-columns:1fr 1fr;gap:var(--lumo-space-s)}
+            .ttm-reg-panel .line{display:flex;align-items:center;gap:var(--lumo-space-s);flex-wrap:wrap;
+              color:var(--lumo-secondary-text-color);font-size:var(--lumo-font-size-s)}
+            .ttm-reg-panel .admin{display:flex;justify-content:space-between;border-top:1px solid var(--lumo-contrast-10pct);
+              padding-top:var(--lumo-space-xs)}
+            .ttm-reg-main{grid-area:main;min-width:0;display:flex;flex-direction:column;gap:var(--lumo-space-s)}
+            .ttm-reg-main h3{margin:0}
+            .ttm-participants{border-top:1px solid var(--lumo-contrast-10pct)}
+            .ttm-participant{display:flex;align-items:center;gap:var(--lumo-space-s);min-height:2.6rem;
+              padding:0 var(--lumo-space-xs);border-bottom:1px solid var(--lumo-contrast-10pct)}
+            .ttm-participant .nr{width:1.75rem;text-align:right;flex:none;color:var(--lumo-secondary-text-color);
+              font-size:var(--lumo-font-size-s)}
+            .ttm-participant .name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+            .ttm-participant .rating{flex:none;color:var(--lumo-secondary-text-color);font-variant-numeric:tabular-nums}
+            .ttm-participant vaadin-button{margin:0;flex:none}
+            @media (min-width:900px){
+              .ttm-reg{grid-template-columns:minmax(0,1fr) 18rem;grid-template-areas:"title panel" "main panel";
+                align-items:start;max-width:72rem}
+            }
+            </style>
+            """;
 
-        HorizontalLayout actions = new HorizontalLayout();
-        actions.setAlignItems(FlexComponent.Alignment.END);
-        actions.getStyle().set("flex-wrap", "wrap");
+    /**
+     * Pagina unui turneu la înscriere: în stânga titlul și lista de participanți, în dreapta un panou cu starea,
+     * data, numărul de participanți și toate acțiunile. Pe telefon panoul urcă deasupra listei.
+     */
+    private Component createRegistrationPage(TournamentDetails details) {
+        Tournament t = details.tournament();
+        Div page = new Div();
+        page.addClassName("ttm-reg");
+        page.add(new Html(REGISTRATION_STYLE.strip()));
+
+        H2 name = new H2(t.getName());
+        name.addClassName("ttm-reg-title");
+        page.add(name, createRegistrationPanel(details), createParticipantList(details));
+        return page;
+    }
+
+    private Component createRegistrationPanel(TournamentDetails details) {
+        Tournament t = details.tournament();
+        Div panel = new Div();
+        panel.addClassName("ttm-reg-panel");
+
+        Div status = new Div(TournamentLabels.statusBadge(t.getStatus()),
+                new Span(TournamentLabels.longDate(t.getTournamentDate())));
+        status.addClassName("line");
+        status.getStyle().set("justify-content", "space-between");
+        List<TournamentParticipant> participants = details.participants();
+        String count = Tr.t("{0} participanți", participants.size());
+        if (!participants.isEmpty()) {
+            long average = Math.round(participants.stream().mapToInt(p -> p.getPlayer().getRating()).average().orElse(0));
+            count += " · " + Tr.t("media {0}", average);
+        }
+        com.vaadin.flow.component.icon.Icon users = VaadinIcon.USERS.create();
+        users.setSize("1em");
+        Div countLine = new Div(users, new Span(count));
+        countLine.addClassName("line");
+        panel.add(status, countLine);
+
+        if (details.manager()) {
+            Button start = new Button(Tr.t("Începe turneul"), VaadinIcon.PLAY.create(), e -> openStartDialog(details));
+            start.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_SUCCESS);
+            start.setEnabled(participants.size() >= 2);
+            start.setWidthFull();
+            panel.add(start);
+        }
+        List<Button> pair = new ArrayList<>();
+        if (details.manager()) {
+            Button addPlayers = new Button(Tr.t("Adaugă jucători"), VaadinIcon.PLUS.create(), e ->
+                    new AddPlayersDialog(t.getName(), participants.size(),
+                            tournamentService.findPlayersNotRegistered(tournamentId), photoService.versions(), ids -> {
+                                tournamentService.addParticipants(tournamentId, ids);
+                                Notifications.success(ids.size() == 1
+                                        ? Tr.t("Jucătorul a fost înscris")
+                                        : Tr.t("Au fost înscriși {0} jucători", ids.size()));
+                                refresh();
+                            }).open());
+            addPlayers.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+            pair.add(addPlayers);
+        }
         if (details.canSelfRegister()) {
             Button register = new Button(Tr.t("Mă înscriu"), VaadinIcon.PLUS.create(),
                     e -> {
@@ -306,75 +386,66 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
                         }
                         refresh();
                     });
-            register.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-            actions.add(register);
-        }
-        if (details.ownRequestPending()) {
-            Span pending = Badges.badge(Tr.t("Cererea de înscriere așteaptă confirmarea organizatorului"), Badges.Tone.PRIMARY);
-            pending.getStyle().set("white-space", "normal");
-            actions.add(pending);
+            if (!details.manager()) {
+                register.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
+            }
+            pair.add(register);
         }
         if (details.canSelfUnregister()) {
             Button leave = new Button(details.ownRequestPending() ? Tr.t("Retrag cererea") : Tr.t("Mă retrag"),
                     VaadinIcon.MINUS.create(),
                     e -> run(() -> tournamentService.unregisterSelf(tournamentId), Tr.t("V-ați retras de la turneu")));
-            actions.add(leave);
+            pair.add(leave);
         }
-        if (details.manager()) {
-            Button addPlayers = new Button(Tr.t("Adaugă jucători"), VaadinIcon.PLUS.create(), e ->
-                    new AddPlayersDialog(details.tournament().getName(), details.participants().size(),
-                            tournamentService.findPlayersNotRegistered(tournamentId), photoService.versions(), ids -> {
-                                tournamentService.addParticipants(tournamentId, ids);
-                                Notifications.success(ids.size() == 1
-                                        ? Tr.t("Jucătorul a fost înscris")
-                                        : Tr.t("Au fost înscriși {0} jucători", ids.size()));
-                                refresh();
-                            }).open());
-            addPlayers.addThemeVariants(ButtonVariant.LUMO_PRIMARY);
-            actions.add(addPlayers);
-
-            Div spacer = new Div();
-            spacer.getStyle().set("flex-grow", "1");
-            Button start = new Button(Tr.t("Începe turneul"), VaadinIcon.PLAY.create(), e -> openStartDialog(details));
-            start.addThemeVariants(ButtonVariant.LUMO_PRIMARY, ButtonVariant.LUMO_SUCCESS);
-            start.setEnabled(details.participants().size() >= 2);
-            actions.add(spacer, start);
-            actions.setWidthFull();
+        if (pair.size() == 2) {
+            Div row = new Div(pair.get(0), pair.get(1));
+            row.addClassName("pair");
+            pair.forEach(b -> b.setWidthFull());
+            panel.add(row);
+        } else {
+            pair.forEach(b -> {
+                b.setWidthFull();
+                panel.add(b);
+            });
         }
-        if (actions.getComponentCount() > 0) {
-            section.add(actions);
-        }
-        if (details.manager() && !details.pendingRequests().isEmpty()) {
-            section.add(pendingRequests(details));
+        if (details.ownRequestPending()) {
+            Span pending = Badges.badge(Tr.t("Cererea de înscriere așteaptă confirmarea organizatorului"), Badges.Tone.PRIMARY);
+            pending.getStyle().set("white-space", "normal");
+            panel.add(pending);
         }
         if (!SecurityUtils.isAuthenticated()) {
             Paragraph hint = new Paragraph();
+            hint.getStyle().set("margin", "0").set("font-size", "var(--lumo-font-size-s)");
             hint.add(new Span(Tr.t("Pentru a vă înscrie,") + " "), new RouterLink(Tr.t("autentificați-vă"), LoginView.class), new Span("."));
-            section.add(hint);
+            panel.add(hint);
         }
+        if (details.manager()) {
+            Button edit = new Button(Tr.t("Editează"), VaadinIcon.EDIT.create(), e -> openEditDialog(t));
+            edit.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL);
+            Button delete = new Button(Tr.t("Șterge"), VaadinIcon.TRASH.create(), e -> confirmDelete(t));
+            delete.addThemeVariants(ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_ERROR, ButtonVariant.LUMO_SMALL);
+            Div admin = new Div(edit, delete);
+            admin.addClassName("admin");
+            panel.add(admin);
+        }
+        return panel;
+    }
 
-        if (details.participants().isEmpty()) {
-            section.add(new Paragraph(Tr.t("Încă nu s-a înscris nimeni.")));
-            return section;
-        }
-        // pe calculator lista se așază pe coloane (de sus în jos, apoi coloana următoare); pe telefon rămâne una
+    private Component createParticipantList(TournamentDetails details) {
+        Div main = new Div();
+        main.addClassName("ttm-reg-main");
         List<TournamentParticipant> participants = details.participants();
+        main.add(new H3(Tr.t("Participanți înscriși ({0})", participants.size())));
+        if (details.manager() && !details.pendingRequests().isEmpty()) {
+            main.add(pendingRequests(details));
+        }
+        if (participants.isEmpty()) {
+            main.add(new Paragraph(Tr.t("Încă nu s-a înscris nimeni.")));
+            return main;
+        }
+        Map<Long, Long> photos = photoService.versions();
         Div list = new Div();
         list.addClassName("ttm-participants");
-        list.add(new Html("""
-                <style>
-                .ttm-participants{columns:17rem;column-gap:var(--lumo-space-l);width:100%;
-                  border-top:1px solid var(--lumo-contrast-10pct)}
-                .ttm-participant{display:flex;align-items:center;gap:var(--lumo-space-s);break-inside:avoid;
-                  min-height:2.25rem;padding:0 var(--lumo-space-xs);border-bottom:1px solid var(--lumo-contrast-10pct)}
-                .ttm-participant .nr{width:1.75rem;text-align:right;flex:none;color:var(--lumo-secondary-text-color);
-                  font-size:var(--lumo-font-size-s)}
-                .ttm-participant .name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-                .ttm-participant .rating{flex:none;color:var(--lumo-secondary-text-color);
-                  font-variant-numeric:tabular-nums}
-                .ttm-participant vaadin-button{margin:0;flex:none}
-                </style>
-                """.strip()));
         for (int i = 0; i < participants.size(); i++) {
             TournamentParticipant p = participants.get(i);
             Div row = new Div();
@@ -386,7 +457,7 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
             name.setTitle(p.getPlayer().getDisplayName());
             Span rating = new Span(String.valueOf(p.getPlayer().getRating()));
             rating.addClassName("rating");
-            row.add(nr, name, rating);
+            row.add(nr, PlayerAvatar.of(p.getPlayer(), photos.get(p.getPlayer().getId()), "1.75rem"), name, rating);
             if (details.manager()) {
                 Button remove = new Button(VaadinIcon.CLOSE_SMALL.create(), e -> run(
                         () -> tournamentService.removeParticipant(tournamentId, p.getId()),
@@ -403,8 +474,8 @@ public class TournamentView extends VerticalLayout implements HasUrlParameter<Lo
         order.getStyle()
                 .set("font-size", "var(--lumo-font-size-s)")
                 .set("color", "var(--lumo-secondary-text-color)");
-        section.add(list, order);
-        return section;
+        main.add(list, order);
+        return main;
     }
 
     private void openStartDialog(TournamentDetails details) {
